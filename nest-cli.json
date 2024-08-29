@@ -1,0 +1,40 @@
+{
+  "collection": "@nestjs/schematics",
+  "monorepo": true,
+  "root": "apps",
+  "sourceRoot": "apps",
+  "entryFile": "main",
+  "language": "ts",
+  "generateOptions": {
+    "spec": false
+  },
+  "compilerOptions": {
+    "manualRestart": true,
+    "tsConfigPath": "./tsconfig.build.json",
+    "webpack": false,
+    "deleteOutDir": true,
+    "assets": [],
+    "watchAssets": false,
+    "plugins": []
+  },
+  "projects": {
+    "backend-project": {
+      "type": "application",
+      "root": "apps/backend-project",
+      "entryFile": "main",
+      "sourceRoot": "apps/backend-project/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/backend-project/tsconfig.app.json"
+      }
+    },
+    "scraping": {
+      "type": "application",
+      "root": "apps/scraping",
+      "entryFile": "main",
+      "sourceRoot": "apps/scraping/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/scraping/tsconfig.app.json"
+      }
+    }
+  }
+}
