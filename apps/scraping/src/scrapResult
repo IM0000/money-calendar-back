@@ -1,0 +1,1802 @@
+[
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-01T22:45:00.000Z",
+        "name": "제조업 구매관리자지수  (6월)",
+        "importance": 3,
+        "actual": "51.6",
+        "forecast": "51.7",
+        "previous": "51.3"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-01T23:00:00.000Z",
+        "name": "건설지출 (MoM)  (5월)",
+        "importance": 2,
+        "actual": "-0.1%",
+        "forecast": "0.3%",
+        "previous": "0.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-01T23:00:00.000Z",
+        "name": "ISM 제조업고용지수  (6월)",
+        "importance": 2,
+        "actual": "49.3",
+        "forecast": "50.0",
+        "previous": "51.1"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-01T23:00:00.000Z",
+        "name": "ISM 제조업 신규주문지수  (6월)",
+        "importance": 1,
+        "actual": "49.3",
+        "forecast": "49.0",
+        "previous": "45.4"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-01T23:00:00.000Z",
+        "name": "ISM 제조업구매자지수  (6월)",
+        "importance": 3,
+        "actual": "48.5",
+        "forecast": "49.2",
+        "previous": "48.7"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-01T23:00:00.000Z",
+        "name": "ISM 제조업물가지수  (6월)",
+        "importance": 2,
+        "actual": "52.1",
+        "forecast": "55.8",
+        "previous": "57.0"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-02T00:30:00.000Z",
+        "name": "3개월물 국채 입찰",
+        "importance": 1,
+        "actual": "5.240%",
+        "forecast": "",
+        "previous": "5.235%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-02T00:30:00.000Z",
+        "name": "6개월물 국채 입찰",
+        "importance": 1,
+        "actual": "5.115%",
+        "forecast": "",
+        "previous": "5.140%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-02T01:00:00.000Z",
+        "name": "애틀랜타 연방준비은행의 GDPnow  (2분기)",
+        "importance": 2,
+        "actual": "1.7%",
+        "forecast": "2.2%",
+        "previous": "2.2%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-02T21:55:00.000Z",
+        "name": "레드북 소매판매지수 (YoY)",
+        "importance": 1,
+        "actual": "5.8%",
+        "forecast": "",
+        "previous": "5.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-02T22:30:00.000Z",
+        "name": "연방준비제도(FED) 의장 Powell 연설",
+        "importance": 3,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-02T23:00:00.000Z",
+        "name": "미국 노동부 JOLTs (구인, 이직 보고서)  (5월)",
+        "importance": 3,
+        "actual": "8.140M",
+        "forecast": "7.960M",
+        "previous": "7.919M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-02T23:10:00.000Z",
+        "name": "IBD/TIPP 경제낙관지수",
+        "importance": 1,
+        "actual": "44.2",
+        "forecast": "41.2",
+        "previous": "40.5"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T05:30:00.000Z",
+        "name": "미국석유협회 주간 원유 재고",
+        "importance": 2,
+        "actual": "-9.163M",
+        "forecast": "-0.150M",
+        "previous": "0.914M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T20:00:00.000Z",
+        "name": "FOMC 멤버 Williams가 연설",
+        "importance": 2,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T20:00:00.000Z",
+        "name": "모기지은행협회 30년 모기지금리",
+        "importance": 1,
+        "actual": "7.03%",
+        "forecast": "",
+        "previous": "6.93%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T20:00:00.000Z",
+        "name": "모기지은행협회 모기지신청건수 (WoW)",
+        "importance": 1,
+        "actual": "-2.6%",
+        "forecast": "",
+        "previous": "0.8%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T20:00:00.000Z",
+        "name": "MBA 구매지수",
+        "importance": 1,
+        "actual": "142.9",
+        "forecast": "",
+        "previous": "147.8"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T20:00:00.000Z",
+        "name": "모기지 시장지수",
+        "importance": 1,
+        "actual": "206.5",
+        "forecast": "",
+        "previous": "212.0"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T20:00:00.000Z",
+        "name": "모기지 재융자지수",
+        "importance": 1,
+        "actual": "544.1",
+        "forecast": "",
+        "previous": "552.4"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T20:30:00.000Z",
+        "name": "Challenger 고용변화율 (YoY)",
+        "importance": 1,
+        "actual": "19.8%",
+        "forecast": "",
+        "previous": "-20.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T20:30:00.000Z",
+        "name": "Challenger 고용변화율  (6월)",
+        "importance": 1,
+        "actual": "48.786K",
+        "forecast": "",
+        "previous": "63.816K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T21:00:00.000Z",
+        "name": "총자동차판매량  (6월)",
+        "importance": 1,
+        "actual": "2.76M",
+        "forecast": "",
+        "previous": "3.06M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T21:00:00.000Z",
+        "name": "모든 트럭 판매량  (6월)",
+        "importance": 1,
+        "actual": "12.53M",
+        "forecast": "",
+        "previous": "12.86M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T21:15:00.000Z",
+        "name": "ADP 비농업부문 고용 변화  (6월)",
+        "importance": 3,
+        "actual": "150K",
+        "forecast": "163K",
+        "previous": "157K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T21:30:00.000Z",
+        "name": "연속 실업수당청구건수",
+        "importance": 2,
+        "actual": "1,858K",
+        "forecast": "1,840K",
+        "previous": "1,832K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T21:30:00.000Z",
+        "name": "수출",
+        "importance": 2,
+        "actual": "261.70B",
+        "forecast": "",
+        "previous": "263.70B"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T21:30:00.000Z",
+        "name": "수입",
+        "importance": 2,
+        "actual": "336.70B",
+        "forecast": "",
+        "previous": "338.20B"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T21:30:00.000Z",
+        "name": "신규 실업수당청구건수",
+        "importance": 3,
+        "actual": "238K",
+        "forecast": "234K",
+        "previous": "234K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T21:30:00.000Z",
+        "name": "4주 평균 실업수당청구건수",
+        "importance": 1,
+        "actual": "238.50K",
+        "forecast": "",
+        "previous": "236.25K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T21:30:00.000Z",
+        "name": "무역수지  (5월)",
+        "importance": 2,
+        "actual": "-75.10B",
+        "forecast": "-76.30B",
+        "previous": "-74.50B"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T22:45:00.000Z",
+        "name": "마킷 종합 구매관리자지수  (6월)",
+        "importance": 2,
+        "actual": "54.8",
+        "forecast": "54.6",
+        "previous": "54.5"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T22:45:00.000Z",
+        "name": "서비스 구매관리자지수  (6월)",
+        "importance": 3,
+        "actual": "55.3",
+        "forecast": "55.1",
+        "previous": "54.8"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:00:00.000Z",
+        "name": "4주일물 국채 입찰",
+        "importance": 1,
+        "actual": "5.280%",
+        "forecast": "",
+        "previous": "5.270%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:00:00.000Z",
+        "name": "8주일물 미 국채 입찰",
+        "importance": 1,
+        "actual": "5.275%",
+        "forecast": "",
+        "previous": "5.260%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:00:00.000Z",
+        "name": "국방을 제외한 내구재 (MoM)  (5월)",
+        "importance": 1,
+        "actual": "-0.2%",
+        "forecast": "",
+        "previous": "-0.2%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:00:00.000Z",
+        "name": "교통을 제외한 내구재 (MoM)  (5월)",
+        "importance": 1,
+        "actual": "-0.1%",
+        "forecast": "",
+        "previous": "-0.1%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:00:00.000Z",
+        "name": "공장수주 (MoM)  (5월)",
+        "importance": 2,
+        "actual": "-0.5%",
+        "forecast": "0.2%",
+        "previous": "0.4%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:00:00.000Z",
+        "name": "운송부문 제외 공장재 수주 (MoM)  (5월)",
+        "importance": 1,
+        "actual": "-0.7%",
+        "forecast": "0.3%",
+        "previous": "0.5%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:00:00.000Z",
+        "name": "ISM 비제조업 기업활동지수  (6월)",
+        "importance": 1,
+        "actual": "49.6",
+        "forecast": "",
+        "previous": "61.2"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:00:00.000Z",
+        "name": "ISM 비제조업고용지수  (6월)",
+        "importance": 2,
+        "actual": "46.1",
+        "forecast": "49.0",
+        "previous": "47.1"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:00:00.000Z",
+        "name": "ISM 비제조업신규수주지수  (6월)",
+        "importance": 1,
+        "actual": "47.3",
+        "forecast": "53.6",
+        "previous": "54.1"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:00:00.000Z",
+        "name": "ISM 비제조업구매자지수  (6월)",
+        "importance": 3,
+        "actual": "48.8",
+        "forecast": "52.6",
+        "previous": "53.8"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:00:00.000Z",
+        "name": "ISM 비제조업물가지수  (6월)",
+        "importance": 2,
+        "actual": "56.3",
+        "forecast": "56.7",
+        "previous": "58.1"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:30:00.000Z",
+        "name": "원유재고",
+        "importance": 3,
+        "actual": "-12.157M",
+        "forecast": "-0.400M",
+        "previous": "3.591M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:30:00.000Z",
+        "name": "EIA 정유소 원유 고갈율 (WoW)",
+        "importance": 1,
+        "actual": "0.260M",
+        "forecast": "",
+        "previous": "-0.233M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:30:00.000Z",
+        "name": "원유 수입",
+        "importance": 1,
+        "actual": "-0.555M",
+        "forecast": "",
+        "previous": "0.065M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:30:00.000Z",
+        "name": "쿠싱 원유 재고",
+        "importance": 2,
+        "actual": "0.345M",
+        "forecast": "",
+        "previous": "-0.226M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:30:00.000Z",
+        "name": "증류유 생산",
+        "importance": 1,
+        "actual": "0.204M",
+        "forecast": "",
+        "previous": "0.142M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:30:00.000Z",
+        "name": "에너지 정보청 주간 정제유 재고량",
+        "importance": 1,
+        "actual": "-1.535M",
+        "forecast": "-1.100M",
+        "previous": "-0.377M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:30:00.000Z",
+        "name": "가솔린 생산",
+        "importance": 1,
+        "actual": "0.180M",
+        "forecast": "",
+        "previous": "-0.289M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:30:00.000Z",
+        "name": "난방유 비축량",
+        "importance": 1,
+        "actual": "-0.572M",
+        "forecast": "",
+        "previous": "0.406M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:30:00.000Z",
+        "name": "EIA 주간 정유소 가동율 (WoW)",
+        "importance": 1,
+        "actual": "1.3%",
+        "forecast": "",
+        "previous": "-1.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-03T23:30:00.000Z",
+        "name": "가솔린 재고",
+        "importance": 1,
+        "actual": "-2.214M",
+        "forecast": "-1.500M",
+        "previous": "2.654M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-04T00:30:00.000Z",
+        "name": "애틀랜타 연방준비은행의 GDPnow  (2분기)",
+        "importance": 2,
+        "actual": "1.5%",
+        "forecast": "1.7%",
+        "previous": "1.7%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-04T01:00:00.000Z",
+        "name": "천연가스 재고량",
+        "importance": 1,
+        "actual": "32B",
+        "forecast": "29B",
+        "previous": "52B"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-04T03:00:00.000Z",
+        "name": "연방공개시장위원회 회의록",
+        "importance": 3,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-05T18:40:00.000Z",
+        "name": "FOMC 멤버 Williams가 연설",
+        "importance": 2,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-05T21:30:00.000Z",
+        "name": "미국 평균 시간당 임금 (YoY)  (6월)",
+        "importance": 2,
+        "actual": "3.9%",
+        "forecast": "3.9%",
+        "previous": "4.1%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-05T21:30:00.000Z",
+        "name": "미국 평균 시간당 임금 (MoM)  (6월)",
+        "importance": 3,
+        "actual": "0.3%",
+        "forecast": "0.3%",
+        "previous": "0.4%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-05T21:30:00.000Z",
+        "name": "평균주당근무시간  (6월)",
+        "importance": 1,
+        "actual": "34.3",
+        "forecast": "34.3",
+        "previous": "34.3"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-05T21:30:00.000Z",
+        "name": "정부 급여  (6월)",
+        "importance": 1,
+        "actual": "70.0K",
+        "forecast": "",
+        "previous": "25.0K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-05T21:30:00.000Z",
+        "name": "제조업 급여  (6월)",
+        "importance": 1,
+        "actual": "-8K",
+        "forecast": "6K",
+        "previous": "8K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-05T21:30:00.000Z",
+        "name": "비농업고용지수  (6월)",
+        "importance": 3,
+        "actual": "206K",
+        "forecast": "191K",
+        "previous": "218K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-05T21:30:00.000Z",
+        "name": "경제활동참가율  (6월)",
+        "importance": 2,
+        "actual": "62.6%",
+        "forecast": "62.6%",
+        "previous": "62.5%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-05T21:30:00.000Z",
+        "name": "민간 비농업부문 고용 변화  (6월)",
+        "importance": 2,
+        "actual": "136K",
+        "forecast": "160K",
+        "previous": "193K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-05T21:30:00.000Z",
+        "name": "U6 실업률  (6월)",
+        "importance": 2,
+        "actual": "7.4%",
+        "forecast": "",
+        "previous": "7.4%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-05T21:30:00.000Z",
+        "name": "실업률  (6월)",
+        "importance": 3,
+        "actual": "4.1%",
+        "forecast": "4.0%",
+        "previous": "4.0%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-06T00:00:00.000Z",
+        "name": "연준 통화정책 보고서",
+        "importance": 3,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-06T02:00:00.000Z",
+        "name": "베이커 휴즈 굴착장비수",
+        "importance": 2,
+        "actual": "479",
+        "forecast": "",
+        "previous": "479"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-06T02:00:00.000Z",
+        "name": "미국 베이커 휴즈 총 원유시추수",
+        "importance": 2,
+        "actual": "585",
+        "forecast": "",
+        "previous": "581"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-06T05:30:00.000Z",
+        "name": "Fed's Balance Sheet",
+        "importance": 2,
+        "actual": "7,222B",
+        "forecast": "",
+        "previous": "7,231B"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-06T05:30:00.000Z",
+        "name": "연방준비은행 지급준비금 잔액",
+        "importance": 1,
+        "actual": "3.322T",
+        "forecast": "",
+        "previous": "3.269T"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-08T23:00:00.000Z",
+        "name": "CB 고용동향지수  (6월)",
+        "importance": 1,
+        "actual": "110.27",
+        "forecast": "",
+        "previous": "111.04"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-08T23:00:00.000Z",
+        "name": "차량 총매출  (6월)",
+        "importance": 1,
+        "actual": "15.30M",
+        "forecast": "",
+        "previous": "15.90M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T00:00:00.000Z",
+        "name": "소비자 인플레이션 예상치",
+        "importance": 1,
+        "actual": "3.0%",
+        "forecast": "",
+        "previous": "3.2%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T00:30:00.000Z",
+        "name": "3개월물 국채 입찰",
+        "importance": 1,
+        "actual": "5.230%",
+        "forecast": "",
+        "previous": "5.240%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T00:30:00.000Z",
+        "name": "6개월물 국채 입찰",
+        "importance": 1,
+        "actual": "5.080%",
+        "forecast": "",
+        "previous": "5.115%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T04:00:00.000Z",
+        "name": "소비자신용  (5월)",
+        "importance": 1,
+        "actual": "11.35B",
+        "forecast": "10.70B",
+        "previous": "6.49B"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T04:30:00.000Z",
+        "name": "CFTC 알루미늄 투기적 순포지션",
+        "importance": 1,
+        "actual": "2.2K",
+        "forecast": "",
+        "previous": "2.3K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T04:30:00.000Z",
+        "name": "CFTC 구리 투기적 순포지션",
+        "importance": 1,
+        "actual": "49.2K",
+        "forecast": "",
+        "previous": "50.1K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T04:30:00.000Z",
+        "name": "CFTC 옥수수 투기적 순포지션",
+        "importance": 1,
+        "actual": "-228.7K",
+        "forecast": "",
+        "previous": "-169.8K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T04:30:00.000Z",
+        "name": "CFTC 원유 투기적 순포지션",
+        "importance": 2,
+        "actual": "279.9K",
+        "forecast": "",
+        "previous": "271.2K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T04:30:00.000Z",
+        "name": "CFTC 금 투기적 순포지션",
+        "importance": 2,
+        "actual": "241.5K",
+        "forecast": "",
+        "previous": "246.2K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T04:30:00.000Z",
+        "name": "CFTC 나스닥 100 투기적 순포지션",
+        "importance": 2,
+        "actual": "10.8K",
+        "forecast": "",
+        "previous": "7.4K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T04:30:00.000Z",
+        "name": "CFTC 천연가스 투기적 순포지션",
+        "importance": 1,
+        "actual": "-90.3K",
+        "forecast": "",
+        "previous": "-89.3K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T04:30:00.000Z",
+        "name": "CFTC S&P 500 투기적 순포지션",
+        "importance": 2,
+        "actual": "-11.8K",
+        "forecast": "",
+        "previous": "-65.2K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T04:30:00.000Z",
+        "name": "CFTC 은 투기적 순포지션",
+        "importance": 1,
+        "actual": "55.8K",
+        "forecast": "",
+        "previous": "56.0K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T04:30:00.000Z",
+        "name": "CFTC 대두 투기적 순포지션",
+        "importance": 1,
+        "actual": "-122.2K",
+        "forecast": "",
+        "previous": "-111.2K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T04:30:00.000Z",
+        "name": "CFTC 소맥 투기적 순포지션",
+        "importance": 1,
+        "actual": "-38.7K",
+        "forecast": "",
+        "previous": "-44.5K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T19:00:00.000Z",
+        "name": "전미자영업연맹 소기업 낙관지수  (6월)",
+        "importance": 1,
+        "actual": "91.5",
+        "forecast": "90.3",
+        "previous": "90.5"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T21:55:00.000Z",
+        "name": "레드북 소매판매지수 (YoY)",
+        "importance": 1,
+        "actual": "6.3%",
+        "forecast": "",
+        "previous": "5.8%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T22:15:00.000Z",
+        "name": "연준 금융감독 부의장 바가 연설합니다",
+        "importance": 2,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T23:00:00.000Z",
+        "name": "연방준비제도(FED) 의장 Powell 증언",
+        "importance": 3,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-09T23:00:00.000Z",
+        "name": "옐런 재무장관의 연설",
+        "importance": 2,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T00:30:00.000Z",
+        "name": "1년물 국채 입찰",
+        "importance": 1,
+        "actual": "4.775%",
+        "forecast": "",
+        "previous": "4.915%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T01:00:00.000Z",
+        "name": "미 에너지청(EIA) 단기에너지전망(STEO)",
+        "importance": 2,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T02:00:00.000Z",
+        "name": "3년물 국채 입찰",
+        "importance": 2,
+        "actual": "4.399%",
+        "forecast": "",
+        "previous": "4.659%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T02:30:00.000Z",
+        "name": "FOMC 위원 보우먼(Bowman) 연설",
+        "importance": 2,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T05:30:00.000Z",
+        "name": "미국석유협회 주간 원유 재고",
+        "importance": 2,
+        "actual": "-1.923M",
+        "forecast": "-0.250M",
+        "previous": "-9.163M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T20:00:00.000Z",
+        "name": "모기지은행협회 30년 모기지금리",
+        "importance": 1,
+        "actual": "7.00%",
+        "forecast": "",
+        "previous": "7.03%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T20:00:00.000Z",
+        "name": "모기지은행협회 모기지신청건수 (WoW)",
+        "importance": 1,
+        "actual": "-0.2%",
+        "forecast": "",
+        "previous": "-2.6%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T20:00:00.000Z",
+        "name": "MBA 구매지수",
+        "importance": 1,
+        "actual": "144.3",
+        "forecast": "",
+        "previous": "142.9"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T20:00:00.000Z",
+        "name": "모기지 시장지수",
+        "importance": 1,
+        "actual": "206.1",
+        "forecast": "",
+        "previous": "206.5"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T20:00:00.000Z",
+        "name": "모기지 재융자지수",
+        "importance": 1,
+        "actual": "532.3",
+        "forecast": "",
+        "previous": "544.1"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T20:00:00.000Z",
+        "name": "석유수출국기구(OPEC) 월간 보고서",
+        "importance": 2,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:00:00.000Z",
+        "name": "연방준비제도(FED) 의장 Powell 증언",
+        "importance": 3,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:00:00.000Z",
+        "name": "도매재고 (MoM)  (5월)",
+        "importance": 1,
+        "actual": "0.6%",
+        "forecast": "0.6%",
+        "previous": "0.1%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:00:00.000Z",
+        "name": "도매 판매액 (MoM)  (5월)",
+        "importance": 1,
+        "actual": "0.4%",
+        "forecast": "",
+        "previous": "0.2%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:30:00.000Z",
+        "name": "원유재고",
+        "importance": 3,
+        "actual": "-3.443M",
+        "forecast": "0.700M",
+        "previous": "-12.157M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:30:00.000Z",
+        "name": "EIA 정유소 원유 고갈율 (WoW)",
+        "importance": 1,
+        "actual": "0.317M",
+        "forecast": "",
+        "previous": "0.260M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:30:00.000Z",
+        "name": "원유 수입",
+        "importance": 1,
+        "actual": "0.615M",
+        "forecast": "",
+        "previous": "-0.555M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:30:00.000Z",
+        "name": "쿠싱 원유 재고",
+        "importance": 2,
+        "actual": "-0.702M",
+        "forecast": "",
+        "previous": "0.345M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:30:00.000Z",
+        "name": "증류유 생산",
+        "importance": 1,
+        "actual": "0.022M",
+        "forecast": "",
+        "previous": "0.204M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:30:00.000Z",
+        "name": "에너지 정보청 주간 정제유 재고량",
+        "importance": 1,
+        "actual": "4.884M",
+        "forecast": "-0.300M",
+        "previous": "-1.535M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:30:00.000Z",
+        "name": "가솔린 생산",
+        "importance": 1,
+        "actual": "0.239M",
+        "forecast": "",
+        "previous": "0.180M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:30:00.000Z",
+        "name": "난방유 비축량",
+        "importance": 1,
+        "actual": "0.356M",
+        "forecast": "",
+        "previous": "-0.572M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:30:00.000Z",
+        "name": "EIA 주간 정유소 가동율 (WoW)",
+        "importance": 1,
+        "actual": "1.9%",
+        "forecast": "",
+        "previous": "1.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-10T23:30:00.000Z",
+        "name": "가솔린 재고",
+        "importance": 1,
+        "actual": "-2.006M",
+        "forecast": "-1.900M",
+        "previous": "-2.214M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T00:00:00.000Z",
+        "name": "톰슨로이터 입소스(IPSOS) 1차 소비자지수(PCSI)  (7월)",
+        "importance": 1,
+        "actual": "55.99",
+        "forecast": "",
+        "previous": "53.82"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T01:00:00.000Z",
+        "name": "애틀랜타 연방준비은행의 GDPnow  (2분기)",
+        "importance": 2,
+        "actual": "2.0%",
+        "forecast": "1.5%",
+        "previous": "1.5%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T02:00:00.000Z",
+        "name": "10년물 국채 입찰",
+        "importance": 2,
+        "actual": "4.276%",
+        "forecast": "",
+        "previous": "4.438%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T03:30:00.000Z",
+        "name": "Fed Goolsbee Speaks",
+        "importance": 1,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T03:30:00.000Z",
+        "name": "FOMC 위원 보우먼(Bowman) 연설",
+        "importance": 2,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T08:30:00.000Z",
+        "name": "쿡 연준 이사가 연설합니다",
+        "importance": 1,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T18:00:00.000Z",
+        "name": "국제 에너지 기구(IEA) 월간 보고서",
+        "importance": 2,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T21:30:00.000Z",
+        "name": "연속 실업수당청구건수",
+        "importance": 2,
+        "actual": "1,852K",
+        "forecast": "1,860K",
+        "previous": "1,856K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T21:30:00.000Z",
+        "name": "근원 소비자물가지수 (YoY)  (6월)",
+        "importance": 2,
+        "actual": "3.3%",
+        "forecast": "3.4%",
+        "previous": "3.4%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T21:30:00.000Z",
+        "name": "근원 소비자물가지수 (MoM)  (6월)",
+        "importance": 3,
+        "actual": "0.1%",
+        "forecast": "0.2%",
+        "previous": "0.2%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T21:30:00.000Z",
+        "name": "핵심 소비자물가 지수  (6월)",
+        "importance": 1,
+        "actual": "318.35",
+        "forecast": "318.78",
+        "previous": "318.14"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T21:30:00.000Z",
+        "name": "소비자물가지수 (MoM)  (6월)",
+        "importance": 3,
+        "actual": "-0.1%",
+        "forecast": "0.1%",
+        "previous": "0.0%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T21:30:00.000Z",
+        "name": "소비자물가지수 (YoY)  (6월)",
+        "importance": 3,
+        "actual": "3.0%",
+        "forecast": "3.1%",
+        "previous": "3.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T21:30:00.000Z",
+        "name": "소비자물가지수  (6월)",
+        "importance": 1,
+        "actual": "314.18",
+        "forecast": "314.63",
+        "previous": "314.07"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T21:30:00.000Z",
+        "name": "소비자물가지수(계절조정)  (6월)",
+        "importance": 1,
+        "actual": "313.05",
+        "forecast": "",
+        "previous": "313.22"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T21:30:00.000Z",
+        "name": "소비자물가지수, 계절 미조정 (MoM)  (6월)",
+        "importance": 1,
+        "actual": "0.03%",
+        "forecast": "",
+        "previous": "0.17%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T21:30:00.000Z",
+        "name": "신규 실업수당청구건수",
+        "importance": 3,
+        "actual": "222K",
+        "forecast": "236K",
+        "previous": "239K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T21:30:00.000Z",
+        "name": "4주 평균 실업수당청구건수",
+        "importance": 1,
+        "actual": "233.50K",
+        "forecast": "",
+        "previous": "238.75K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T21:30:00.000Z",
+        "name": "실질임금 (MoM)  (6월)",
+        "importance": 1,
+        "actual": "0.3%",
+        "forecast": "",
+        "previous": "0.4%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-11T23:30:00.000Z",
+        "name": "천연가스 재고량",
+        "importance": 1,
+        "actual": "65B",
+        "forecast": "56B",
+        "previous": "32B"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T00:00:00.000Z",
+        "name": "클리블랜드 소비자물가지수 (MoM)  (6월)",
+        "importance": 1,
+        "actual": "0.2%",
+        "forecast": "",
+        "previous": "0.2%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T00:30:00.000Z",
+        "name": "4주일물 국채 입찰",
+        "importance": 1,
+        "actual": "5.270%",
+        "forecast": "",
+        "previous": "5.280%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T00:30:00.000Z",
+        "name": "8주일물 미 국채 입찰",
+        "importance": 1,
+        "actual": "5.260%",
+        "forecast": "",
+        "previous": "5.275%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T00:30:00.000Z",
+        "name": "FOMC 위원 Bostic 연설",
+        "importance": 2,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T02:00:00.000Z",
+        "name": "30년물 국채 입찰",
+        "importance": 2,
+        "actual": "4.405%",
+        "forecast": "",
+        "previous": "4.403%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T03:00:00.000Z",
+        "name": "연방재정수지  (6월)",
+        "importance": 2,
+        "actual": "-66.0B",
+        "forecast": "-71.2B",
+        "previous": "-347.0B"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T05:30:00.000Z",
+        "name": "Fed's Balance Sheet",
+        "importance": 2,
+        "actual": "7,224B",
+        "forecast": "",
+        "previous": "7,222B"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T05:30:00.000Z",
+        "name": "연방준비은행 지급준비금 잔액",
+        "importance": 1,
+        "actual": "3.341T",
+        "forecast": "",
+        "previous": "3.322T"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T21:30:00.000Z",
+        "name": "식품/에너지/교통 제외 생산자물가지수(PPI) (MoM)  (6월)",
+        "importance": 1,
+        "actual": "0.0%",
+        "forecast": "0.2%",
+        "previous": "0.2%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T21:30:00.000Z",
+        "name": "식품/에너지/교통 제외 생산자물가지수(PPI) (YoY)  (6월)",
+        "importance": 1,
+        "actual": "3.1%",
+        "forecast": "",
+        "previous": "3.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T21:30:00.000Z",
+        "name": "근원 생산자물가지수 (MoM)  (6월)",
+        "importance": 2,
+        "actual": "0.4%",
+        "forecast": "0.2%",
+        "previous": "0.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T21:30:00.000Z",
+        "name": "근원 생산자물가지수 (YoY)  (6월)",
+        "importance": 1,
+        "actual": "3.0%",
+        "forecast": "2.5%",
+        "previous": "2.6%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T21:30:00.000Z",
+        "name": "생산자물가지수 (MoM)  (6월)",
+        "importance": 3,
+        "actual": "0.2%",
+        "forecast": "0.1%",
+        "previous": "0.0%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T21:30:00.000Z",
+        "name": "생산자물가지수 (YoY)  (6월)",
+        "importance": 1,
+        "actual": "2.6%",
+        "forecast": "2.3%",
+        "previous": "2.4%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T23:00:00.000Z",
+        "name": "미국 미시간대 인플레이션 기대치  (7월)",
+        "importance": 2,
+        "actual": "2.9%",
+        "forecast": "2.9%",
+        "previous": "3.0%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T23:00:00.000Z",
+        "name": "미시간 5년 인플레이션 예상  (7월)",
+        "importance": 2,
+        "actual": "2.9%",
+        "forecast": "3.0%",
+        "previous": "3.0%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T23:00:00.000Z",
+        "name": "미시간대 소비자기대지수  (7월)",
+        "importance": 2,
+        "actual": "67.2",
+        "forecast": "69.8",
+        "previous": "69.6"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T23:00:00.000Z",
+        "name": "미시간대 소비자심리지수  (7월)",
+        "importance": 2,
+        "actual": "66.0",
+        "forecast": "68.5",
+        "previous": "68.2"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-12T23:00:00.000Z",
+        "name": "미시간대 소비자평가지수  (7월)",
+        "importance": 1,
+        "actual": "64.1",
+        "forecast": "66.3",
+        "previous": "65.9"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T01:00:00.000Z",
+        "name": "WASDE 보고서",
+        "importance": 2,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T02:00:00.000Z",
+        "name": "베이커 휴즈 굴착장비수",
+        "importance": 2,
+        "actual": "478",
+        "forecast": "",
+        "previous": "479"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T02:00:00.000Z",
+        "name": "미국 베이커 휴즈 총 원유시추수",
+        "importance": 2,
+        "actual": "584",
+        "forecast": "",
+        "previous": "585"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T04:30:00.000Z",
+        "name": "CFTC 알루미늄 투기적 순포지션",
+        "importance": 1,
+        "actual": "2.2K",
+        "forecast": "",
+        "previous": "2.2K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T04:30:00.000Z",
+        "name": "CFTC 구리 투기적 순포지션",
+        "importance": 1,
+        "actual": "56.0K",
+        "forecast": "",
+        "previous": "49.2K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T04:30:00.000Z",
+        "name": "CFTC 옥수수 투기적 순포지션",
+        "importance": 1,
+        "actual": "-239.9K",
+        "forecast": "",
+        "previous": "-228.7K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T04:30:00.000Z",
+        "name": "CFTC 원유 투기적 순포지션",
+        "importance": 2,
+        "actual": "283.9K",
+        "forecast": "",
+        "previous": "279.9K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T04:30:00.000Z",
+        "name": "CFTC 금 투기적 순포지션",
+        "importance": 2,
+        "actual": "254.8K",
+        "forecast": "",
+        "previous": "241.5K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T04:30:00.000Z",
+        "name": "CFTC 나스닥 100 투기적 순포지션",
+        "importance": 2,
+        "actual": "5.2K",
+        "forecast": "",
+        "previous": "10.8K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T04:30:00.000Z",
+        "name": "CFTC 천연가스 투기적 순포지션",
+        "importance": 1,
+        "actual": "-105.5K",
+        "forecast": "",
+        "previous": "-90.3K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T04:30:00.000Z",
+        "name": "CFTC S&P 500 투기적 순포지션",
+        "importance": 2,
+        "actual": "-55.0K",
+        "forecast": "",
+        "previous": "-11.8K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T04:30:00.000Z",
+        "name": "CFTC 은 투기적 순포지션",
+        "importance": 1,
+        "actual": "61.1K",
+        "forecast": "",
+        "previous": "55.8K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T04:30:00.000Z",
+        "name": "CFTC 대두 투기적 순포지션",
+        "importance": 1,
+        "actual": "-150.2K",
+        "forecast": "",
+        "previous": "-122.2K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-13T04:30:00.000Z",
+        "name": "CFTC 소맥 투기적 순포지션",
+        "importance": 1,
+        "actual": "-34.8K",
+        "forecast": "",
+        "previous": "-38.7K"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-15T21:30:00.000Z",
+        "name": "미국 뉴욕 엠파이어스테이트 제조업지수  (7월)",
+        "importance": 2,
+        "actual": "-6.60",
+        "forecast": "-5.50",
+        "previous": "-6.00"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T00:30:00.000Z",
+        "name": "3개월물 국채 입찰",
+        "importance": 1,
+        "actual": "5.195%",
+        "forecast": "",
+        "previous": "5.230%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T00:30:00.000Z",
+        "name": "6개월물 국채 입찰",
+        "importance": 1,
+        "actual": "4.985%",
+        "forecast": "",
+        "previous": "5.080%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T01:30:00.000Z",
+        "name": "연방준비제도(FED) 의장 Powell 연설",
+        "importance": 3,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T05:35:00.000Z",
+        "name": "연방공개시장위원회 위원 델리의 연설",
+        "importance": 2,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T21:30:00.000Z",
+        "name": "근원 소매판매 (MoM)  (6월)",
+        "importance": 3,
+        "actual": "0.4%",
+        "forecast": "0.1%",
+        "previous": "0.1%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T21:30:00.000Z",
+        "name": "수출 물가 지수 (YoY)  (6월)",
+        "importance": 1,
+        "actual": "0.7%",
+        "forecast": "1.0%",
+        "previous": "0.5%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T21:30:00.000Z",
+        "name": "수출물가지수 (MoM)  (6월)",
+        "importance": 2,
+        "actual": "-0.5%",
+        "forecast": "-0.1%",
+        "previous": "-0.7%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T21:30:00.000Z",
+        "name": "수입물가지수 (MoM)  (6월)",
+        "importance": 2,
+        "actual": "0.0%",
+        "forecast": "0.2%",
+        "previous": "-0.2%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T21:30:00.000Z",
+        "name": "수입 물가 지수 (YoY)  (6월)",
+        "importance": 1,
+        "actual": "1.6%",
+        "forecast": "1.0%",
+        "previous": "1.4%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T21:30:00.000Z",
+        "name": "소매관리 (MoM)  (6월)",
+        "importance": 2,
+        "actual": "0.9%",
+        "forecast": "0.2%",
+        "previous": "0.4%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T21:30:00.000Z",
+        "name": "소매판매 (MoM)  (6월)",
+        "importance": 3,
+        "actual": "0.0%",
+        "forecast": "-0.3%",
+        "previous": "0.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T21:30:00.000Z",
+        "name": "소매판매 (YoY)  (6월)",
+        "importance": 1,
+        "actual": "2.28%",
+        "forecast": "",
+        "previous": "2.59%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T21:30:00.000Z",
+        "name": "석유와 자동차를 제외한 소매 판매 (MoM)  (6월)",
+        "importance": 1,
+        "actual": "0.8%",
+        "forecast": "0.2%",
+        "previous": "0.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T21:55:00.000Z",
+        "name": "레드북 소매판매지수 (YoY)",
+        "importance": 1,
+        "actual": "4.8%",
+        "forecast": "",
+        "previous": "6.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T23:00:00.000Z",
+        "name": "기업재고 (MoM)  (5월)",
+        "importance": 2,
+        "actual": "0.5%",
+        "forecast": "0.4%",
+        "previous": "0.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T23:00:00.000Z",
+        "name": "전미주택건설협회 주택시장지수  (7월)",
+        "importance": 1,
+        "actual": "42",
+        "forecast": "43",
+        "previous": "43"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-16T23:00:00.000Z",
+        "name": "자동차 제외 소매 재고  (5월)",
+        "importance": 2,
+        "actual": "0.0%",
+        "forecast": "0.0%",
+        "previous": "0.3%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-17T01:00:00.000Z",
+        "name": "애틀랜타 연방준비은행의 GDPnow  (2분기)",
+        "importance": 2,
+        "actual": "2.5%",
+        "forecast": "2.0%",
+        "previous": "2.0%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-17T03:45:00.000Z",
+        "name": "아드리아나 쿠글러 FOMC 위원의 연설",
+        "importance": 1,
+        "actual": "",
+        "forecast": "",
+        "previous": ""
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-17T05:30:00.000Z",
+        "name": "미국석유협회 주간 원유 재고",
+        "importance": 2,
+        "actual": "-4.440M",
+        "forecast": "",
+        "previous": "-1.923M"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-17T20:00:00.000Z",
+        "name": "모기지은행협회 30년 모기지금리",
+        "importance": 1,
+        "actual": "6.87%",
+        "forecast": "",
+        "previous": "7.00%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-17T20:00:00.000Z",
+        "name": "모기지은행협회 모기지신청건수 (WoW)",
+        "importance": 1,
+        "actual": "3.9%",
+        "forecast": "",
+        "previous": "-0.2%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-17T20:00:00.000Z",
+        "name": "MBA 구매지수",
+        "importance": 1,
+        "actual": "140.4",
+        "forecast": "",
+        "previous": "144.3"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-17T20:00:00.000Z",
+        "name": "모기지 시장지수",
+        "importance": 1,
+        "actual": "214.1",
+        "forecast": "",
+        "previous": "206.1"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-17T20:00:00.000Z",
+        "name": "모기지 재융자지수",
+        "importance": 1,
+        "actual": "613.0",
+        "forecast": "",
+        "previous": "532.3"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-17T21:30:00.000Z",
+        "name": "건축허가건수 (MoM)  (6월)",
+        "importance": 1,
+        "actual": "3.4%",
+        "forecast": "",
+        "previous": "-2.8%"
+    },
+    {
+        "country": "USA",
+        "releaseDate": "2024-07-17T21:30:00.000Z",
+        "name": "건축승인건수  (6월)",
+        "importance": 2,
+        "actual": "1.446M",
+        "forecast": "1.400M",
+        "previous": "1.399M"
+    }
+]
