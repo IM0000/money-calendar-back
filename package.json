@@ -23,7 +23,11 @@
     "test:cov": "pnpm jest --coverage",
     "test:debug": "pnpm node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e:backend": "pnpm jest --config ./apps/backend/test/jest-e2e.json",
-    "test:e2e:scraping": "pnpm jest --config ./apps/scraping/test/jest-e2e.json"
+    "test:e2e:scraping": "pnpm jest --config ./apps/scraping/test/jest-e2e.json",
+    "prisma:generate:backend:dev": "dotenv -e apps/backend/src/config/env/.development.env -- npx prisma generate --schema=apps/backend/prisma/schema.prisma",
+    "prisma:generate:backend:prod": "dotenv -e apps/backend/src/config/env/.production.env -- npx prisma generate --schema=apps/backend/prisma/schema.prisma",
+    "prisma:generate:scraping:dev": "dotenv -e apps/scraping/src/config/env/.development.env -- npx prisma generate --schema=apps/scraping/prisma/schema.prisma",
+    "prisma:generate:scraping:prod": "dotenv -e apps/scraping/src/config/env/.production.env -- npx prisma generate --schema=apps/scraping/prisma/schema.prisma"
   },
   "dependencies": {
     "@nestjs/common": "^9.0.0",

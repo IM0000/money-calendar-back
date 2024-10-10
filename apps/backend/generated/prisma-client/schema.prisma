@@ -1,0 +1,46 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  password      String? // 이메일 로그인 사용자의 경우 사용
+  nickname      String?
+  verified      Boolean        @default(false)
+  oauthAccounts OAuthAccount[] // 여러 OAuth 계정을 가질 수 있음
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model OAuthAccount {
+  id         Int      @id @default(autoincrement())
+  provider   String // 'google', 'kakao', 'apple', 'discord', 등
+  providerId String // OAuth 제공자가 제공하는 고유 ID
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([provider, providerId]) // 같은 제공자와 ID 조합이 중복되지 않도록 설정
+}
+
+model VerificationCode {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
