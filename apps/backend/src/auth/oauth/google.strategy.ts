@@ -42,7 +42,6 @@ export class GoogleStrategy implements OAuthStrategy {
       provider: this.provider,
       providerId: userInfo.sub,
       email: userInfo.email,
-      nickname: userInfo.name,
     };
   }
 

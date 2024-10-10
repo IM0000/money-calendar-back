@@ -6,12 +6,14 @@ import { UsersService } from '../users/users.service';
 import { LoginDto } from '../users/dto/login.dto';
 import { OAuthStrategy } from './oauth/oauth-strategy.interface';
 import { User } from '@prisma/client';
-import { ConfigService } from '@nestjs/config';
+import { ConfigType } from '@nestjs/config';
+import { jwtConfig } from '../config/jwt.config';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly configService: ConfigService,
+    @Inject(jwtConfig.KEY)
+    private jwtConfiguration: ConfigType<typeof jwtConfig>,
     private readonly usersService: UsersService, // Users 관련 로직
     @Inject('OAUTH_STRATEGIES') private readonly strategies: OAuthStrategy[], // OAuth 전략들
   ) {}
@@ -39,17 +41,8 @@ export class AuthService {
    * @param query OAuth 제공자로부터 받은 쿼리 파라미터
    * @returns JWT 토큰과 사용자 정보
    */
-  async loginWithOAuth(provider: string, query: any): Promise<any> {
-    const strategy = this.strategies.find(
-      (strategy) => strategy.provider === provider,
-    );
-    if (!strategy) {
-      throw new Error(`'${provider}'는 지원하지 않는 인증 기관입니다.`);
-    }
-    const oauthUser = await strategy.authenticate(query);
-    const user = await this.usersService.findOrCreateUserFromOAuth(oauthUser);
-    const token = this.generateJwtToken(user);
-    return { token, user };
+  async loginWithOAuth(provider: string, query: any) {
+    console.log('loginWithOAuth', provider, query);
   }
 
   /**
@@ -64,8 +57,8 @@ export class AuthService {
       nickname: user.nickname,
     };
 
-    const secret = this.configService.get<string>('JWT_SECRET');
-    const expiresIn = this.configService.get<string>('JWT_EXPIRATION', '3600s'); // 기본값 '3600s'
+    const secret = this.jwtConfiguration.secret;
+    const expiresIn = this.jwtConfiguration.expiration;
 
     // JWT 생성
     return jwt.sign(payload, secret, { expiresIn });
@@ -77,12 +70,38 @@ export class AuthService {
    * @returns 디코딩된 토큰 정보
    */
   async verifyJwtToken(token: string): Promise<any> {
-    const secret = this.configService.get<string>('JWT_SECRET');
+    const secret = this.jwtConfiguration.secret;
     try {
       const decoded = jwt.verify(token, secret);
       return decoded;
     } catch (error) {
       throw new Error('유효하지 않은 토큰입니다.');
     }
+  }
+
+  /**
+   * 기존 사용자 계정에 OAuth 계정 연동
+   * @param userId 현재 로그인한 사용자 ID
+   * @param provider OAuth 제공자 이름
+   * @param query OAuth 제공자로부터 받은 쿼리 파라미터
+   * @returns 연동된 사용자 정보
+   */
+  async linkOAuthAccount(
+    userId: number,
+    provider: string,
+    query: any,
+  ): Promise<User> {
+    const strategy = this.strategies.find(
+      (strategy) => strategy.provider === provider,
+    );
+    if (!strategy) {
+      throw new Error(`'${provider}'는 지원하지 않는 인증 기관입니다.`);
+    }
+    const oauthUser = await strategy.authenticate(query);
+    const updatedUser = await this.usersService.linkOAuthAccount(
+      userId,
+      oauthUser,
+    );
+    return updatedUser;
   }
 }

@@ -18,6 +18,7 @@ model User {
   email        String          @unique
   password     String?         // 이메일 로그인 사용자의 경우 사용
   nickname     String?
+  verified     Boolean         @default(false)
   oauthAccounts OAuthAccount[] // 여러 OAuth 계정을 가질 수 있음
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
@@ -33,4 +34,12 @@ model OAuthAccount {
   updatedAt    DateTime @updatedAt
 
   @@unique([provider, providerId]) // 같은 제공자와 ID 조합이 중복되지 않도록 설정
+}
+
+model VerificationCode {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  code       String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
 }

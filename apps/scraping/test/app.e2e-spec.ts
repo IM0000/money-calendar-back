@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { ScrapingModule } from './../src/scraping.module';
+import { ScrapingModule } from '../src/scraping.module';
 
 describe('ScrapingController (e2e)', () => {
   let app: INestApplication;

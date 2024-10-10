@@ -5,7 +5,6 @@ import * as cheerio from 'cheerio';
 import { PrismaService } from './prisma/prisma.service';
 import { ScrapeDto } from './dto/scrape.dto';
 import {
-  Country3to2Map,
   CountryCodeMap,
   CountryNameToCodeMap,
   ImportanceLevelMap,

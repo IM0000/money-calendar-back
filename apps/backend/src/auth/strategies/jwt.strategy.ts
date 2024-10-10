@@ -1,21 +1,21 @@
 // /auth/jwt.strategy.ts
-
+import { jwtConfig } from '../../config/jwt.config';
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
-import { UsersService } from '../users/users.service';
+import { ConfigType } from '@nestjs/config';
+import { UsersService } from '../../users/users.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
-    private readonly configService: ConfigService,
+    private jwtConfiguration: ConfigType<typeof jwtConfig>,
     private readonly usersService: UsersService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), // Authorization 헤더에서 토큰 추출
       ignoreExpiration: false, // 만료된 토큰을 무시하지 않음
-      secretOrKey: configService.get<string>('JWT_SECRET'), // 비밀 키 설정
+      secretOrKey: jwtConfiguration.secret, // 비밀 키 설정
     });
   }
 
