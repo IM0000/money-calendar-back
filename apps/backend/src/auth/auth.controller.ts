@@ -25,7 +25,6 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
-    @Inject('OAUTH_STRATEGIES') private readonly strategies: OAuthStrategy[],
   ) {}
 
   /**

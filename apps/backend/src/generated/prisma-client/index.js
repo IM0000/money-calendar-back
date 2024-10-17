@@ -147,7 +147,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/sjlim/Documents/money-project/backend-project/apps/backend/generated/prisma-client",
+      "value": "/Users/sjlim/Documents/money-project/backend-project/apps/backend/src/generated/prisma-client",
       "fromEnvVar": null
     },
     "config": {
@@ -167,7 +167,7 @@ const config = {
   "relativeEnvPaths": {
     "rootEnvPath": null
   },
-  "relativePath": "../../prisma",
+  "relativePath": "../../../prisma",
   "clientVersion": "5.19.0",
   "engineVersion": "5fe21811a6ba0b952a3bc71400666511fe3b902f",
   "datasourceNames": [
@@ -183,8 +183,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../generated/prisma-client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id            Int            @id @default(autoincrement())\n  email         String         @unique\n  password      String? // 이메일 로그인 사용자의 경우 사용\n  nickname      String?\n  verified      Boolean        @default(false)\n  oauthAccounts OAuthAccount[] // 여러 OAuth 계정을 가질 수 있음\n  createdAt     DateTime       @default(now())\n  updatedAt     DateTime       @updatedAt\n}\n\nmodel OAuthAccount {\n  id         Int      @id @default(autoincrement())\n  provider   String // 'google', 'kakao', 'apple', 'discord', 등\n  providerId String // OAuth 제공자가 제공하는 고유 ID\n  userId     Int\n  user       User     @relation(fields: [userId], references: [id])\n  createdAt  DateTime @default(now())\n  updatedAt  DateTime @updatedAt\n\n  @@unique([provider, providerId]) // 같은 제공자와 ID 조합이 중복되지 않도록 설정\n}\n\nmodel VerificationCode {\n  id        Int      @id @default(autoincrement())\n  email     String   @unique\n  code      String\n  expiresAt DateTime\n  createdAt DateTime @default(now())\n}\n",
-  "inlineSchemaHash": "0d1de20e016fcb4222ae3e2ddd8c6ee14d60193e7821b6aa6bace0d3c41f3f87",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma-client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id            Int            @id @default(autoincrement())\n  email         String         @unique\n  password      String? // 이메일 로그인 사용자의 경우 사용\n  nickname      String?\n  verified      Boolean        @default(false)\n  oauthAccounts OAuthAccount[] // 여러 OAuth 계정을 가질 수 있음\n  createdAt     DateTime       @default(now())\n  updatedAt     DateTime       @updatedAt\n}\n\nmodel OAuthAccount {\n  id         Int      @id @default(autoincrement())\n  provider   String // 'google', 'kakao', 'apple', 'discord', 등\n  providerId String // OAuth 제공자가 제공하는 고유 ID\n  userId     Int\n  user       User     @relation(fields: [userId], references: [id])\n  createdAt  DateTime @default(now())\n  updatedAt  DateTime @updatedAt\n\n  @@unique([provider, providerId]) // 같은 제공자와 ID 조합이 중복되지 않도록 설정\n}\n\nmodel VerificationCode {\n  id        Int      @id @default(autoincrement())\n  email     String   @unique\n  code      String\n  expiresAt DateTime\n  createdAt DateTime @default(now())\n}\n",
+  "inlineSchemaHash": "e5aa1a86702b1c3e376215a334838df576a9f8f78e6b1269ca6355aa4a990fe1",
   "copyEngine": true
 }
 
@@ -193,8 +193,8 @@ const fs = require('fs')
 config.dirname = __dirname
 if (!fs.existsSync(path.join(__dirname, 'schema.prisma'))) {
   const alternativePaths = [
-    "apps/backend/generated/prisma-client",
-    "backend/generated/prisma-client",
+    "apps/backend/src/generated/prisma-client",
+    "backend/src/generated/prisma-client",
   ]
   
   const alternativePath = alternativePaths.find((altPath) => {
@@ -223,7 +223,7 @@ Object.assign(exports, Prisma)
 
 // file annotations for bundling tools to include these files
 path.join(__dirname, "libquery_engine-darwin.dylib.node");
-path.join(process.cwd(), "apps/backend/generated/prisma-client/libquery_engine-darwin.dylib.node")
+path.join(process.cwd(), "apps/backend/src/generated/prisma-client/libquery_engine-darwin.dylib.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
-path.join(process.cwd(), "apps/backend/generated/prisma-client/schema.prisma")
+path.join(process.cwd(), "apps/backend/src/generated/prisma-client/schema.prisma")

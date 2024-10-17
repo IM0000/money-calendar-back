@@ -15,7 +15,6 @@ export class AuthService {
     @Inject(jwtConfig.KEY)
     private jwtConfiguration: ConfigType<typeof jwtConfig>,
     private readonly usersService: UsersService, // Users 관련 로직
-    @Inject('OAUTH_STRATEGIES') private readonly strategies: OAuthStrategy[], // OAuth 전략들
   ) {}
 
   /**
@@ -86,22 +85,22 @@ export class AuthService {
    * @param query OAuth 제공자로부터 받은 쿼리 파라미터
    * @returns 연동된 사용자 정보
    */
-  async linkOAuthAccount(
-    userId: number,
-    provider: string,
-    query: any,
-  ): Promise<User> {
-    const strategy = this.strategies.find(
-      (strategy) => strategy.provider === provider,
-    );
-    if (!strategy) {
-      throw new Error(`'${provider}'는 지원하지 않는 인증 기관입니다.`);
-    }
-    const oauthUser = await strategy.authenticate(query);
-    const updatedUser = await this.usersService.linkOAuthAccount(
-      userId,
-      oauthUser,
-    );
-    return updatedUser;
-  }
+  // async linkOAuthAccount(
+  //   userId: number,
+  //   provider: string,
+  //   query: any,
+  // ): Promise<User> {
+  //   const strategy = this.strategies.find(
+  //     (strategy) => strategy.provider === provider,
+  //   );
+  //   if (!strategy) {
+  //     throw new Error(`'${provider}'는 지원하지 않는 인증 기관입니다.`);
+  //   }
+  //   const oauthUser = await strategy.authenticate(query);
+  //   const updatedUser = await this.usersService.linkOAuthAccount(
+  //     userId,
+  //     oauthUser,
+  //   );
+  //   return updatedUser;
+  // }
 }

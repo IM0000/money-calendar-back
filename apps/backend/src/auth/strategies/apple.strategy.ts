@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, VerifyCallback } from 'passport-apple';
 import { AuthService } from '../auth.service';
@@ -12,6 +12,7 @@ export class AppleStrategy extends PassportStrategy(
   OAuthProviderEnum.Apple,
 ) {
   constructor(
+    @Inject(appleConfig.KEY)
     private readonly appleConfiguration: ConfigType<typeof appleConfig>,
     private readonly authService: AuthService,
   ) {

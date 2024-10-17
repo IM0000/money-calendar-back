@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-discord';
 import { AuthService } from '../auth.service';
@@ -12,6 +12,7 @@ export class DiscordStrategy extends PassportStrategy(
   OAuthProviderEnum.Discord,
 ) {
   constructor(
+    @Inject(discordConfig.KEY)
     private readonly discordConfiguration: ConfigType<typeof discordConfig>,
     private readonly authService: AuthService,
   ) {

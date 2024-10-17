@@ -18,13 +18,24 @@
     "plugins": []
   },
   "projects": {
-    "backend-project": {
+    "backend": {
       "type": "application",
-      "root": "apps/backend-project",
+      "root": "apps/backend",
       "entryFile": "main",
-      "sourceRoot": "apps/backend-project/src",
+      "sourceRoot": "apps/backend/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/backend-project/tsconfig.app.json"
+        "tsConfigPath": "apps/backend/tsconfig.app.json",
+        "outDir": "dist/apps/backend",
+        "assets": [
+          {
+            "include": "../src/generated/prisma-client/**/*",
+            "outDir": "dist/apps/backend"
+          },
+          {
+            "include": "../src/config/env/*.env",
+            "outDir": "dist/apps/backend"
+          }
+        ]
       }
     },
     "scraping": {
@@ -33,7 +44,14 @@
       "entryFile": "main",
       "sourceRoot": "apps/scraping/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/scraping/tsconfig.app.json"
+        "tsConfigPath": "apps/scraping/tsconfig.app.json",
+        "outDir": "dist/apps/scraping",
+        "assets": [
+          {
+            "include": "../src/generated/prisma-client/**/*",
+            "outDir": "dist/apps/scraping"
+          }
+        ]
       }
     }
   }
