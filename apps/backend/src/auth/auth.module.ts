@@ -1,11 +1,9 @@
-import { User } from '@prisma/client';
 // /auth/auth.module.ts
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
-import { EmailModule } from '../email/email.module';
 import { OAuthGuardFactory } from './strategies/oauth-strategy.factory';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { AppleStrategy } from './strategies/apple.strategy';

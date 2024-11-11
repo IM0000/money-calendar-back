@@ -5,15 +5,15 @@ import {
   Query,
   Res,
   Param,
-  Inject,
   Post,
   Body,
   HttpCode,
   HttpStatus,
   UseGuards,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { OAuthStrategy } from './oauth/oauth-strategy.interface';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from '../users/dto/register.dto';
 import { VerifyDto } from '../users/dto/verify.dto';
@@ -50,9 +50,38 @@ export class AuthController {
   async oauthCallback(
     @Param('provider') provider: string,
     @Query() query: any,
+    @Req() req: any,
     @Res() res: any,
   ) {
-    console.log('OAuth callback received');
+    // Passport를 통해 검증된 사용자 정보
+    const oauthUser = req.user;
+
+    if (!oauthUser) {
+      throw new UnauthorizedException('OAuth 인증에 실패했습니다.');
+    }
+
+    // email로 DB에 가입정보가 있는지 확인
+    const user = await this.usersService.findUserByEmail(oauthUser.email);
+
+    // user 정보가 있으면 로그인 처리
+    if (user) {
+      const { token } = await this.authService.loginWithOAuth(oauthUser);
+      // 프론트엔드로 리다이렉트할 URL
+      const frontendRedirectUrl = `${process.env.FRONTEND_URL}/auth/success?token=${token}`;
+
+      return res.redirect(frontendRedirectUrl);
+    } else {
+      // oauth email로 인증코드 전송
+      await this.usersService.sendVerificationCode(oauthUser.email);
+      // 이메일 전송 토큰 생성
+      const emailVerificationToken =
+        await this.authService.generateVerificationToken(oauthUser.email);
+
+      const frontendRedirectUrl = `${
+        process.env.FRONTEND_URL
+      }/auth/email-verify?token=${encodeURIComponent(emailVerificationToken)}`;
+      return res.redirect(frontendRedirectUrl);
+    }
   }
 
   /**
@@ -79,6 +108,19 @@ export class AuthController {
     await this.usersService.verifyCode(email, code);
     await this.usersService.createUserByEmail(email, password);
     return { message: '회원가입이 완료되었습니다.' };
+  }
+
+  /**
+   * 이메일 인증 token을 받고 토큰 확인 후 email을 반환
+   * @param token 이메일토큰
+   * @returns email
+   */
+  @Get('verification-email')
+  async getVerifyEmail(
+    @Query('token') token: string,
+  ): Promise<{ email: string }> {
+    const email = await this.authService.verifyVerificationToken(token);
+    return { email };
   }
 
   /**

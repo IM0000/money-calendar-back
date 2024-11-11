@@ -1,13 +1,12 @@
 // /auth/auth.service.ts
-
 import * as jwt from 'jsonwebtoken';
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from '../users/dto/login.dto';
-import { OAuthStrategy } from './oauth/oauth-strategy.interface';
 import { User } from '@prisma/client';
 import { ConfigType } from '@nestjs/config';
 import { jwtConfig } from '../config/jwt.config';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AuthService {
@@ -36,12 +35,17 @@ export class AuthService {
 
   /**
    * OAuth 제공자를 통해 로그인 처리
-   * @param provider OAuth 제공자 이름
-   * @param query OAuth 제공자로부터 받은 쿼리 파라미터
+   * @param oauthUser OAuth 사용자 정보
    * @returns JWT 토큰과 사용자 정보
    */
-  async loginWithOAuth(provider: string, query: any) {
-    console.log('loginWithOAuth', provider, query);
+  async loginWithOAuth(oauthUser: any): Promise<any> {
+    // UsersService를 통해 사용자 찾기 또는 생성
+    const user = await this.usersService.findOrCreateUserFromOAuth(oauthUser);
+
+    // JWT 토큰 생성
+    const token = this.generateJwtToken(user);
+
+    return { token, user };
   }
 
   /**
@@ -64,18 +68,28 @@ export class AuthService {
   }
 
   /**
-   * JWT 토큰 검증 함수 (JwtStrategy에서 처리)
-   * @param token JWT 토큰
-   * @returns 디코딩된 토큰 정보
+   * 이메일 인증 토큰 생성 및 저장
+   * @param email 사용자 이메일
+   * @returns opaque 토큰
    */
-  async verifyJwtToken(token: string): Promise<any> {
-    const secret = this.jwtConfiguration.secret;
-    try {
-      const decoded = jwt.verify(token, secret);
-      return decoded;
-    } catch (error) {
-      throw new Error('유효하지 않은 토큰입니다.');
-    }
+  async generateVerificationToken(email: string): Promise<string> {
+    const token = uuidv4(); // 고유한 토큰 생성
+
+    // 토큰을 데이터베이스에 저장 (예: Prisma 사용)
+    await this.usersService.storeVerificationToken(token, email);
+
+    return token;
+  }
+
+  /**
+   * 토큰 검증 및 이메일 반환
+   * @param token opaque 토큰
+   * @returns 사용자 이메일
+   */
+  async verifyVerificationToken(token: string): Promise<string> {
+    const email = await this.usersService.findEmailFromVerificationToken(token);
+
+    return email;
   }
 
   /**

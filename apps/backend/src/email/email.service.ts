@@ -27,23 +27,13 @@ export class EmailService {
     });
   }
 
-  async sendMemberJoinVerification(
-    emailAddress: string,
-    signupVerifyToken: string,
-  ) {
-    const baseUrl = this.emailConfiguration.baseUrl;
-
-    // 유저가 버튼 눌렀을 때 요청되는 url
-    const url = `${baseUrl}/users/email-verify?signupVerifyToken=${signupVerifyToken}`;
-
+  async sendMemberJoinVerification(emailAddress: string, code: string) {
     const mailOptions: EmailOptions = {
       to: emailAddress,
-      subject: '머니캘린더 가입 인증 메일',
+      subject: '머니캘린더 가입 인증코드',
       html: `
-        가입확인 버튼을 누르시면 가입 인증이 완료됩니다.<br/>
-        <form action="${url}" method="POST">
-          <button>가입확인</button>
-        </form>
+        <p>머니캘린더 인증코드는 <strong>${code}</strong> 입니다.</p>
+        <p>인증 코드의 유효 기간은 10분입니다.</p>
       `,
     };
 

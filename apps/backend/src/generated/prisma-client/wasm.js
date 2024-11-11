@@ -17,11 +17,11 @@ exports.$Enums = {}
 
 /**
  * Prisma Client JS version: 5.19.0
- * Query Engine version: 5fe21811a6ba0b952a3bc71400666511fe3b902f
+ * Query Engine version: 605197351a3c8bdd595af2d2a9bc3025bca48ea2
  */
 Prisma.prismaVersion = {
   client: "5.19.0",
-  engine: "5fe21811a6ba0b952a3bc71400666511fe3b902f"
+  engine: "605197351a3c8bdd595af2d2a9bc3025bca48ea2"
 }
 
 Prisma.PrismaClientKnownRequestError = () => {
@@ -146,6 +146,13 @@ exports.Prisma.VerificationCodeScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.VerificationTokenScalarFieldEnum = {
+  id: 'id',
+  token: 'token',
+  email: 'email',
+  expiresAt: 'expiresAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -165,7 +172,8 @@ exports.Prisma.NullsOrder = {
 exports.Prisma.ModelName = {
   User: 'User',
   OAuthAccount: 'OAuthAccount',
-  VerificationCode: 'VerificationCode'
+  VerificationCode: 'VerificationCode',
+  VerificationToken: 'VerificationToken'
 };
 
 /**

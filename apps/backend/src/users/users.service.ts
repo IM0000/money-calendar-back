@@ -9,7 +9,6 @@ import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RandomNickList } from '../common/random-nick.constants';
-import { v4 as uuidv4 } from 'uuid';
 import { EmailService } from '../email/email.service';
 import { randomInt } from 'crypto';
 
@@ -232,12 +231,6 @@ export class UsersService {
    * @param email 이메일 주소
    */
   async sendVerificationCode(email: string): Promise<void> {
-    // 이미 사용 중인 이메일인지 확인 (OAuth 등록 시 필요)
-    const existingUser = await this.findUserByEmail(email);
-    if (existingUser && existingUser.verified) {
-      throw new ConflictException('이미 사용 중인 이메일입니다.');
-    }
-
     // 인증 코드 생성
     const code = this.generateSixDigitCode(); // 숫자 6자리
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10분 후 만료
@@ -286,6 +279,39 @@ export class UsersService {
         data: { verified: true },
       });
     }
+  }
+
+  /**
+   * 이메일 토큰으로 이메일 찾기
+   * @param token 이메일 토큰
+   * @returns 이메일 주소
+   */
+  async findEmailFromVerificationToken(token: string): Promise<string> {
+    const verification = await this.prisma.verificationToken.findUnique({
+      where: { token },
+    });
+
+    if (!verification || verification.expiresAt < new Date()) {
+      throw new BadRequestException('유효하지 않은 토큰입니다.');
+    }
+
+    return verification.email;
+  }
+
+  /**
+   * 이메일 토큰 저장, 제한시간 10분
+   * @param token 이메일 토큰
+   * @param email 이메일
+   */
+  async storeVerificationToken(token: string, email: string): Promise<void> {
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10분 후 만료
+    await this.prisma.verificationToken.create({
+      data: {
+        token,
+        email,
+        expiresAt,
+      },
+    });
   }
 
   /**
