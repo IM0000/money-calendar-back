@@ -2,7 +2,7 @@
 import Mail from 'nodemailer/lib/mailer';
 import * as nodemailer from 'nodemailer';
 import { emailConfig } from './../config/email.config';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 
 interface EmailOptions {
@@ -13,6 +13,7 @@ interface EmailOptions {
 
 @Injectable()
 export class EmailService {
+  private readonly logger = new Logger(EmailService.name);
   private transporter: Mail;
   constructor(
     @Inject(emailConfig.KEY)
@@ -36,7 +37,8 @@ export class EmailService {
         <p>인증 코드의 유효 기간은 10분입니다.</p>
       `,
     };
-
+    this.logger.log('sendMemberJoinVerification end');
+    this.logger.log(mailOptions);
     return await this.transporter.sendMail(mailOptions);
   }
 }

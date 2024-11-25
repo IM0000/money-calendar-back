@@ -1,3 +1,4 @@
+import { emailValidationSchema } from './../config/validation/email.validation';
 // /auth/auth.controller.ts
 import {
   Controller,
@@ -12,16 +13,20 @@ import {
   UseGuards,
   Req,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
-import { RegisterDto } from '../users/dto/register.dto';
-import { VerifyDto } from '../users/dto/verify.dto';
-import { LoginDto } from '../users/dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+import { VerifyDto } from './dto/verify.dto';
+import { LoginDto } from './dto/login.dto';
 import { DynamicAuthGuard } from './guard/dynamic-auth.guard';
+import { SignUpDto } from './dto/sign-up.dto';
+import { promises } from 'dns';
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
   constructor(
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
@@ -63,8 +68,8 @@ export class AuthController {
     // email로 DB에 가입정보가 있는지 확인
     const user = await this.usersService.findUserByEmail(oauthUser.email);
 
-    // user 정보가 있으면 로그인 처리
-    if (user) {
+    // user 정보가 있고, 비밀번호도 설정되어 있으면 로그인 처리
+    if (user && user.password) {
       const { token } = await this.authService.loginWithOAuth(oauthUser);
       // 프론트엔드로 리다이렉트할 URL
       const frontendRedirectUrl = `${process.env.FRONTEND_URL}/auth/success?token=${token}`;
@@ -89,25 +94,31 @@ export class AuthController {
    * @param registerDto 이메일 주소
    */
   @Post('register')
+  @HttpCode(HttpStatus.OK)
   async register(
     @Body() registerDto: RegisterDto,
-  ): Promise<{ message: string }> {
+  ): Promise<{ token: string; message: string }> {
+    this.logger.log('registerDto', registerDto);
     const { email } = registerDto;
     await this.usersService.sendVerificationCode(email);
-    return { message: '인증 코드가 이메일로 전송되었습니다.' };
+    const emailVerificationToken =
+      await this.authService.generateVerificationToken(email);
+    return {
+      token: emailVerificationToken,
+      message: '인증 코드가 이메일로 전송되었습니다.',
+    };
   }
 
   /**
-   * 인증 코드 검증 및 비밀번호 설정
-   * @param verifyDto 이메일, 인증 코드, 비밀번호
+   * 인증 코드 검증
+   * @param verifyDto 이메일, 인증 코드
    */
   @Post('verify')
   @HttpCode(HttpStatus.OK)
   async verify(@Body() verifyDto: VerifyDto): Promise<{ message: string }> {
-    const { email, code, password } = verifyDto;
+    const { email, code } = verifyDto;
     await this.usersService.verifyCode(email, code);
-    await this.usersService.createUserByEmail(email, password);
-    return { message: '회원가입이 완료되었습니다.' };
+    return { message: '이메일 인증이 완료되었습니다.' };
   }
 
   /**
@@ -119,7 +130,8 @@ export class AuthController {
   async getVerifyEmail(
     @Query('token') token: string,
   ): Promise<{ email: string }> {
-    const email = await this.authService.verifyVerificationToken(token);
+    this.logger.log('token', token);
+    const email = await this.usersService.findEmailFromVerificationToken(token);
     return { email };
   }
 
@@ -130,5 +142,12 @@ export class AuthController {
   @Post('login')
   async login(@Body() loginDto: LoginDto): Promise<any> {
     return await this.authService.loginWithEmail(loginDto);
+  }
+
+  @Post('sign-up')
+  @HttpCode(HttpStatus.OK)
+  async signUp(@Body() signUpDto: SignUpDto): Promise<{ message: string }> {
+    await this.authService.signUp(signUpDto);
+    return { message: '회원가입이 완료되었습니다.' };
   }
 }

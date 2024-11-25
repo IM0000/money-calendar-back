@@ -35,9 +35,9 @@ import { SharedModule } from '../shared/shared.module';
     DynamicAuthGuard,
     JwtStrategy,
     GoogleStrategy,
-    AppleStrategy,
-    KakaoStrategy,
-    DiscordStrategy,
+    // AppleStrategy,
+    // KakaoStrategy,
+    // DiscordStrategy,
   ],
   exports: [AuthService],
 })

@@ -1,8 +1,10 @@
+import { LoginDto } from './../auth/dto/login.dto';
 // users.service.ts
 import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { User } from '@prisma/client';
@@ -14,6 +16,7 @@ import { randomInt } from 'crypto';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
@@ -55,6 +58,15 @@ export class UsersService {
     // 비밀번호가 유효한 경우 사용자 반환 (비밀번호는 제외)
     const { password: _password, ...safeUser } = user;
     return safeUser as User;
+  }
+
+  // 유저 비밀번호 업데이트
+  async updateUserPassword(id: number, newPassword: string): Promise<void> {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword },
+    });
   }
 
   // OAuth 사용자 생성 또는 검색
@@ -231,6 +243,7 @@ export class UsersService {
    * @param email 이메일 주소
    */
   async sendVerificationCode(email: string): Promise<void> {
+    this.logger.log(email);
     // 인증 코드 생성
     const code = this.generateSixDigitCode(); // 숫자 6자리
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10분 후 만료
@@ -251,6 +264,7 @@ export class UsersService {
 
     // 이메일 전송
     await this.emailService.sendMemberJoinVerification(email, code);
+    this.logger.log(email, code);
   }
 
   /**
@@ -304,14 +318,21 @@ export class UsersService {
    * @param email 이메일
    */
   async storeVerificationToken(token: string, email: string): Promise<void> {
+    this.logger.log(token, email);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10분 후 만료
-    await this.prisma.verificationToken.create({
-      data: {
-        token,
-        email,
-        expiresAt,
-      },
-    });
+    try {
+      const result = await this.prisma.verificationToken.create({
+        data: {
+          token,
+          email,
+          expiresAt,
+        },
+      });
+
+      this.logger.log(result);
+    } catch (error) {
+      this.logger.error('Error storing verification token:', error);
+    }
   }
 
   /**

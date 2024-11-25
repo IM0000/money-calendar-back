@@ -13,6 +13,9 @@ import { kakaoConfig } from './config/kakao.config';
 import { appleConfig } from './config/apple.config';
 import { discordConfig } from './config/discord.config';
 import { join } from 'path';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { ResponseInterceptor } from './common/interceptor/response.interceptor';
 
 console.log('NODE_ENV:', process.env.NODE_ENV); // NODE_ENV 값 로그 출력
 // const envFilePath = join(
@@ -53,6 +56,16 @@ console.log('Loading environment variables from:', envFilePath);
     EmailModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseInterceptor,
+    },
+  ],
 })
 export class AppModule {}

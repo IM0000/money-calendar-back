@@ -1,5 +1,5 @@
 // /users/dto/verify.dto.ts
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
 export class VerifyDto {
   @IsEmail()
@@ -9,8 +9,4 @@ export class VerifyDto {
   @IsString()
   @IsNotEmpty()
   code: string;
-
-  @IsString()
-  @MinLength(6)
-  password: string;
 }

@@ -1,15 +1,18 @@
+import { Logger } from '@nestjs/common';
 // /auth/auth.service.ts
 import * as jwt from 'jsonwebtoken';
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
-import { LoginDto } from '../users/dto/login.dto';
+import { LoginDto } from './dto/login.dto';
 import { User } from '@prisma/client';
 import { ConfigType } from '@nestjs/config';
 import { jwtConfig } from '../config/jwt.config';
 import { v4 as uuidv4 } from 'uuid';
+import { SignUpDto } from './dto/sign-up.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     @Inject(jwtConfig.KEY)
     private jwtConfiguration: ConfigType<typeof jwtConfig>,
@@ -74,6 +77,7 @@ export class AuthService {
    */
   async generateVerificationToken(email: string): Promise<string> {
     const token = uuidv4(); // 고유한 토큰 생성
+    this.logger.log(token);
 
     // 토큰을 데이터베이스에 저장 (예: Prisma 사용)
     await this.usersService.storeVerificationToken(token, email);
@@ -81,15 +85,17 @@ export class AuthService {
     return token;
   }
 
-  /**
-   * 토큰 검증 및 이메일 반환
-   * @param token opaque 토큰
-   * @returns 사용자 이메일
-   */
-  async verifyVerificationToken(token: string): Promise<string> {
-    const email = await this.usersService.findEmailFromVerificationToken(token);
+  async signUp(signUpDto: SignUpDto): Promise<void> {
+    const { email, password } = signUpDto;
 
-    return email;
+    // 이메일로 user 정보 찾아서 비밀번호 업데이트
+    const user = await this.usersService.findUserByEmail(email);
+
+    if (!user.verified) {
+      throw new UnauthorizedException('이메일 인증이 필요합니다.');
+    }
+
+    await this.usersService.updateUserPassword(user.id, password);
   }
 
   /**
