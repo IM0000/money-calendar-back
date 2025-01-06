@@ -1,4 +1,3 @@
-// /users/dto/verify.dto.ts
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
 export class VerifyDto {
@@ -9,4 +8,13 @@ export class VerifyDto {
   @IsString()
   @IsNotEmpty()
   code: string;
+}
+
+export class LoginDto {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @IsNotEmpty()
+  password: string;
 }

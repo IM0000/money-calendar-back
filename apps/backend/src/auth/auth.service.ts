@@ -1,14 +1,15 @@
-import { Logger } from '@nestjs/common';
+import { ForbiddenException, Logger } from '@nestjs/common';
 // /auth/auth.service.ts
 import * as jwt from 'jsonwebtoken';
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
-import { LoginDto } from './dto/login.dto';
+import { LoginDto } from './dto/auth.dto';
 import { User } from '@prisma/client';
 import { ConfigType } from '@nestjs/config';
 import { jwtConfig } from '../config/jwt.config';
 import { v4 as uuidv4 } from 'uuid';
-import { SignUpDto } from './dto/sign-up.dto';
+import { ErrorCodes } from '../common/enums/error-codes.enum';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
@@ -20,20 +21,62 @@ export class AuthService {
   ) {}
 
   /**
+   * 이메일과 비밀번호 검증
+   * @param email 사용자 이메일
+   * @param password 입력된 비밀번호
+   * @returns 검증 결과 (true: 성공, false: 실패)
+   */
+  async validateUser(email: string, password: string): Promise<boolean> {
+    const user = await this.usersService.findUserByEmail(email);
+
+    // 사용자가 없거나 비밀번호가 설정되지 않은 경우
+    if (!user || !user.password) {
+      return false;
+    }
+
+    // 비밀번호 비교
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    return isPasswordValid;
+  }
+
+  /**
    * 이메일과 비밀번호로 로그인 처리
    * @param loginDto 로그인 정보
    * @returns JWT 토큰과 사용자 정보
    */
   async loginWithEmail(loginDto: LoginDto): Promise<any> {
-    const user = await this.usersService.validateUserByEmailAndPassword(
-      loginDto.email,
-      loginDto.password,
-    );
+    const user = await this.usersService.findUserByEmail(loginDto.email);
+    this.logger.log('loginWithEmail', user);
+
     if (!user) {
-      throw new Error('잘못된 이메일 또는 비밀번호입니다.');
+      throw new ForbiddenException({
+        errorCode: ErrorCodes.RESOURCE_001,
+        errorMessage: '존재하지 않는 이메일입니다.',
+      });
+    }
+
+    if (!user.password) {
+      // 비밀번호 설정이 안된 경우
+      throw new ForbiddenException({
+        errorCode: ErrorCodes.ACCOUNT_001,
+        errorMessage: '비밀번호 설정이 필요합니다.',
+        data: user,
+      });
+    }
+
+    const isLogin = await this.validateUser(loginDto.email, loginDto.password);
+    this.logger.log('isLogin', isLogin);
+    if (!isLogin) {
+      throw new UnauthorizedException({
+        errorCode: ErrorCodes.AUTH_002,
+        errorMessage: '잘못된 이메일 또는 비밀번호입니다.',
+      });
     }
     const token = this.generateJwtToken(user);
-    return { token, user };
+
+    const { password, ...userWithoutPassword } = user;
+
+    return { accessToken: token, user: userWithoutPassword };
   }
 
   /**
@@ -81,21 +124,8 @@ export class AuthService {
 
     // 토큰을 데이터베이스에 저장 (예: Prisma 사용)
     await this.usersService.storeVerificationToken(token, email);
-
+    this.logger.log('generateVerificationToken', 'token', token);
     return token;
-  }
-
-  async signUp(signUpDto: SignUpDto): Promise<void> {
-    const { email, password } = signUpDto;
-
-    // 이메일로 user 정보 찾아서 비밀번호 업데이트
-    const user = await this.usersService.findUserByEmail(email);
-
-    if (!user.verified) {
-      throw new UnauthorizedException('이메일 인증이 필요합니다.');
-    }
-
-    await this.usersService.updateUserPassword(user.id, password);
   }
 
   /**

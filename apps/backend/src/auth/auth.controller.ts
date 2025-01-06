@@ -17,12 +17,11 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
-import { RegisterDto } from './dto/register.dto';
-import { VerifyDto } from './dto/verify.dto';
-import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/users.dto';
+import { VerifyDto } from './dto/auth.dto';
+import { LoginDto } from './dto/auth.dto';
 import { DynamicAuthGuard } from './guard/dynamic-auth.guard';
-import { SignUpDto } from './dto/sign-up.dto';
-import { promises } from 'dns';
+import { UserDto } from './dto/users.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -37,7 +36,7 @@ export class AuthController {
    * @param provider OAuth 제공자 이름
    * @param res 응답 객체
    */
-  @Get(':provider')
+  @Get('oauth/:provider')
   @UseGuards(DynamicAuthGuard)
   async oauthLogin(@Res() res: any) {
     console.log('OAuth login initiated');
@@ -50,7 +49,7 @@ export class AuthController {
    * @param query OAuth 제공자로부터 받은 쿼리 파라미터
    * @param res 응답 객체
    */
-  @Get(':provider/callback')
+  @Get('oauth/:provider/callback')
   @UseGuards(DynamicAuthGuard)
   async oauthCallback(
     @Param('provider') provider: string,
@@ -103,6 +102,7 @@ export class AuthController {
     await this.usersService.sendVerificationCode(email);
     const emailVerificationToken =
       await this.authService.generateVerificationToken(email);
+    this.logger.log('register end', emailVerificationToken);
     return {
       token: emailVerificationToken,
       message: '인증 코드가 이메일로 전송되었습니다.',
@@ -112,13 +112,16 @@ export class AuthController {
   /**
    * 인증 코드 검증
    * @param verifyDto 이메일, 인증 코드
+   * @returns 상태 업데이트 된 유저 객체
    */
   @Post('verify')
   @HttpCode(HttpStatus.OK)
-  async verify(@Body() verifyDto: VerifyDto): Promise<{ message: string }> {
+  async verify(@Body() verifyDto: VerifyDto): Promise<UserDto> {
     const { email, code } = verifyDto;
-    await this.usersService.verifyCode(email, code);
-    return { message: '이메일 인증이 완료되었습니다.' };
+    this.logger.log('/auth/verify', verifyDto);
+    const user = await this.usersService.verifyCode(email, code);
+    this.logger.log('verify end', user);
+    return user;
   }
 
   /**
@@ -126,11 +129,11 @@ export class AuthController {
    * @param token 이메일토큰
    * @returns email
    */
-  @Get('verification-email')
+  @Get('email-verification')
   async getVerifyEmail(
     @Query('token') token: string,
   ): Promise<{ email: string }> {
-    this.logger.log('token', token);
+    this.logger.log('email-verification', token);
     const email = await this.usersService.findEmailFromVerificationToken(token);
     return { email };
   }
@@ -142,12 +145,5 @@ export class AuthController {
   @Post('login')
   async login(@Body() loginDto: LoginDto): Promise<any> {
     return await this.authService.loginWithEmail(loginDto);
-  }
-
-  @Post('sign-up')
-  @HttpCode(HttpStatus.OK)
-  async signUp(@Body() signUpDto: SignUpDto): Promise<{ message: string }> {
-    await this.authService.signUp(signUpDto);
-    return { message: '회원가입이 완료되었습니다.' };
   }
 }
