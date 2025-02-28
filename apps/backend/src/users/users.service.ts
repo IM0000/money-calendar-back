@@ -29,14 +29,6 @@ export class UsersService {
     });
   }
 
-  // OAuth 사용자가 이미 존재하는지 확인
-  async findExistingOAuthUser(
-    provider: string,
-    providerId: string,
-  ): Promise<User | null> {
-    return this.findUserByOAuthId(provider, providerId);
-  }
-
   async linkOAuthAccountToUser(
     user: User,
     provider: string,
@@ -67,32 +59,6 @@ export class UsersService {
     return await this.prisma.user.findUnique({
       where: { id: userId },
     });
-  }
-
-  async findOrCreateUserFromOAuth(oauthUser: any): Promise<User> {
-    // 1. OAuth 사용자가 이미 존재하는지 확인
-    let user = await this.findExistingOAuthUser(
-      oauthUser.provider,
-      oauthUser.providerId,
-    );
-    if (user) {
-      return user;
-    }
-
-    // 2. 이메일로 기존 사용자 찾기
-    user = await this.findUserByEmail(oauthUser.email);
-
-    // 3. 기존 사용자에 OAuth 계정 연동
-    if (user) {
-      return await this.linkOAuthAccountToUser(
-        user,
-        oauthUser.provider,
-        oauthUser.providerId,
-      );
-    }
-
-    // 4. 새로운 OAuth 사용자 생성
-    return await this.createUserFromOAuth(oauthUser);
   }
 
   // OAuth 제공자와 제공자 ID로 사용자 찾기
@@ -142,6 +108,7 @@ export class UsersService {
       data: {
         email: oauthUser.email,
         nickname: nickname + new Date().getTime(),
+        verified: true, // OAuth 가입자는 이메일 인증 생략
         oauthAccounts: {
           create: [
             {

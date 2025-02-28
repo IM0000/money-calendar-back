@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, Put, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdatePasswordDto, UserDto } from '../auth/dto/users.dto';
 
-@Controller('users')
+@Controller('api/v1/users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

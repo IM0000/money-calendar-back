@@ -84,14 +84,13 @@ export class AuthService {
    * @param oauthUser OAuth 사용자 정보
    * @returns JWT 토큰과 사용자 정보
    */
-  async loginWithOAuth(oauthUser: any): Promise<any> {
-    // UsersService를 통해 사용자 찾기 또는 생성
-    const user = await this.usersService.findOrCreateUserFromOAuth(oauthUser);
-
+  async loginWithOAuth(user: User): Promise<any> {
     // JWT 토큰 생성
     const token = this.generateJwtToken(user);
 
-    return { token, user };
+    const { password, ...userWithoutPassword } = user;
+
+    return { accessToken: token, user: userWithoutPassword };
   }
 
   /**

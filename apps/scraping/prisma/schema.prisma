@@ -23,6 +23,7 @@ model User {
   favoriteEarnings  FavoriteEarnings[]
   favoriteDividends FavoriteDividends[]
   favoriteIndicators FavoriteIndicator[]
+  notifications     Notification[]
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
 }
@@ -54,24 +55,32 @@ model Company {
   @@unique([ticker, country])  // ticker와 country를 복합 키로 설정
 }
 
-model Earnings {
-  id              Int      @id @default(autoincrement())
-  country         String   // 국가
-  releaseDate     BigInt   // 발표 날짜 (밀리초 단위 정수 값)
-  actualEPS       String   // 실제 EPS
-  forecastEPS     String   // 예측 EPS
-  previousEPS     String   // 이전 EPS
-  actualRevenue   String   // 실제 매출
-  forecastRevenue String   // 예측 매출
-  previousRevenue String   // 이전 매출
-  companyId       Int
-  company         Company   @relation(fields: [companyId], references: [id])
-  favorites       FavoriteEarnings[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@unique([releaseDate, companyId])  // 복합 고유 키 설정
+enum ReleaseTiming {
+  UNKNOWN
+  PRE_MARKET
+  POST_MARKET
 }
+
+model Earnings {
+  id              Int          @id @default(autoincrement())
+  country         String       // 국가
+  releaseDate     BigInt       // 발표 날짜 (밀리초 단위 정수 값)
+  releaseTiming   ReleaseTiming @default(UNKNOWN) // 발표 시간 상태: 개장전, 폐장후, 모름
+  actualEPS       String       // 실제 EPS
+  forecastEPS     String       // 예측 EPS
+  previousEPS     String       // 이전 EPS
+  actualRevenue   String       // 실제 매출
+  forecastRevenue String       // 예측 매출
+  previousRevenue String       // 이전 매출
+  companyId       Int
+  company         Company      @relation(fields: [companyId], references: [id])
+  favorites       FavoriteEarnings[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([releaseDate, companyId])
+}
+
 
 model Dividend {
   id              Int      @id @default(autoincrement())
@@ -130,4 +139,21 @@ model FavoriteIndicator {
   user       User               @relation(fields: [userId], references: [id])
   indicator  EconomicIndicator  @relation(fields: [indicatorId], references: [id])
   @@id([userId, indicatorId])
+}
+
+enum NotificationType {
+  EARNINGS
+  DIVIDEND
+  ECONOMIC_INDICATOR
+}
+
+model Notification {
+  id          Int              @id @default(autoincrement())
+  userId      Int              // 알림을 받을 사용자
+  type        NotificationType // 알림 유형 (실적, 배당, 경제지표)
+  contentId   Int              // 알림 대상 컨텐츠의 id (예: Earnings, Dividend, EconomicIndicator의 id)
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  user        User             @relation(fields: [userId], references: [id])
 }
