@@ -28,10 +28,6 @@
         "outDir": "dist/apps/backend",
         "assets": [
           {
-            "include": "../src/generated/prisma-client/**/*",
-            "outDir": "dist/apps/backend"
-          },
-          {
             "include": "../src/config/env/*.env",
             "outDir": "dist/apps/backend"
           }
@@ -45,13 +41,7 @@
       "sourceRoot": "apps/scraping/src",
       "compilerOptions": {
         "tsConfigPath": "apps/scraping/tsconfig.app.json",
-        "outDir": "dist/apps/scraping",
-        "assets": [
-          {
-            "include": "../src/generated/prisma-client/**/*",
-            "outDir": "dist/apps/scraping"
-          }
-        ]
+        "outDir": "dist/apps/scraping"
       }
     }
   }

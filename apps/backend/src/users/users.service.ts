@@ -8,12 +8,12 @@ import {
 } from '@nestjs/common';
 import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { PrismaService } from '../prisma/prisma.service';
 import { RandomNickList } from '../common/random-nick.constants';
 import { EmailService } from '../email/email.service';
 import { UserDto } from '../auth/dto/users.dto';
 import { ErrorCodes } from '../common/enums/error-codes.enum';
 import { generateSixDigitCode } from '../utils/code-generator';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class UsersService {
