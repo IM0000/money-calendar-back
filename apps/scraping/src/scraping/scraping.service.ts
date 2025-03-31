@@ -9,6 +9,7 @@ import {
   CountryNameToCodeMap,
   ImportanceLevelMap,
 } from '../common/constants/nation-code.constants';
+import { ReleaseTiming } from '@prisma/client';
 
 @Injectable()
 export class ScrapingService {
@@ -336,8 +337,9 @@ export class ScrapingService {
 
       let page = 0;
       let bind_scroll_handler = true;
+      let last_time_scope = undefined;
 
-      while (page < 200 && bind_scroll_handler) {
+      while (page < 5 && bind_scroll_handler) {
         const url =
           'https://kr.investing.com/earnings-calendar/Service/getCalendarFilteredData';
         const data = {
@@ -346,15 +348,19 @@ export class ScrapingService {
           dateTo: formatDate(dateTo),
           currentTab: 'custom',
           limit_from: page++,
+          submitFilters: page === 1 ? 1 : 0,
+          byHandler: page === 1 ? '' : bind_scroll_handler,
+          last_time_scope: page === 1 ? '' : last_time_scope,
         };
 
         const urlEncodedData = Object.keys(data)
-          .map(
-            (key) =>
-              `${encodeURIComponent(key)}=${encodeURIComponent(
+          .map((key) => {
+            if (data[key] != 'undefined' || data[key] != '') {
+              return `${encodeURIComponent(key)}=${encodeURIComponent(
                 String(data[key]),
-              )}`,
-          )
+              )}`;
+            }
+          })
           .join('&');
 
         requestConfig.url = url;
@@ -363,6 +369,7 @@ export class ScrapingService {
         const response = await axios(requestConfig);
         const html = response.data.data;
         bind_scroll_handler = response.data.bind_scroll_handler;
+        last_time_scope = response.data.last_time_scope;
 
         // cheerio로 파싱한 후의 HTML을 저장
         const $ = cheerio.load(html, { xmlMode: true });
@@ -416,11 +423,29 @@ export class ScrapingService {
               }
             }
 
+            let releaseTiming = '';
+            const releaseTimingElement = $(element).find(
+              'td.right.time span.genToolTip',
+            );
+            if (releaseTimingElement.length > 0) {
+              releaseTiming =
+                releaseTimingElement.attr('data-tooltip')?.trim() || '';
+            }
+
+            if (releaseTiming === '개장 전') {
+              releaseTiming = ReleaseTiming.PRE_MARKET;
+            } else if (releaseTiming === '폐장 후') {
+              releaseTiming = ReleaseTiming.POST_MARKET;
+            } else {
+              releaseTiming = ReleaseTiming.UNKNOWN;
+            }
+
             // 날짜 형식 변환
             const releaseDate = currentDate.getTime();
 
             this.logger.debug({
               releaseDate,
+              releaseTiming,
               actualEPS,
               forecastEPS,
               actualRevenue,
@@ -432,6 +457,7 @@ export class ScrapingService {
             // 데이터 객체 생성
             dataSet.push({
               releaseDate,
+              releaseTiming,
               actualEPS,
               forecastEPS,
               actualRevenue,
@@ -459,6 +485,7 @@ export class ScrapingService {
   }
 
   async saveEarningsData(earningsData: any[]) {
+    this.logger.debug('earningsData', earningsData);
     for (const data of earningsData) {
       const company = await this.prisma.company.findFirst({
         where: {
@@ -487,6 +514,7 @@ export class ScrapingService {
         await this.prisma.earnings.update({
           where: { id: existingRecord.id },
           data: {
+            releaseTiming: data.releaseTiming,
             actualEPS: data.actualEPS,
             forecastEPS: data.forecastEPS,
             actualRevenue: data.actualRevenue,
@@ -498,6 +526,7 @@ export class ScrapingService {
         await this.prisma.earnings.create({
           data: {
             releaseDate: data.releaseDate,
+            releaseTiming: data.releaseTiming,
             actualEPS: data.actualEPS,
             forecastEPS: data.forecastEPS,
             previousEPS: '',
@@ -694,6 +723,7 @@ export class ScrapingService {
             dividendAmount: data.dividendAmount,
             paymentDate: data.paymentDate,
             previousDividendAmount: data.previousDividendAmount,
+            dividendYield: data.dividendYield,
           },
         });
       } else {
@@ -704,6 +734,7 @@ export class ScrapingService {
             dividendAmount: data.dividendAmount,
             previousDividendAmount: data.previousDividendAmount,
             paymentDate: data.paymentDate,
+            dividendYield: data.dividendYield,
             company: {
               connect: { id: company.id },
             },

@@ -1,4 +1,3 @@
-import { emailValidationSchema } from './../config/validation/email.validation';
 // /auth/auth.controller.ts
 import {
   Controller,
@@ -70,10 +69,28 @@ export class AuthController {
 
     if (!oauthUser) {
       return res.redirect(
-        `/auth/error?errorCode=${ErrorCodes.AUTH_002}&message=OAuth 인증에 실패했습니다.`,
+        `${frontendURL}/auth/error?errorCode=${ErrorCodes.AUTH_002}&message=OAuth 인증에 실패했습니다.`,
       );
     }
 
+    // 연결 요청인지 확인 (마이페이지에서 연결 요청 시)
+    const oauthMethod = req.query.oauthMethod;
+    if (oauthMethod === 'connect' && req.user && req.user.id) {
+      // 이미 로그인된 사용자가 계정 연결을 요청한 경우
+      try {
+        await this.usersService.linkOAuthAccount(req.user.id, oauthUser);
+        return res.redirect(
+          `${frontendURL}/mypage?message=계정이 성공적으로 연결되었습니다.`,
+        );
+      } catch (error) {
+        this.logger.error('OAuth 계정 연결 중 오류 발생:', error);
+        return res.redirect(
+          `${frontendURL}/mypage?error=true&message=계정 연결에 실패했습니다. ${error.message}`,
+        );
+      }
+    }
+
+    // 일반 로그인 처리 (기존 코드)
     // oauth 인증 정보로 회원검색
     const userByOAuthId = await this.usersService.findUserByOAuthId(
       oauthUser.provider,
@@ -92,7 +109,11 @@ export class AuthController {
 
       this.logger.log('userByOauthEmail', userByOauthEmail);
 
-      if (userByOauthEmail.email && userByOauthEmail.verified) {
+      if (
+        userByOauthEmail &&
+        userByOauthEmail.email &&
+        userByOauthEmail.verified
+      ) {
         // 연동
         await this.usersService.linkOAuthAccount(
           userByOauthEmail.id,
@@ -117,58 +138,19 @@ export class AuthController {
       return res.redirect(
         `${frontendURL}/auth/success?token=${loginResult.accessToken}`,
       );
-    } else {
-      // oauth 이메일로 (메일인증 & 연동)된 회원정보가 있으면 로그인 처리
-      if (userByOAuthId.email && userByOAuthId.verified) {
-        const loginResult = await this.authService.loginWithOAuth(
-          userByOAuthId,
-        );
-        return res.redirect(
-          `${frontendURL}/auth/success?token=${loginResult.accessToken}`,
-        );
-      }
+    }
 
+    // oauth 이메일로 (메일인증 & 연동)된 회원정보가 있으면 로그인 처리
+    if (userByOAuthId.email && userByOAuthId.verified) {
+      const loginResult = await this.authService.loginWithOAuth(userByOAuthId);
       return res.redirect(
-        `${frontendURL}/auth/error?errorCode=${ErrorCodes.AUTH_002}&message=OAuth 인증에 실패했습니다.`,
+        `${frontendURL}/auth/success?token=${loginResult.accessToken}`,
       );
     }
-  }
 
-  /**
-   * OAuth 콜백 처리 (공통 엔드포인트)
-   * @param provider OAuth 제공자 이름
-   * @param query OAuth 제공자로부터 받은 쿼리 파라미터
-   * @param res 응답 객체
-   */
-  @Get('oauth/:provider/callback')
-  @UseGuards(DynamicAuthGuard)
-  async oauthConnectCallback(
-    @Param('provider') provider: string,
-    @Query() query: any,
-    @Req() req: any,
-    @Res() res: any,
-  ) {
-    this.logger.log(req);
-    // Passport를 통해 검증된 사용자 정보
-    const oauthUser = req.user;
-    this.logger.log('oauthUser', oauthUser);
-
-    if (!oauthUser) {
-      throw new UnauthorizedException({
-        errorCode: ErrorCodes.AUTH_002,
-        errorMessage: 'OAuth 인증에 실패했습니다.',
-      });
-    }
-
-    // oauth 인증 정보로 회원검색
-    const user = await this.usersService.findUserByOAuthId(
-      oauthUser.provider,
-      oauthUser.providerId,
+    return res.redirect(
+      `${frontendURL}/auth/error?errorCode=${ErrorCodes.AUTH_002}&message=OAuth 인증에 실패했습니다.`,
     );
-
-    this.logger.log('user', user);
-
-    // oauth 이메일로 메일인증된 회원정보가 있으면 연동처리
   }
 
   /**

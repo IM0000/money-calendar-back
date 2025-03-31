@@ -18,8 +18,21 @@ model User {
   favoriteDividends   FavoriteDividends[]
   favoriteIndicators  FavoriteIndicator[]
   notifications       Notification[]
+  notificationSettings UserNotificationSettings?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+}
+
+model UserNotificationSettings {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  user            User     @relation(fields: [userId], references: [id])
+  emailEnabled    Boolean  @default(true)
+  pushEnabled     Boolean  @default(true)
+  preferredMethod String   @default("BOTH") // "EMAIL", "PUSH", "BOTH"
+  defaultTiming   String   @default("ONE_DAY_BEFORE") // "ONE_HOUR_BEFORE", "THREE_HOURS_BEFORE", "ONE_DAY_BEFORE", "THREE_DAYS_BEFORE", "ONE_WEEK_BEFORE"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model OAuthAccount {
@@ -155,12 +168,14 @@ enum NotificationType {
 }
 
 model Notification {
-  id          Int              @id @default(autoincrement())
-  userId      Int              // 알림을 받을 사용자
-  type        NotificationType // 알림 유형
-  contentId   Int              // 알림 대상 컨텐츠의 id (예: Earnings, Dividend, EconomicIndicator의 id)
-  read        Boolean          @default(false)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  user        User             @relation(fields: [userId], references: [id])
+  id              Int              @id @default(autoincrement())
+  userId          Int              // 알림을 받을 사용자
+  type            NotificationType // 알림 유형
+  contentId       Int              // 알림 대상 컨텐츠의 id (예: Earnings, Dividend, EconomicIndicator의 id)
+  read            Boolean          @default(false)
+  method          String?          // "EMAIL", "PUSH", "BOTH"
+  timing          String?          // "ONE_HOUR_BEFORE", "THREE_HOURS_BEFORE", "ONE_DAY_BEFORE", "THREE_DAYS_BEFORE", "ONE_WEEK_BEFORE"
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  user            User             @relation(fields: [userId], references: [id])
 }
