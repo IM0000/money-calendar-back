@@ -614,7 +614,7 @@ export class ScrapingService {
       let bind_scroll_handler = true;
       let last_time_scope = undefined;
 
-      while (page < 4 && bind_scroll_handler) {
+      while (page < 200 && bind_scroll_handler) {
         const url =
           'https://kr.investing.com/dividends-calendar/Service/getCalendarFilteredData';
         const data = {
