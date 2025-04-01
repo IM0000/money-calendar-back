@@ -83,6 +83,12 @@ export enum ErrorCodes {
   ACCOUNT_001 = 'ACCOUNT_001',
 
   /**
+   * OAuth 관련 에러
+   */
+  /** oauth 정보 오류 */
+  OAUTH_001 = 'OAUTH_001',
+
+  /**
    * 기타 에러
    */
   /** 알 수 없는 오류 */

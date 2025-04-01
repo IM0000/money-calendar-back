@@ -16,6 +16,11 @@ import { join } from 'path';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ResponseInterceptor } from './common/interceptor/response.interceptor';
+import { frontendConfig } from './config/frontend.config';
+import { CalendarModule } from './calendar/calendar.module';
+import { FavoritesModule } from './favorites/favorites.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { SearchModule } from './search/search.module';
 
 console.log('NODE_ENV:', process.env.NODE_ENV); // NODE_ENV 값 로그 출력
 // const envFilePath = join(
@@ -42,6 +47,7 @@ console.log('Loading environment variables from:', envFilePath);
       isGlobal: true, // ConfigModule을 전역으로 설정
       envFilePath: [envFilePath],
       load: [
+        frontendConfig,
         emailConfig,
         jwtConfig,
         googleConfig,
@@ -54,6 +60,10 @@ console.log('Loading environment variables from:', envFilePath);
     UsersModule,
     AuthModule,
     EmailModule,
+    CalendarModule,
+    FavoritesModule,
+    NotificationsModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [

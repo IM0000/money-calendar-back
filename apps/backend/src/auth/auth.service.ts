@@ -84,14 +84,13 @@ export class AuthService {
    * @param oauthUser OAuth 사용자 정보
    * @returns JWT 토큰과 사용자 정보
    */
-  async loginWithOAuth(oauthUser: any): Promise<any> {
-    // UsersService를 통해 사용자 찾기 또는 생성
-    const user = await this.usersService.findOrCreateUserFromOAuth(oauthUser);
-
+  async loginWithOAuth(user: User): Promise<any> {
     // JWT 토큰 생성
     const token = this.generateJwtToken(user);
 
-    return { token, user };
+    const { password, ...userWithoutPassword } = user;
+
+    return { accessToken: token, user: userWithoutPassword };
   }
 
   /**
@@ -127,30 +126,4 @@ export class AuthService {
     this.logger.log('generateVerificationToken', 'token', token);
     return token;
   }
-
-  /**
-   * 기존 사용자 계정에 OAuth 계정 연동
-   * @param userId 현재 로그인한 사용자 ID
-   * @param provider OAuth 제공자 이름
-   * @param query OAuth 제공자로부터 받은 쿼리 파라미터
-   * @returns 연동된 사용자 정보
-   */
-  // async linkOAuthAccount(
-  //   userId: number,
-  //   provider: string,
-  //   query: any,
-  // ): Promise<User> {
-  //   const strategy = this.strategies.find(
-  //     (strategy) => strategy.provider === provider,
-  //   );
-  //   if (!strategy) {
-  //     throw new Error(`'${provider}'는 지원하지 않는 인증 기관입니다.`);
-  //   }
-  //   const oauthUser = await strategy.authenticate(query);
-  //   const updatedUser = await this.usersService.linkOAuthAccount(
-  //     userId,
-  //     oauthUser,
-  //   );
-  //   return updatedUser;
-  // }
 }

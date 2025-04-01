@@ -5,15 +5,17 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { PrismaService } from '../prisma/prisma.service';
 import { RandomNickList } from '../common/random-nick.constants';
 import { EmailService } from '../email/email.service';
 import { UserDto } from '../auth/dto/users.dto';
 import { ErrorCodes } from '../common/enums/error-codes.enum';
 import { generateSixDigitCode } from '../utils/code-generator';
+import { PrismaService } from '../prisma/prisma.service';
+import { UpdateProfileDto, OAuthConnectionDto } from './dto/profile.dto';
 
 @Injectable()
 export class UsersService {
@@ -24,17 +26,14 @@ export class UsersService {
   ) {}
 
   async findUserByEmail(email: string): Promise<User | null> {
-    return await this.prisma.user.findUnique({
-      where: { email },
-    });
-  }
-
-  // OAuth 사용자가 이미 존재하는지 확인
-  async findExistingOAuthUser(
-    provider: string,
-    providerId: string,
-  ): Promise<User | null> {
-    return this.findUserByOAuthId(provider, providerId);
+    try {
+      return await this.prisma.user.findUnique({
+        where: { email },
+      });
+    } catch (error) {
+      this.logError('findUserByEmail', error, { email });
+      throw error;
+    }
   }
 
   async linkOAuthAccountToUser(
@@ -64,35 +63,14 @@ export class UsersService {
 
   // ID로 사용자 찾기 (JWT 검증 시 사용)
   async findUserById(userId: number): Promise<User | null> {
-    return await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-  }
-
-  async findOrCreateUserFromOAuth(oauthUser: any): Promise<User> {
-    // 1. OAuth 사용자가 이미 존재하는지 확인
-    let user = await this.findExistingOAuthUser(
-      oauthUser.provider,
-      oauthUser.providerId,
-    );
-    if (user) {
-      return user;
+    try {
+      return await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+    } catch (error) {
+      this.logError('findUserById', error, { userId });
+      throw error;
     }
-
-    // 2. 이메일로 기존 사용자 찾기
-    user = await this.findUserByEmail(oauthUser.email);
-
-    // 3. 기존 사용자에 OAuth 계정 연동
-    if (user) {
-      return await this.linkOAuthAccountToUser(
-        user,
-        oauthUser.provider,
-        oauthUser.providerId,
-      );
-    }
-
-    // 4. 새로운 OAuth 사용자 생성
-    return await this.createUserFromOAuth(oauthUser);
   }
 
   // OAuth 제공자와 제공자 ID로 사용자 찾기
@@ -142,6 +120,7 @@ export class UsersService {
       data: {
         email: oauthUser.email,
         nickname: nickname + new Date().getTime(),
+        verified: true, // OAuth 가입자는 이메일 인증 생략
         oauthAccounts: {
           create: [
             {
@@ -352,6 +331,230 @@ export class UsersService {
       this.logger.log(result);
     } catch (error) {
       this.logger.error('Error storing verification token:', error);
+    }
+  }
+
+  /**
+   * 사용자 프로필 조회
+   */
+  async getUserProfile(userId: number) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          oauthAccounts: true,
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      }
+
+      // 클라이언트에 반환할 데이터 형식으로 가공
+      const providers = ['google', 'kakao', 'apple', 'discord'];
+      const oauthConnections = providers.map((provider) => {
+        const isConnected = user.oauthAccounts.some(
+          (account) => account.provider === provider,
+        );
+        return { provider, connected: isConnected };
+      });
+
+      return {
+        id: user.id,
+        email: user.email,
+        nickname: user.nickname,
+        verified: user.verified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        oauthConnections,
+      };
+    } catch (error) {
+      this.logError('getUserProfile', error, { userId });
+      throw error;
+    }
+  }
+
+  /**
+   * 사용자 프로필 업데이트
+   */
+  async updateUserProfile(userId: number, updateProfileDto: UpdateProfileDto) {
+    try {
+      // 사용자 존재 확인
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      }
+
+      // 닉네임 업데이트
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...updateProfileDto,
+        },
+      });
+
+      return {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        nickname: updatedUser.nickname,
+        verified: updatedUser.verified,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+      };
+    } catch (error) {
+      this.logError('updateUserProfile', error, { userId, updateProfileDto });
+      throw error;
+    }
+  }
+
+  /**
+   * 사용자 비밀번호 변경
+   */
+  async changeUserPassword(
+    userId: number,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    try {
+      // 사용자 존재 확인
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      }
+
+      // 현재 비밀번호 확인
+      const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user.password,
+      );
+      if (!isPasswordValid) {
+        throw new BadRequestException('현재 비밀번호가 일치하지 않습니다.');
+      }
+
+      // 새 비밀번호 해싱
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // 비밀번호 업데이트
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          password: hashedPassword,
+        },
+      });
+
+      return { message: '비밀번호가 성공적으로 변경되었습니다.' };
+    } catch (error) {
+      this.logError('changeUserPassword', error, { userId });
+      throw error;
+    }
+  }
+
+  /**
+   * OAuth 계정 연결
+   */
+  async connectOAuthAccount(
+    userId: number,
+    oauthConnectionDto: OAuthConnectionDto,
+  ) {
+    const { provider, accessToken, refreshToken } = oauthConnectionDto;
+
+    try {
+      // providerId는 실제로는 OAuth 프로바이더로부터 정보를 받아야 합니다.
+      // 여기서는 임시로 사용자 식별값에 시간을 붙여 모의 생성합니다.
+      const providerId = `${userId}_${Date.now()}`;
+
+      // 이미 연결된 계정이 있는지 확인
+      const existingAccount = await this.prisma.oAuthAccount.findFirst({
+        where: {
+          userId,
+          provider,
+        },
+      });
+
+      // 이미 연결된 계정이 있다면 업데이트
+      if (existingAccount) {
+        await this.prisma.oAuthAccount.update({
+          where: { id: existingAccount.id },
+          data: {
+            accessToken,
+            refreshToken,
+            tokenExpiry: refreshToken
+              ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+              : null, // 30일 후
+          },
+        });
+      } else {
+        // 새로운 연결 생성
+        await this.prisma.oAuthAccount.create({
+          data: {
+            provider,
+            providerId,
+            accessToken,
+            refreshToken,
+            tokenExpiry: refreshToken
+              ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+              : null, // 30일 후
+            userId,
+          },
+        });
+      }
+
+      return { message: `${provider} 계정이 성공적으로 연결되었습니다.` };
+    } catch (error) {
+      throw new BadRequestException('OAuth 계정 연결 중 오류가 발생했습니다.');
+    }
+  }
+
+  // 에러 로깅 개선을 위한 공통 함수 추가
+  private logError(methodName: string, error: any, params?: any) {
+    this.logger.error(`Error in UsersService.${methodName}: ${error.message}`, {
+      service: 'UsersService',
+      method: methodName,
+      error: error.stack || error.message,
+      params: params ? JSON.stringify(params) : undefined,
+    });
+    return error;
+  }
+
+  /**
+   * OAuth 계정 연결 해제
+   */
+  async disconnectOAuthAccount(userId: number, provider: string) {
+    try {
+      // 연결된 모든 계정 조회
+      const connectedAccounts = await this.prisma.oAuthAccount.findMany({
+        where: { userId },
+      });
+
+      // 최소 하나의 로그인 방법 유지 확인
+      if (connectedAccounts.length <= 1) {
+        throw new ForbiddenException(
+          '최소 하나의 로그인 방법이 필요합니다. 소셜 계정 연결을 해제할 수 없습니다.',
+        );
+      }
+
+      // 해당 프로바이더의 연결 제거
+      await this.prisma.oAuthAccount.deleteMany({
+        where: {
+          userId,
+          provider,
+        },
+      });
+      return { message: `${provider} 계정 연결이 해제되었습니다.` };
+    } catch (error) {
+      this.logError('disconnectOAuthAccount', error, { userId, provider });
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        'OAuth 계정 연결 해제 중 오류가 발생했습니다.',
+      );
     }
   }
 }

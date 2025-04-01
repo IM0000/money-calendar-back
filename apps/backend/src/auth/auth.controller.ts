@@ -1,4 +1,3 @@
-import { emailValidationSchema } from './../config/validation/email.validation';
 // /auth/auth.controller.ts
 import {
   Controller,
@@ -14,6 +13,7 @@ import {
   Req,
   UnauthorizedException,
   Logger,
+  Inject,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
@@ -22,11 +22,17 @@ import { VerifyDto } from './dto/auth.dto';
 import { LoginDto } from './dto/auth.dto';
 import { DynamicAuthGuard } from './guard/dynamic-auth.guard';
 import { UserDto } from './dto/users.dto';
+import { ErrorCodes } from '../common/enums/error-codes.enum';
+import { ConfigType } from '@nestjs/config';
+import { frontendConfig } from '../config/frontend.config';
+import { JwtAuthGuard } from './guard/jwt-auth.guard';
 
-@Controller('auth')
+@Controller('api/v1/auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
   constructor(
+    @Inject(frontendConfig.KEY)
+    private frontendConfiguration: ConfigType<typeof frontendConfig>,
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
   ) {}
@@ -34,13 +40,12 @@ export class AuthController {
   /**
    * OAuth 로그인 요청 처리 (공통 엔드포인트)
    * @param provider OAuth 제공자 이름
-   * @param res 응답 객체
+   * @param req 응답 객체
    */
   @Get('oauth/:provider')
   @UseGuards(DynamicAuthGuard)
-  async oauthLogin(@Res() res: any) {
-    console.log('OAuth login initiated');
-    return;
+  async oauthLogin(@Param('provider') provider: string) {
+    console.log('oauthLogin : ' + provider);
   }
 
   /**
@@ -57,35 +62,95 @@ export class AuthController {
     @Req() req: any,
     @Res() res: any,
   ) {
+    const frontendURL = this.frontendConfiguration.baseUrl;
     // Passport를 통해 검증된 사용자 정보
     const oauthUser = req.user;
+    this.logger.log('oauthUser', oauthUser);
 
     if (!oauthUser) {
-      throw new UnauthorizedException('OAuth 인증에 실패했습니다.');
+      return res.redirect(
+        `${frontendURL}/auth/error?errorCode=${ErrorCodes.AUTH_002}&message=OAuth 인증에 실패했습니다.`,
+      );
     }
 
-    // email로 DB에 가입정보가 있는지 확인
-    const user = await this.usersService.findUserByEmail(oauthUser.email);
-
-    // user 정보가 있고, 비밀번호도 설정되어 있으면 로그인 처리
-    if (user && user.password) {
-      const { token } = await this.authService.loginWithOAuth(oauthUser);
-      // 프론트엔드로 리다이렉트할 URL
-      const frontendRedirectUrl = `${process.env.FRONTEND_URL}/auth/success?token=${token}`;
-
-      return res.redirect(frontendRedirectUrl);
-    } else {
-      // oauth email로 인증코드 전송
-      await this.usersService.sendVerificationCode(oauthUser.email);
-      // 이메일 전송 토큰 생성
-      const emailVerificationToken =
-        await this.authService.generateVerificationToken(oauthUser.email);
-
-      const frontendRedirectUrl = `${
-        process.env.FRONTEND_URL
-      }/auth/email-verify?token=${encodeURIComponent(emailVerificationToken)}`;
-      return res.redirect(frontendRedirectUrl);
+    // 연결 요청인지 확인 (마이페이지에서 연결 요청 시)
+    const oauthMethod = req.query.oauthMethod;
+    if (oauthMethod === 'connect' && req.user && req.user.id) {
+      // 이미 로그인된 사용자가 계정 연결을 요청한 경우
+      try {
+        await this.usersService.linkOAuthAccount(req.user.id, oauthUser);
+        return res.redirect(
+          `${frontendURL}/mypage?message=계정이 성공적으로 연결되었습니다.`,
+        );
+      } catch (error) {
+        this.logger.error('OAuth 계정 연결 중 오류 발생:', error);
+        return res.redirect(
+          `${frontendURL}/mypage?error=true&message=계정 연결에 실패했습니다. ${error.message}`,
+        );
+      }
     }
+
+    // 일반 로그인 처리 (기존 코드)
+    // oauth 인증 정보로 회원검색
+    const userByOAuthId = await this.usersService.findUserByOAuthId(
+      oauthUser.provider,
+      oauthUser.providerId,
+    );
+    this.logger.log(oauthUser);
+    this.logger.log('user', userByOAuthId);
+
+    // 연동된 회원정보는 없는데,
+    if (userByOAuthId === null) {
+      this.logger.log('연동된 회원정보가 없어영', oauthUser.email);
+      //oauth 이메일로 메일인증된 회원정보가 있으면 그 게정에 연동시킴
+      const userByOauthEmail = await this.usersService.findUserByEmail(
+        oauthUser.email,
+      );
+
+      this.logger.log('userByOauthEmail', userByOauthEmail);
+
+      if (
+        userByOauthEmail &&
+        userByOauthEmail.email &&
+        userByOauthEmail.verified
+      ) {
+        // 연동
+        await this.usersService.linkOAuthAccount(
+          userByOauthEmail.id,
+          oauthUser,
+        );
+        // 로그인 처리
+        const loginResult = await this.authService.loginWithOAuth(
+          userByOauthEmail,
+        );
+        return res.redirect(
+          `${frontendURL}/auth/success?token=${loginResult.accessToken}`,
+        );
+      }
+
+      // oauth 메일로 이메일 인증된 계정이 없는 경우 회원가입 처리
+      const createdUser = await this.usersService.createUserFromOAuth(
+        oauthUser,
+      );
+
+      const loginResult = await this.authService.loginWithOAuth(createdUser);
+
+      return res.redirect(
+        `${frontendURL}/auth/success?token=${loginResult.accessToken}`,
+      );
+    }
+
+    // oauth 이메일로 (메일인증 & 연동)된 회원정보가 있으면 로그인 처리
+    if (userByOAuthId.email && userByOAuthId.verified) {
+      const loginResult = await this.authService.loginWithOAuth(userByOAuthId);
+      return res.redirect(
+        `${frontendURL}/auth/success?token=${loginResult.accessToken}`,
+      );
+    }
+
+    return res.redirect(
+      `${frontendURL}/auth/error?errorCode=${ErrorCodes.AUTH_002}&message=OAuth 인증에 실패했습니다.`,
+    );
   }
 
   /**
@@ -145,5 +210,11 @@ export class AuthController {
   @Post('login')
   async login(@Body() loginDto: LoginDto): Promise<any> {
     return await this.authService.loginWithEmail(loginDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('status')
+  getStatus(@Req() req): any {
+    return { isAuthenticated: true, user: req.user };
   }
 }
