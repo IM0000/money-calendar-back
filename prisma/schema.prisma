@@ -70,6 +70,7 @@ model Company {
   ticker    String
   name      String
   country   String
+  marketValue String    @default("")
   earnings  Earnings[]
   dividends Dividend[]
   createdAt DateTime    @default(now())

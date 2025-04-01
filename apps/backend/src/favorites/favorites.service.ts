@@ -44,9 +44,37 @@ export class FavoritesService {
     }
 
     return {
-      earnings: user.favoriteEarnings.map((fav) => fav.earnings),
-      dividends: user.favoriteDividends.map((fav) => fav.dividend),
-      indicators: user.favoriteIndicators.map((fav) => fav.indicator),
+      earnings: convertEarningsBigInt(
+        user.favoriteEarnings.map((fav) => fav.earnings),
+      ).map((item) => ({
+        ...item,
+        eventCountry: item.country,
+        company: {
+          ...item.company,
+          companyCountry: item.company.country,
+        },
+      })),
+      dividends: convertDividendBigInt(
+        user.favoriteDividends.map((fav) => fav.dividend),
+      ).map((item) => ({
+        ...item,
+        exDividendDate: Number(item.exDividendDate),
+        paymentDate: Number(item.paymentDate),
+        company: {
+          ...item.company,
+          companyCountry: item.company.country,
+        },
+      })),
+      economicIndicators: convertEconomicIndicatorBigInt(
+        user.favoriteIndicators.map((fav) => fav.indicator),
+      ).map((item) => ({
+        ...item,
+        releaseDate: Number(item.releaseDate),
+        company: {
+          ...item.company,
+          companyCountry: item.company.country,
+        },
+      })),
     };
   }
 
@@ -110,9 +138,33 @@ export class FavoritesService {
     });
 
     return {
-      earnings: favoriteEarnings,
-      dividends: favoriteDividends,
-      economicIndicators: favoriteIndicators,
+      earnings: convertEarningsBigInt(favoriteEarnings).map((item) => ({
+        ...item,
+        eventCountry: item.country,
+        company: {
+          ...item.company,
+          companyCountry: item.company.country,
+        },
+      })),
+      dividends: convertDividendBigInt(favoriteDividends).map((item) => ({
+        ...item,
+        exDividendDate: Number(item.exDividendDate),
+        paymentDate: Number(item.paymentDate),
+        company: {
+          ...item.company,
+          companyCountry: item.company.country,
+        },
+      })),
+      economicIndicators: convertEconomicIndicatorBigInt(
+        favoriteIndicators,
+      ).map((item) => ({
+        ...item,
+        releaseDate: Number(item.releaseDate),
+        company: {
+          ...item.company,
+          companyCountry: item.company.country,
+        },
+      })),
     };
   }
 
@@ -254,3 +306,22 @@ export class FavoritesService {
     }
   }
 }
+
+const convertEarningsBigInt = (earnings: any[]) =>
+  earnings.map((item) => ({
+    ...item,
+    releaseDate: Number(item.releaseDate),
+  }));
+
+const convertDividendBigInt = (dividends: any[]) =>
+  dividends.map((item) => ({
+    ...item,
+    exDividendDate: Number(item.exDividendDate),
+    paymentDate: Number(item.paymentDate),
+  }));
+
+const convertEconomicIndicatorBigInt = (indicators: any[]) =>
+  indicators.map((item) => ({
+    ...item,
+    releaseDate: Number(item.releaseDate),
+  }));

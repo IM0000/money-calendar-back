@@ -44,6 +44,7 @@ export class CalendarService {
         ticker: e.company.ticker,
         name: e.company.name,
         companyCountry: e.company.country, // 회사의 나라 (Company 모델의 country)
+        marketValue: e.company.marketValue,
       },
       createdAt: e.createdAt.toISOString(),
       updatedAt: e.updatedAt.toISOString(),
@@ -84,6 +85,7 @@ export class CalendarService {
         ticker: d.company.ticker,
         name: d.company.name,
         companyCountry: d.company.country, // 회사의 나라
+        marketValue: d.company.marketValue,
       },
       createdAt: d.createdAt.toISOString(),
       updatedAt: d.updatedAt.toISOString(),
@@ -139,5 +141,73 @@ export class CalendarService {
     ]);
 
     return { earnings, dividends, economicIndicators };
+  }
+
+  /**
+   * 특정 기업의 이전 실적 정보 조회
+   * @param companyId 회사 ID
+   * @param page 페이지 번호
+   * @param limit 한 페이지당 항목 수
+   */
+  async getCompanyEarningsHistory(
+    companyId: number,
+    page: number,
+    limit: number,
+  ) {
+    const skip = (page - 1) * limit;
+
+    const [earnings, total] = await Promise.all([
+      this.prisma.earnings.findMany({
+        where: {
+          companyId,
+        },
+        include: {
+          company: true,
+        },
+        orderBy: {
+          releaseDate: 'desc', // 최신 실적부터 표시
+        },
+        skip,
+        take: limit,
+      }),
+      this.prisma.earnings.count({
+        where: {
+          companyId,
+        },
+      }),
+    ]);
+
+    // 결과 가공
+    const formattedEarnings = earnings.map((e) => ({
+      id: e.id,
+      eventCountry: e.country,
+      releaseDate: Number(e.releaseDate),
+      releaseTiming: e.releaseTiming,
+      actualEPS: e.actualEPS,
+      forecastEPS: e.forecastEPS,
+      previousEPS: e.previousEPS,
+      actualRevenue: e.actualRevenue,
+      forecastRevenue: e.forecastRevenue,
+      previousRevenue: e.previousRevenue,
+      company: {
+        id: e.company.id,
+        ticker: e.company.ticker,
+        name: e.company.name,
+        companyCountry: e.company.country,
+        marketValue: e.company.marketValue,
+      },
+      createdAt: e.createdAt.toISOString(),
+      updatedAt: e.updatedAt.toISOString(),
+    }));
+
+    return {
+      items: formattedEarnings,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }

@@ -1,5 +1,12 @@
 // src/calendar/calendar.controller.ts
-import { Controller, Get, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  Param,
+  ParseIntPipe,
+  DefaultValuePipe,
+} from '@nestjs/common';
 import { GetCalendarDto } from './dto/get-calendar.dto';
 import { CalendarService } from './calendar.service';
 
@@ -81,6 +88,23 @@ export class CalendarController {
     return await this.calendarService.getEconomicIndicatorsEvents(
       startTimestamp,
       endTimestamp,
+    );
+  }
+
+  /**
+   * 특정 기업의 이전 실적 정보 조회
+   * GET /calendar/earnings/history/:companyId?page=1&limit=5
+   */
+  @Get('earnings/history/:companyId')
+  async getCompanyEarningsHistory(
+    @Param('companyId', ParseIntPipe) companyId: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(5), ParseIntPipe) limit: number,
+  ) {
+    return await this.calendarService.getCompanyEarningsHistory(
+      companyId,
+      page,
+      limit,
     );
   }
 }

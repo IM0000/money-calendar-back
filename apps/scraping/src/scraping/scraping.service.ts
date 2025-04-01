@@ -79,6 +79,7 @@ export class ScrapingService {
             ticker: stock.symbolCode,
             name: stock.stockName + '(' + stock.stockNameEng + ')',
             country: stock.nationType,
+            marketValue: stock.marketValue,
           }));
 
           // 데이터셋 처리 로직 추가
@@ -104,7 +105,12 @@ export class ScrapingService {
   }
 
   async saveCompanyData(
-    companyData: { ticker: string; name: string; country: string }[],
+    companyData: {
+      ticker: string;
+      name: string;
+      country: string;
+      marketValue: string;
+    }[],
   ) {
     for (const data of companyData) {
       try {
@@ -122,6 +128,7 @@ export class ScrapingService {
             where: { id: existingCompany.id },
             data: {
               name: data.name, // 이름 업데이트
+              marketValue: data.marketValue,
               updatedAt: new Date(), // 업데이트 시간 갱신
             },
           });
@@ -133,6 +140,7 @@ export class ScrapingService {
               ticker: data.ticker,
               name: data.name,
               country: data.country,
+              marketValue: data.marketValue,
             },
           });
           console.log(`Created new company: ${data.name} (${data.ticker})`);
