@@ -612,8 +612,9 @@ export class ScrapingService {
 
       let page = 0;
       let bind_scroll_handler = true;
+      let last_time_scope = undefined;
 
-      while (page < 200 && bind_scroll_handler) {
+      while (page < 4 && bind_scroll_handler) {
         const url =
           'https://kr.investing.com/dividends-calendar/Service/getCalendarFilteredData';
         const data = {
@@ -622,6 +623,9 @@ export class ScrapingService {
           dateTo: formatDate(dateTo),
           currentTab: 'custom',
           limit_from: page++,
+          submitFilters: page === 1 ? 1 : 0,
+          byHandler: page === 1 ? '' : bind_scroll_handler,
+          last_time_scope: page === 1 ? '' : last_time_scope,
         };
 
         const urlEncodedData = Object.keys(data)
@@ -639,6 +643,7 @@ export class ScrapingService {
         const response = await axios(requestConfig);
         const html = response.data.data;
         bind_scroll_handler = response.data.bind_scroll_handler;
+        last_time_scope = response.data.last_time_scope;
 
         // cheerio로 파싱한 후의 HTML을 저장
         const $ = cheerio.load(html, { xmlMode: true });
