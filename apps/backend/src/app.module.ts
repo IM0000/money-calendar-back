@@ -21,6 +21,7 @@ import { CalendarModule } from './calendar/calendar.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SearchModule } from './search/search.module';
+import { CompaniesModule } from './companies/companies.module';
 
 console.log('NODE_ENV:', process.env.NODE_ENV); // NODE_ENV 값 로그 출력
 // const envFilePath = join(
@@ -64,6 +65,7 @@ console.log('Loading environment variables from:', envFilePath);
     FavoritesModule,
     NotificationsModule,
     SearchModule,
+    CompaniesModule,
   ],
   controllers: [AppController],
   providers: [

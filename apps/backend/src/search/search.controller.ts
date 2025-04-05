@@ -1,10 +1,8 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Request } from '@nestjs/common';
 import { SearchService } from './search.service';
 import { SearchCompanyDto, SearchIndicatorDto } from './dto/search.dto';
-import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 
 @Controller('api/v1/search')
-@UseGuards(JwtAuthGuard)
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
@@ -13,8 +11,11 @@ export class SearchController {
    * GET /search/companies?query=apple&country=US&page=1&limit=10
    */
   @Get('companies')
-  async searchCompanies(@Query() searchDto: SearchCompanyDto) {
-    return this.searchService.searchCompanies(searchDto);
+  async searchCompanies(@Query() searchDto: SearchCompanyDto, @Request() req) {
+    // 인증된 사용자가 있다면 ID 추출
+    const userId = req.user?.id;
+
+    return await this.searchService.searchCompanies(searchDto, userId);
   }
 
   /**
@@ -22,7 +23,13 @@ export class SearchController {
    * GET /search/indicators?query=cpi&country=US&page=1&limit=10
    */
   @Get('indicators')
-  async searchIndicators(@Query() searchDto: SearchIndicatorDto) {
-    return this.searchService.searchIndicators(searchDto);
+  async searchIndicators(
+    @Query() searchDto: SearchIndicatorDto,
+    @Request() req,
+  ) {
+    // 인증된 사용자가 있다면 ID 추출
+    const userId = req.user?.id;
+
+    return await this.searchService.searchIndicators(searchDto, userId);
   }
 }

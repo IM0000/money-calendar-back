@@ -5,9 +5,9 @@ import {
   Query,
   Param,
   ParseIntPipe,
-  DefaultValuePipe,
+  Request,
 } from '@nestjs/common';
-import { GetCalendarDto } from './dto/get-calendar.dto';
+import { GetCalendarDto, GetCompanyHistoryDto } from './dto/get-calendar.dto';
 import { CalendarService } from './calendar.service';
 
 @Controller('api/v1/calendar')
@@ -19,31 +19,18 @@ export class CalendarController {
    * GET /calendar/events?startDate=yyyy-mm-dd&endDate=yyyy-mm-dd
    */
   @Get('events')
-  async getAllEvents(@Query() query: GetCalendarDto) {
-    const { startDate, endDate } = query;
-    // 전달받은 yyyy-mm-dd 형식을 Date 객체로 변환 후, timestamp(밀리초)로 변경
-    const startTimestamp = new Date(startDate).getTime();
-    const endTimestamp = new Date(endDate).getTime();
+  async getCalendarEvents(@Query() query: GetCalendarDto, @Request() req) {
+    const startTimestamp = new Date(query.startDate).getTime();
+    const endTimestamp = new Date(query.endDate).getTime() + 86400000; // 하루 추가(23:59:59까지 포함)
 
-    const earnings = await this.calendarService.getEarningsEvents(
+    // req.user가 있으면 userId 전달, 없으면 undefined
+    const userId = req.user?.id;
+
+    return await this.calendarService.getCalendarEvents(
       startTimestamp,
       endTimestamp,
+      userId,
     );
-    const dividends = await this.calendarService.getDividendEvents(
-      startTimestamp,
-      endTimestamp,
-    );
-    const economicIndicators =
-      await this.calendarService.getEconomicIndicatorsEvents(
-        startTimestamp,
-        endTimestamp,
-      );
-
-    return {
-      earnings,
-      dividends,
-      economicIndicators,
-    };
   }
 
   /**
@@ -51,13 +38,16 @@ export class CalendarController {
    * GET /calendar/earnings?startDate=yyyy-mm-dd&endDate=yyyy-mm-dd
    */
   @Get('earnings')
-  async getEarnings(@Query() query: GetCalendarDto) {
-    const { startDate, endDate } = query;
-    const startTimestamp = new Date(startDate).getTime();
-    const endTimestamp = new Date(endDate).getTime();
+  async getEarningsEvents(@Query() query: GetCalendarDto, @Request() req) {
+    const startTimestamp = new Date(query.startDate).getTime();
+    const endTimestamp = new Date(query.endDate).getTime() + 86400000; // 하루 추가(23:59:59까지 포함)
+
+    const userId = req.user?.id;
+
     return await this.calendarService.getEarningsEvents(
       startTimestamp,
       endTimestamp,
+      userId,
     );
   }
 
@@ -66,28 +56,37 @@ export class CalendarController {
    * GET /calendar/dividends?startDate=yyyy-mm-dd&endDate=yyyy-mm-dd
    */
   @Get('dividends')
-  async getDividends(@Query() query: GetCalendarDto) {
-    const { startDate, endDate } = query;
-    const startTimestamp = new Date(startDate).getTime();
-    const endTimestamp = new Date(endDate).getTime();
+  async getDividendEvents(@Query() query: GetCalendarDto, @Request() req) {
+    const startTimestamp = new Date(query.startDate).getTime();
+    const endTimestamp = new Date(query.endDate).getTime() + 86400000; // 하루 추가(23:59:59까지 포함)
+
+    const userId = req.user?.id;
+
     return await this.calendarService.getDividendEvents(
       startTimestamp,
       endTimestamp,
+      userId,
     );
   }
 
   /**
    * 경제지표만 조회
-   * GET /calendar/economic-indicators?startDate=yyyy-mm-dd&endDate=yyyy-mm-dd
+   * GET /api/v1/calendar/economic-indicators?startDate=yyyy-mm-dd&endDate=yyyy-mm-dd
    */
   @Get('economic-indicators')
-  async getEconomicIndicators(@Query() query: GetCalendarDto) {
-    const { startDate, endDate } = query;
-    const startTimestamp = new Date(startDate).getTime();
-    const endTimestamp = new Date(endDate).getTime();
+  async getEconomicIndicatorEvents(
+    @Query() query: GetCalendarDto,
+    @Request() req,
+  ) {
+    const startTimestamp = new Date(query.startDate).getTime();
+    const endTimestamp = new Date(query.endDate).getTime() + 86400000; // 하루 추가(23:59:59까지 포함)
+
+    const userId = req.user?.id;
+
     return await this.calendarService.getEconomicIndicatorsEvents(
       startTimestamp,
       endTimestamp,
+      userId,
     );
   }
 
@@ -98,13 +97,36 @@ export class CalendarController {
   @Get('earnings/history/:companyId')
   async getCompanyEarningsHistory(
     @Param('companyId', ParseIntPipe) companyId: number,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(5), ParseIntPipe) limit: number,
+    @Query() query: GetCompanyHistoryDto,
+    @Request() req,
   ) {
+    const userId = req.user?.id;
+
     return await this.calendarService.getCompanyEarningsHistory(
       companyId,
-      page,
-      limit,
+      query.page,
+      query.limit,
+      userId,
+    );
+  }
+
+  /**
+   * 특정 기업의 이전 배당금 정보 조회
+   * GET /calendar/dividends/history/:companyId?page=1&limit=5
+   */
+  @Get('dividends/history/:companyId')
+  async getCompanyDividendHistory(
+    @Param('companyId', ParseIntPipe) companyId: number,
+    @Query() query: GetCompanyHistoryDto,
+    @Request() req,
+  ) {
+    const userId = req.user?.id;
+
+    return await this.calendarService.getCompanyDividendHistory(
+      companyId,
+      query.page,
+      query.limit,
+      userId,
     );
   }
 }
