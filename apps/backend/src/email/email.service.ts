@@ -4,6 +4,9 @@ import * as nodemailer from 'nodemailer';
 import { emailConfig } from './../config/email.config';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
+import { SendNotificationEmailDto } from '../notification/dto/notification.dto';
 
 interface EmailOptions {
   to: string;
@@ -18,12 +21,14 @@ export class EmailService {
   constructor(
     @Inject(emailConfig.KEY)
     private emailConfiguration: ConfigType<typeof emailConfig>,
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
   ) {
     this.transporter = nodemailer.createTransport({
-      service: emailConfiguration.service,
+      service: this.emailConfiguration.service,
       auth: {
-        user: emailConfiguration.auth.user,
-        pass: emailConfiguration.auth.pass,
+        user: this.emailConfiguration.auth.user,
+        pass: this.emailConfiguration.auth.pass,
       },
     });
   }
@@ -40,5 +45,11 @@ export class EmailService {
     this.logger.log('sendMemberJoinVerification end');
     this.logger.log(mailOptions);
     return await this.transporter.sendMail(mailOptions);
+  }
+
+  async sendNotificationEmail(dto: SendNotificationEmailDto) {
+    // TODO: 실제 이메일 발송 로직 구현
+    // 현재는 로그만 출력
+    console.log('이메일 알림 발송:', dto);
   }
 }

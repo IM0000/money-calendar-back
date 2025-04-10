@@ -9,6 +9,7 @@ import {
   Param,
   Delete,
   HttpCode,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdatePasswordDto, UserDto } from '../auth/dto/users.dto';
@@ -19,6 +20,8 @@ import {
   OAuthConnectionDto,
 } from './dto/profile.dto';
 import { Request } from 'express';
+import { NotificationService } from '../notification/notification.service';
+import { UpdateUserNotificationSettingsDto } from '../notification/dto/notification.dto';
 
 interface RequestWithUser extends Request {
   user: {
@@ -29,7 +32,10 @@ interface RequestWithUser extends Request {
 
 @Controller('api/v1/users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   @Put('/password')
   async updatePassword(
@@ -126,5 +132,59 @@ export class UsersController {
   ) {
     const userId = req.user.id;
     return this.usersService.disconnectOAuthAccount(userId, provider);
+  }
+
+  /**
+   * 사용자 알림 목록 조회
+   */
+  @Get('/me/notifications')
+  @UseGuards(JwtAuthGuard)
+  async getUserNotifications(
+    @Req() req: RequestWithUser,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    const userId = req.user.id;
+    return this.notificationService.getUserNotifications(
+      userId,
+      parseInt(page),
+      parseInt(limit),
+    );
+  }
+
+  /**
+   * 사용자 읽지 않은 알림 개수 조회
+   */
+  @Get('/me/notifications/unread/count')
+  @UseGuards(JwtAuthGuard)
+  async getUnreadNotificationsCount(@Req() req: RequestWithUser) {
+    const userId = req.user.id;
+    return this.notificationService.getUnreadNotificationsCount(userId);
+  }
+
+  /**
+   * 사용자 알림 설정 조회
+   */
+  @Get('/me/notification-settings')
+  @UseGuards(JwtAuthGuard)
+  async getNotificationSettings(@Req() req: RequestWithUser) {
+    const userId = req.user.id;
+    return this.notificationService.getUserNotificationSettings(userId);
+  }
+
+  /**
+   * 사용자 알림 설정 업데이트
+   */
+  @Put('/me/notification-settings')
+  @UseGuards(JwtAuthGuard)
+  async updateNotificationSettings(
+    @Req() req: RequestWithUser,
+    @Body() updateSettingsDto: UpdateUserNotificationSettingsDto,
+  ) {
+    const userId = req.user.id;
+    return this.notificationService.updateUserNotificationSettings(
+      userId,
+      updateSettingsDto,
+    );
   }
 }
