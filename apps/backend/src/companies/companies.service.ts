@@ -4,6 +4,7 @@ import {
 } from './../utils/convert-bigint';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ContentType } from '@prisma/client';
 
 @Injectable()
 export class CompaniesService {
@@ -46,11 +47,11 @@ export class CompaniesService {
         },
       });
 
-      // 알림 설정 정보도 조회 (NotificationSetting 테이블이 있다고 가정)
+      // 알림 설정 정보도 조회
       userNotifications = await this.prisma.notification.findMany({
         where: {
           userId,
-          type: 'EARNINGS',
+          contentType: ContentType.EARNINGS,
           contentId: {
             in: earningsItems.map((item) => item.id),
           },
@@ -132,7 +133,7 @@ export class CompaniesService {
       userNotifications = await this.prisma.notification.findMany({
         where: {
           userId,
-          type: 'DIVIDEND',
+          contentType: ContentType.DIVIDEND,
           contentId: {
             in: dividendItems.map((item) => item.id),
           },

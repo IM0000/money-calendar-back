@@ -6,11 +6,14 @@ import {
   Param,
   ParseIntPipe,
   Request,
+  UseGuards,
 } from '@nestjs/common';
 import { GetCalendarDto, GetCompanyHistoryDto } from './dto/get-calendar.dto';
 import { CalendarService } from './calendar.service';
+import { OptionalJwtAuthGuard } from '../auth/guard/optional-jwt-auth.guard';
 
 @Controller('api/v1/calendar')
+@UseGuards(OptionalJwtAuthGuard)
 export class CalendarController {
   constructor(private readonly calendarService: CalendarService) {}
 
@@ -25,7 +28,6 @@ export class CalendarController {
 
     // req.user가 있으면 userId 전달, 없으면 undefined
     const userId = req.user?.id;
-
     return await this.calendarService.getCalendarEvents(
       startTimestamp,
       endTimestamp,
@@ -43,7 +45,8 @@ export class CalendarController {
     const endTimestamp = new Date(query.endDate).getTime() + 86400000; // 하루 추가(23:59:59까지 포함)
 
     const userId = req.user?.id;
-
+    console.log(userId);
+    console.log(req);
     return await this.calendarService.getEarningsEvents(
       startTimestamp,
       endTimestamp,

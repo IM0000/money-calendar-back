@@ -33,6 +33,13 @@ export class CalendarService {
               },
             }
           : false,
+        notifications: userId
+          ? {
+              where: {
+                userId,
+              },
+            }
+          : false,
       },
       orderBy: {
         releaseDate: 'asc',
@@ -61,6 +68,7 @@ export class CalendarService {
       createdAt: e.createdAt.toISOString(),
       updatedAt: e.updatedAt.toISOString(),
       isFavorite: userId ? e.favorites.length > 0 : false,
+      hasNotification: userId ? e.notifications?.length > 0 : false,
     }));
   }
 
@@ -116,6 +124,7 @@ export class CalendarService {
       createdAt: d.createdAt.toISOString(),
       updatedAt: d.updatedAt.toISOString(),
       isFavorite: userId ? d.favorites.length > 0 : false,
+      hasNotification: false,
     }));
   }
 
@@ -145,6 +154,13 @@ export class CalendarService {
               },
             }
           : false,
+        notifications: userId
+          ? {
+              where: {
+                userId,
+              },
+            }
+          : false,
       },
       orderBy: {
         releaseDate: 'asc',
@@ -164,6 +180,7 @@ export class CalendarService {
       createdAt: e.createdAt.toISOString(),
       updatedAt: e.updatedAt.toISOString(),
       isFavorite: userId ? e.favorites.length > 0 : false,
+      hasNotification: userId ? e.notifications?.length > 0 : false,
     }));
   }
 
@@ -216,6 +233,13 @@ export class CalendarService {
                 },
               }
             : false,
+          notifications: userId
+            ? {
+                where: {
+                  userId,
+                },
+              }
+            : false,
         },
         orderBy: {
           releaseDate: 'desc', // 최신 실적부터 표시
@@ -252,6 +276,7 @@ export class CalendarService {
       createdAt: e.createdAt.toISOString(),
       updatedAt: e.updatedAt.toISOString(),
       isFavorite: userId ? e.favorites.length > 0 : false,
+      hasNotification: userId ? e.notifications?.length > 0 : false,
     }));
 
     return {
@@ -327,6 +352,7 @@ export class CalendarService {
       createdAt: d.createdAt.toISOString(),
       updatedAt: d.updatedAt.toISOString(),
       isFavorite: userId ? d.favorites.length > 0 : false,
+      hasNotification: false,
     }));
 
     return {

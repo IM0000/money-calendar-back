@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import { SharedModule } from '../shared/shared.module';
+import { PrismaModule } from '../prisma/prisma.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
-  imports: [SharedModule], // 순환 의존성 해결],
+  imports: [PrismaModule, NotificationModule],
   controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],

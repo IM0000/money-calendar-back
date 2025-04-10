@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["fullTextSearchPostgres"]
 }
 
@@ -9,19 +9,21 @@ datasource db {
 }
 
 model User {
-  id                  Int                  @id @default(autoincrement())
-  email               String               @unique
-  password            String?              // 이메일 로그인 사용자의 경우 사용 (OAuth만 사용하면 null 가능)
-  nickname            String?
-  verified            Boolean              @default(false)  // 인증 관련 추가 필드
-  oauthAccounts       OAuthAccount[]       // 기존 OAuthAccount / OauthInfo 통합
-  favoriteEarnings    FavoriteEarnings[]
-  favoriteDividends   FavoriteDividends[]
-  favoriteIndicators  FavoriteIndicator[]
-  notifications       Notification[]
-  notificationSettings UserNotificationSettings?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  id                     Int                                 @id @default(autoincrement())
+  email                  String                              @unique
+  password               String? // 이메일 로그인 사용자의 경우 사용 (OAuth만 사용하면 null 가능)
+  nickname               String?
+  verified               Boolean                             @default(false) // 인증 관련 추가 필드
+  oauthAccounts          OAuthAccount[] // 기존 OAuthAccount / OauthInfo 통합
+  favoriteEarnings       FavoriteEarnings[]
+  favoriteDividends      FavoriteDividends[]
+  favoriteIndicators     FavoriteIndicator[]
+  notifications          Notification[]
+  notificationSettings   UserNotificationSettings?
+  indicatorNotifications IndicatorNotification[]
+  earningsNotifications  EarningsNotification[]
+  createdAt              DateTime                            @default(now())
+  updatedAt              DateTime                            @updatedAt
 }
 
 model UserNotificationSettings {
@@ -31,32 +33,31 @@ model UserNotificationSettings {
   emailEnabled    Boolean  @default(true)
   pushEnabled     Boolean  @default(true)
   preferredMethod String   @default("BOTH") // "EMAIL", "PUSH", "BOTH"
-  defaultTiming   String   @default("ONE_DAY_BEFORE") // "ONE_HOUR_BEFORE", "THREE_HOURS_BEFORE", "ONE_DAY_BEFORE", "THREE_DAYS_BEFORE", "ONE_WEEK_BEFORE"
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
 
 model OAuthAccount {
-  id           Int      @id @default(autoincrement())
-  provider     String   // 'google', 'kakao', 'apple', 'discord', 등
-  providerId   String   // OAuth 제공자가 제공하는 고유 ID
-  accessToken  String?  // OAuth 관련 access token (OauthInfo 필드)
-  refreshToken String?  // refresh token
+  id           Int       @id @default(autoincrement())
+  provider     String // 'google', 'kakao', 'apple', 'discord', 등
+  providerId   String // OAuth 제공자가 제공하는 고유 ID
+  accessToken  String? // OAuth 관련 access token (OauthInfo 필드)
+  refreshToken String? // refresh token
   tokenExpiry  DateTime? // token 만료일
   userId       Int
-  user         User     @relation(fields: [userId], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  user         User      @relation(fields: [userId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@unique([provider, providerId])
 }
 
 model VerificationCode {
-  id         Int      @id @default(autoincrement())
-  email      String   @unique
-  code       String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model VerificationToken {
@@ -67,15 +68,15 @@ model VerificationToken {
 }
 
 model Company {
-  id        Int         @id @default(autoincrement())
-  ticker    String
-  name      String
-  country   String
-  marketValue String    @default("")
-  earnings  Earnings[]
-  dividends Dividend[]
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id          Int        @id @default(autoincrement())
+  ticker      String
+  name        String
+  country     String
+  marketValue String     @default("")
+  earnings    Earnings[]
+  dividends   Dividend[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@unique([ticker, country])
 }
@@ -87,54 +88,56 @@ enum ReleaseTiming {
 }
 
 model Earnings {
-  id              Int           @id @default(autoincrement())
-  country         String        // 국가
-  releaseDate     BigInt        // 발표 날짜 (밀리초 단위)
-  releaseTiming   ReleaseTiming @default(UNKNOWN)
-  actualEPS       String        // 실제 EPS
-  forecastEPS     String        // 예측 EPS
-  previousEPS     String        // 이전 EPS
-  actualRevenue   String        // 실제 매출
-  forecastRevenue String        // 예측 매출
-  previousRevenue String        // 이전 매출
+  id              Int                                @id @default(autoincrement())
+  country         String // 국가
+  releaseDate     BigInt // 발표 날짜 (밀리초 단위)
+  releaseTiming   ReleaseTiming                      @default(UNKNOWN)
+  actualEPS       String // 실제 EPS
+  forecastEPS     String // 예측 EPS
+  previousEPS     String // 이전 EPS
+  actualRevenue   String // 실제 매출
+  forecastRevenue String // 예측 매출
+  previousRevenue String // 이전 매출
   companyId       Int
-  company         Company       @relation(fields: [companyId], references: [id])
+  company         Company                            @relation(fields: [companyId], references: [id])
   favorites       FavoriteEarnings[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  notifications   EarningsNotification[]
+  createdAt       DateTime                           @default(now())
+  updatedAt       DateTime                           @updatedAt
 
   @@unique([releaseDate, companyId])
 }
 
 model Dividend {
-  id                      Int      @id @default(autoincrement())
-  country                 String   // 국가
-  exDividendDate          BigInt   // 배당락일 (밀리초 단위)
-  dividendAmount          String   // 배당금
-  previousDividendAmount  String   // 이전 배당금
-  paymentDate             BigInt   // 배당 지급일 (밀리초 단위)
-  dividendYield           String   // 배당 수익률
-  companyId               Int
-  company                 Company  @relation(fields: [companyId], references: [id])
-  favorites               FavoriteDividends[]
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  id                     Int                 @id @default(autoincrement())
+  country                String // 국가
+  exDividendDate         BigInt // 배당락일 (밀리초 단위)
+  dividendAmount         String // 배당금
+  previousDividendAmount String // 이전 배당금
+  paymentDate            BigInt // 배당 지급일 (밀리초 단위)
+  dividendYield          String // 배당 수익률
+  companyId              Int
+  company                Company             @relation(fields: [companyId], references: [id])
+  favorites              FavoriteDividends[]
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 
   @@unique([exDividendDate, companyId])
 }
 
 model EconomicIndicator {
-  id         Int      @id @default(autoincrement())
-  country    String   // 국가
-  releaseDate BigInt  // 발표 날짜 (밀리초 단위)
-  name       String   // 지표 이름
-  importance Int      // 중요도 (예: 1~5 스케일)
-  actual     String   // 실제 값
-  forecast   String   // 예측 값
-  previous   String   // 이전 값
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  favorites  FavoriteIndicator[]
+  id            Int                                 @id @default(autoincrement())
+  country       String // 국가
+  releaseDate   BigInt // 발표 날짜 (밀리초 단위)
+  name          String // 지표 이름
+  importance    Int // 중요도 (예: 1~5 스케일)
+  actual        String // 실제 값
+  forecast      String // 예측 값
+  previous      String // 이전 값
+  createdAt     DateTime                            @default(now())
+  updatedAt     DateTime                            @updatedAt
+  favorites     FavoriteIndicator[]
+  notifications IndicatorNotification[]
 
   @@unique([releaseDate, name, country])
 }
@@ -144,6 +147,7 @@ model FavoriteEarnings {
   earningsId Int
   user       User     @relation(fields: [userId], references: [id])
   earnings   Earnings @relation(fields: [earningsId], references: [id])
+
   @@id([userId, earningsId])
 }
 
@@ -152,32 +156,65 @@ model FavoriteDividends {
   dividendId Int
   user       User     @relation(fields: [userId], references: [id])
   dividend   Dividend @relation(fields: [dividendId], references: [id])
+
   @@id([userId, dividendId])
 }
 
 model FavoriteIndicator {
   userId      Int
   indicatorId Int
-  user        User               @relation(fields: [userId], references: [id])
-  indicator   EconomicIndicator  @relation(fields: [indicatorId], references: [id])
+  user        User              @relation(fields: [userId], references: [id])
+  indicator   EconomicIndicator @relation(fields: [indicatorId], references: [id])
+
   @@id([userId, indicatorId])
 }
+enum NotificationMethod {
+  EMAIL
+  PUSH
+  BOTH
+}
 
-enum NotificationType {
+enum ContentType {
   EARNINGS
   DIVIDEND
   ECONOMIC_INDICATOR
 }
 
 model Notification {
-  id              Int              @id @default(autoincrement())
-  userId          Int              // 알림을 받을 사용자
-  type            NotificationType // 알림 유형
-  contentId       Int              // 알림 대상 컨텐츠의 id (예: Earnings, Dividend, EconomicIndicator의 id)
-  read            Boolean          @default(false)
-  method          String?          // "EMAIL", "PUSH", "BOTH"
-  timing          String?          // "ONE_HOUR_BEFORE", "THREE_HOURS_BEFORE", "ONE_DAY_BEFORE", "THREE_DAYS_BEFORE", "ONE_WEEK_BEFORE"
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  user            User             @relation(fields: [userId], references: [id])
+  id           Int         @id @default(autoincrement())
+  userId       Int         // 알림을 받을 사용자의 id
+  contentId    Int         // 알림 대상 콘텐츠의 id (예: Earnings, Dividend, EconomicIndicator의 id)
+  contentType  ContentType // 콘텐츠의 유형을 나타내는 필드
+  read         Boolean     @default(false)
+  method       NotificationMethod?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  user         User        @relation(fields: [userId], references: [id])
+
+  @@index([userId, read, contentType])
+  @@index([contentType, contentId])
+}
+// 알림 관리용 모델 추가
+model IndicatorNotification {
+  id          Int               @id @default(autoincrement())
+  userId      Int
+  indicatorId Int
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation(fields: [userId], references: [id])
+  indicator   EconomicIndicator @relation(fields: [indicatorId], references: [id])
+
+  @@unique([userId, indicatorId])
+}
+
+model EarningsNotification {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  earningsId Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id])
+  earnings   Earnings @relation(fields: [earningsId], references: [id])
+
+  @@unique([userId, earningsId])
 }
