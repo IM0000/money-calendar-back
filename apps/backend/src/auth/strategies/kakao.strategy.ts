@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-kakao';
 import { AuthService } from '../auth.service';
@@ -11,6 +11,8 @@ export class KakaoStrategy extends PassportStrategy(
   Strategy,
   OAuthProviderEnum.Kakao,
 ) {
+  private readonly logger = new Logger(KakaoStrategy.name);
+
   constructor(
     @Inject(kakaoConfig.KEY)
     private readonly kakaoConfiguration: ConfigType<typeof kakaoConfig>,
@@ -18,7 +20,7 @@ export class KakaoStrategy extends PassportStrategy(
   ) {
     super({
       clientID: kakaoConfiguration.clientID,
-      clientSecret: kakaoConfiguration.clientSecret,
+      clientSecret: '',
       callbackURL: kakaoConfiguration.callbackURL,
     });
   }
@@ -29,10 +31,12 @@ export class KakaoStrategy extends PassportStrategy(
     profile: any,
     done: (error: any, user?: any, info?: any) => void,
   ): Promise<any> {
-    const { id, username } = profile;
+    this.logger.log('🚀 ~ profile:', profile);
+    const { id, provider, _json } = profile;
     const user = {
-      id,
-      username,
+      provider,
+      providerId: id.toString(),
+      email: _json.kakao_account.email,
       accessToken,
     };
     done(null, user);
