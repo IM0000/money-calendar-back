@@ -3,46 +3,28 @@ import {
   IsOptional,
   IsString,
   Length,
-  Matches,
+  ValidateIf,
 } from 'class-validator';
 
 export class UpdateProfileDto {
-  @IsOptional()
   @IsString()
   @Length(2, 20)
-  nickname?: string;
+  nickname: string;
 }
 
 export class UpdateUserPasswordDto {
+  @ValidateIf((o) => o.currentPassword !== '')
   @IsString()
   @Length(8, 100)
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d\W]{8,}$/, {
-    message:
-      '비밀번호는 최소 8자 이상이며, 대문자, 소문자, 숫자를 포함해야 합니다.',
-  })
-  currentPassword: string;
+  currentPassword?: string;
 
   @IsString()
   @Length(8, 100)
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d\W]{8,}$/, {
-    message:
-      '비밀번호는 최소 8자 이상이며, 대문자, 소문자, 숫자를 포함해야 합니다.',
-  })
   newPassword: string;
+
+  @IsEmail()
+  email: string;
 }
-
-export class OAuthConnectionDto {
-  @IsString()
-  provider: string;
-
-  @IsString()
-  accessToken: string;
-
-  @IsOptional()
-  @IsString()
-  refreshToken?: string;
-}
-
 export class ProfileResponseDto {
   id: number;
   email: string;
@@ -54,4 +36,16 @@ export class ProfileResponseDto {
     provider: string;
     connected: boolean;
   }[];
+}
+
+export class DeleteUserDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  password: string;
+}
+export class VerifyPasswordDto {
+  @IsString()
+  password: string;
 }

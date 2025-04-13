@@ -29,7 +29,7 @@ model User {
 model UserNotificationSettings {
   id              Int      @id @default(autoincrement())
   userId          Int      @unique
-  user            User     @relation(fields: [userId], references: [id])
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   emailEnabled    Boolean  @default(true)
   pushEnabled     Boolean  @default(true)
   preferredMethod String   @default("BOTH") // "EMAIL", "PUSH", "BOTH"
@@ -41,11 +41,12 @@ model OAuthAccount {
   id           Int       @id @default(autoincrement())
   provider     String // 'google', 'kakao', 'apple', 'discord', 등
   providerId   String // OAuth 제공자가 제공하는 고유 ID
+  oauthEmail   String?
   accessToken  String? // OAuth 관련 access token (OauthInfo 필드)
   refreshToken String? // refresh token
   tokenExpiry  DateTime? // token 만료일
   userId       Int
-  user         User      @relation(fields: [userId], references: [id])
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -145,7 +146,7 @@ model EconomicIndicator {
 model FavoriteEarnings {
   userId     Int
   earningsId Int
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   earnings   Earnings @relation(fields: [earningsId], references: [id])
 
   @@id([userId, earningsId])
@@ -154,7 +155,7 @@ model FavoriteEarnings {
 model FavoriteDividends {
   userId     Int
   dividendId Int
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   dividend   Dividend @relation(fields: [dividendId], references: [id])
 
   @@id([userId, dividendId])
@@ -163,7 +164,7 @@ model FavoriteDividends {
 model FavoriteIndicator {
   userId      Int
   indicatorId Int
-  user        User              @relation(fields: [userId], references: [id])
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   indicator   EconomicIndicator @relation(fields: [indicatorId], references: [id])
 
   @@id([userId, indicatorId])
@@ -189,7 +190,7 @@ model Notification {
   method       NotificationMethod?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
-  user         User        @relation(fields: [userId], references: [id])
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read, contentType])
   @@index([contentType, contentId])
@@ -201,7 +202,7 @@ model IndicatorNotification {
   indicatorId Int
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
-  user        User              @relation(fields: [userId], references: [id])
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   indicator   EconomicIndicator @relation(fields: [indicatorId], references: [id])
 
   @@unique([userId, indicatorId])
@@ -213,7 +214,7 @@ model EarningsNotification {
   earningsId Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   earnings   Earnings @relation(fields: [earningsId], references: [id])
 
   @@unique([userId, earningsId])

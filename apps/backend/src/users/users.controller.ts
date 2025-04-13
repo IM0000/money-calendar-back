@@ -10,6 +10,9 @@ import {
   Delete,
   HttpCode,
   Query,
+  Patch,
+  Inject,
+  Logger,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdatePasswordDto, UserDto } from '../auth/dto/users.dto';
@@ -17,11 +20,14 @@ import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import {
   UpdateProfileDto,
   UpdateUserPasswordDto,
-  OAuthConnectionDto,
+  DeleteUserDto,
+  VerifyPasswordDto,
 } from './dto/profile.dto';
 import { Request } from 'express';
 import { NotificationService } from '../notification/notification.service';
 import { UpdateUserNotificationSettingsDto } from '../notification/dto/notification.dto';
+import { ConfigType } from '@nestjs/config';
+import { jwtConfig } from '../config/jwt.config';
 
 interface RequestWithUser extends Request {
   user: {
@@ -32,9 +38,12 @@ interface RequestWithUser extends Request {
 
 @Controller('api/v1/users')
 export class UsersController {
+  private readonly logger = new Logger(UsersController.name);
   constructor(
     private readonly usersService: UsersService,
     private readonly notificationService: NotificationService,
+    @Inject(jwtConfig.KEY)
+    private jwtConfiguration: ConfigType<typeof jwtConfig>,
   ) {}
 
   @Put('/password')
@@ -67,7 +76,7 @@ export class UsersController {
   /**
    * 사용자 프로필 업데이트 (닉네임 등)
    */
-  @Put('/profile')
+  @Patch('/profile/nickname')
   @UseGuards(JwtAuthGuard)
   async updateProfile(
     @Req() req: RequestWithUser,
@@ -80,7 +89,7 @@ export class UsersController {
   /**
    * 사용자 비밀번호 변경 (로그인된 상태에서)
    */
-  @Put('/profile/password')
+  @Patch('/profile/password')
   @UseGuards(JwtAuthGuard)
   async changeUserPassword(
     @Req() req: RequestWithUser,
@@ -95,29 +104,20 @@ export class UsersController {
   }
 
   /**
-   * OAuth 계정 연결
+   * 계정 탈퇴
    */
-  @Post('/profile/oauth')
+  @Post('/delete')
   @UseGuards(JwtAuthGuard)
-  async connectOAuthAccount(
+  async deleteUser(
     @Req() req: RequestWithUser,
-    @Body() oauthConnectionDto: OAuthConnectionDto,
+    @Body() deleteUserDto: DeleteUserDto,
   ) {
-    const { provider } = oauthConnectionDto;
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-    // 유효한 OAuth 제공자인지 확인
-    const validProviders = ['google', 'apple', 'discord', 'kakao'];
-    if (!validProviders.includes(provider)) {
-      throw new Error(`지원하지 않는 OAuth 제공자입니다: ${provider}`);
-    }
-
-    // OAuth 인증 요청 URL을 반환
-    // oauthMethod=connect 파라미터를 추가하여 auth 모듈에서 계정 연결 요청임을 인식
-    return {
-      message: '계정 연결을 위해 OAuth 인증 페이지로 이동하세요.',
-      redirectUrl: `/api/v1/auth/oauth/${provider}?oauthMethod=connect`,
-    };
+    const userId = req.user.id;
+    return this.usersService.deleteUser(
+      userId,
+      deleteUserDto.email,
+      deleteUserDto.password,
+    );
   }
 
   /**
@@ -186,5 +186,22 @@ export class UsersController {
       userId,
       updateSettingsDto,
     );
+  }
+
+  /**
+   * 현재 비밀번호 확인
+   */
+  @Post('/verify-password')
+  @UseGuards(JwtAuthGuard)
+  async verifyPassword(
+    @Req() req: RequestWithUser,
+    @Body() verifyPasswordDto: VerifyPasswordDto,
+  ): Promise<{ isValid: boolean }> {
+    const userId = req.user.id;
+    const isValid = await this.usersService.verifyUserPassword(
+      userId,
+      verifyPasswordDto.password,
+    );
+    return { isValid };
   }
 }

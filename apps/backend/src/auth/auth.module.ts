@@ -36,8 +36,8 @@ import { SharedModule } from '../shared/shared.module';
     JwtStrategy,
     GoogleStrategy,
     // AppleStrategy,
-    // KakaoStrategy,
-    // DiscordStrategy,
+    KakaoStrategy,
+    DiscordStrategy,
   ],
   exports: [AuthService],
 })

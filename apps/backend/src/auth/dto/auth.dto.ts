@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class VerifyDto {
   @IsEmail()
@@ -17,4 +17,23 @@ export class LoginDto {
 
   @IsNotEmpty()
   password: string;
+}
+
+export class OAuthConnectionDto {
+  @IsString()
+  provider: string;
+
+  @IsOptional()
+  @IsString()
+  accessToken?: string;
+
+  @IsOptional()
+  @IsString()
+  refreshToken?: string;
+}
+
+export class StatePayload {
+  oauthMethod: string;
+  userId: number;
+  provider: string;
 }

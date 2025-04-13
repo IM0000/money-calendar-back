@@ -1,5 +1,5 @@
-import { ForbiddenException, Logger } from '@nestjs/common';
 // /auth/auth.service.ts
+import { ForbiddenException, Logger } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
@@ -10,6 +10,7 @@ import { jwtConfig } from '../config/jwt.config';
 import { v4 as uuidv4 } from 'uuid';
 import { ErrorCodes } from '../common/enums/error-codes.enum';
 import * as bcrypt from 'bcrypt';
+import { OAuthProviderEnum } from './enum/oauth-provider.enum';
 
 @Injectable()
 export class AuthService {
@@ -125,5 +126,38 @@ export class AuthService {
     await this.usersService.storeVerificationToken(token, email);
     this.logger.log('generateVerificationToken', 'token', token);
     return token;
+  }
+
+  /**
+   * oauth 연동 state 토큰 생성
+   * @param email 사용자 이메일
+   * @returns oauth 연동 state 토큰
+   */
+  generateOAuthStateToken(userId: number, provider: string): string {
+    // 유효한 OAuth 제공자인지 확인
+    const validProviders = [
+      OAuthProviderEnum.Google.toString(),
+      OAuthProviderEnum.Apple.toString(),
+      OAuthProviderEnum.Discord.toString(),
+      OAuthProviderEnum.Kakao.toString(),
+    ];
+    if (!validProviders.includes(provider)) {
+      throw new Error(`지원하지 않는 OAuth 제공자입니다: ${provider}`);
+    }
+
+    const statePayload = {
+      oauthMethod: 'connect',
+      userId,
+      provider,
+    };
+    const stateToken = jwt.sign(statePayload, this.jwtConfiguration.secret, {
+      expiresIn: '5m',
+    });
+
+    return stateToken;
+  }
+
+  verifyJwtToken(token: string): any {
+    return jwt.verify(token, this.jwtConfiguration.secret);
   }
 }

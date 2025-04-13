@@ -30,8 +30,10 @@ export class DiscordStrategy extends PassportStrategy(
     profile: any,
     done: (error: any, user?: any, info?: any) => void,
   ): Promise<any> {
-    const { username, email } = profile;
+    const { provider, id, username, email } = profile;
     const user = {
+      providerId: id,
+      provider,
       username,
       email,
       accessToken,
