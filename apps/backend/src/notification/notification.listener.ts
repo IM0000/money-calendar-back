@@ -42,6 +42,7 @@ export class NotificationListener {
           userSettings.preferredMethod === 'BOTH')
       ) {
         const emailDto: SendNotificationEmailDto = {
+          email: notification.user.email,
           subject: `${before.name} 지표 업데이트 알림`,
           content: `${before.name}의 실제값이 ${before.actual}에서 ${after.actual}로 변경되었습니다.`,
         };
@@ -80,6 +81,7 @@ export class NotificationListener {
           userSettings.preferredMethod === 'BOTH')
       ) {
         const emailDto: SendNotificationEmailDto = {
+          email: notification.user.email,
           subject: `${before.company.name} 실적 업데이트 알림`,
           content: `${before.company.name}의 실적이 업데이트되었습니다. 
           EPS : ${after.actualEPS}, 매출 : ${after.actualRevenue}`,

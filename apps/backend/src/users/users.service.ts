@@ -239,41 +239,44 @@ export class UsersService {
    * @param email 이메일 주소
    */
   async sendVerificationCode(email: string): Promise<void> {
-    this.logger.log(email);
+    this.logger.log(`sendVerificationCode: ${email}`);
     // 인증 코드 생성
-    const code = generateSixDigitCode(); // 숫자 6자리
+    const code = generateSixDigitCode(); // 6자리 숫자 코드 생성
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10분 후 만료
 
-    // 기존 인증 코드 삭제
-    await this.prisma.verificationCode.deleteMany({
-      where: { email },
-    });
+    // DB 작업들을 트랜잭션으로 묶어 원자성 보장
+    await this.prisma.$transaction(async (tx) => {
+      // 기존 인증 코드 삭제
+      await tx.verificationCode.deleteMany({
+        where: { email },
+      });
 
-    // 새 인증 코드 저장
-    await this.prisma.verificationCode.create({
-      data: {
-        email,
-        code,
-        expiresAt,
-      },
-    });
-
-    // 인증 안된 유저 객체 생성
-    const user = this.prisma.user.findUnique({
-      where: { email },
-    });
-    if (!user) {
-      await this.prisma.user.create({
+      // 새 인증 코드 저장
+      await tx.verificationCode.create({
         data: {
           email,
-          verified: false,
+          code,
+          expiresAt,
         },
       });
-    }
 
-    // 이메일 전송
+      // 사용자가 존재하지 않으면 생성
+      const existingUser = await tx.user.findUnique({
+        where: { email },
+      });
+      if (!existingUser) {
+        await tx.user.create({
+          data: {
+            email,
+            verified: false,
+          },
+        });
+      }
+    });
+
+    // 이메일 전송은 DB 트랜잭션 외부에서 실행
     await this.emailService.sendMemberJoinVerification(email, code);
-    this.logger.log(email, code);
+    this.logger.log(`Verification email sent to ${email} with code ${code}`);
   }
 
   /**
@@ -282,34 +285,35 @@ export class UsersService {
    * @param code 인증 코드
    */
   async verifyEmailCode(email: string, code: string): Promise<UserDto> {
-    const verification = await this.prisma.verificationCode.findUnique({
-      where: { email },
-    });
-    this.logger.log(verification);
-    if (!verification || verification.code !== code) {
-      throw new BadRequestException({
-        errorCode: ErrorCodes.AUTH_002,
-        errorMessage: '유효하지 않은 인증 코드입니다.',
-      });
-    }
-
-    if (verification.expiresAt < new Date()) {
-      throw new BadRequestException({
-        errorCode: ErrorCodes.AUTH_001,
-        errorMessage: '인증 코드가 만료되었습니다.',
-      });
-    }
-
-    // 인증 완료 처리 (계정 생성)
-    const user = await this.createUserByEmail(email);
-    this.logger.log(user);
-    if (user) {
-      await this.prisma.user.update({
+    return await this.prisma.$transaction(async (tx) => {
+      const verification = await tx.verificationCode.findUnique({
         where: { email },
-        data: { verified: true },
       });
-    }
-    return user;
+      this.logger.log(`verifyEmailCode: ${email}, code: ${code}`);
+      if (!verification || verification.code !== code) {
+        throw new BadRequestException({
+          errorCode: ErrorCodes.AUTH_002,
+          errorMessage: '유효하지 않은 인증 코드입니다.',
+        });
+      }
+
+      if (verification.expiresAt < new Date()) {
+        throw new BadRequestException({
+          errorCode: ErrorCodes.AUTH_001,
+          errorMessage: '인증 코드가 만료되었습니다.',
+        });
+      }
+
+      // 인증 완료 처리 (사용자 계정 생성 혹은 업데이트)
+      const user = await this.createUserByEmail(email);
+      if (user) {
+        await tx.user.update({
+          where: { email },
+          data: { verified: true },
+        });
+      }
+      return user;
+    });
   }
 
   /**

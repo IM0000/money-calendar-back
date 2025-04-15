@@ -124,6 +124,7 @@ describe('EmailService', () => {
   describe('sendNotificationEmail', () => {
     it('알림 이메일을 보내야 합니다', async () => {
       const notificationDto: SendNotificationEmailDto = {
+        email: 'test@example.com',
         subject: '알림 제목',
         content: '알림 내용',
       };
