@@ -30,7 +30,7 @@ export class NotificationController {
   async getNotifications(
     @Req() req: RequestWithUser,
     @Query('page') page = '1',
-    @Query('limit') limit = '10',
+    @Query('limit') limit = '100',
   ) {
     const userId = req.user.id;
     return this.notificationService.getUserNotifications(

@@ -9,10 +9,6 @@ import {
   CreateNotificationDto,
   UpdateUserNotificationSettingsDto,
 } from './dto/notification.dto';
-import {
-  convertEarningsBigInt,
-  convertEconomicIndicatorBigInt,
-} from '../utils/convert-bigint';
 
 @Injectable()
 export class NotificationService {
@@ -28,7 +24,7 @@ export class NotificationService {
     });
   }
 
-  async getUserNotifications(userId: number, page = 1, limit = 10) {
+  async getUserNotifications(userId: number, page = 1, limit = 100) {
     const skip = (page - 1) * limit;
 
     const [notifications, total] = await Promise.all([
