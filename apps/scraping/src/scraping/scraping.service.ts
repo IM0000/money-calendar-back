@@ -10,6 +10,9 @@ import {
   ImportanceLevelMap,
 } from '../common/constants/nation-code.constants';
 import { ReleaseTiming } from '@prisma/client';
+import { ScrapingErrorHandler } from '../common/utils/scraping-error-handler.util';
+import { ElementNotFoundException } from '../common/exceptions/scraping.exceptions';
+import { formatDate, parseDate } from '../common/utils/convert-date';
 
 @Injectable()
 export class ScrapingService {
@@ -62,7 +65,19 @@ export class ScrapingService {
           };
 
           // GET 요청 보내기
-          const getResponse = await axios(getRequestConfig);
+          const getResponse = await ScrapingErrorHandler.executeWithRetry(
+            () => axios(getRequestConfig),
+            {
+              maxRetries: 3,
+              delayMs: 1000,
+              retryableErrors: [
+                'NETWORK_ERROR',
+                'REQUEST_TIMEOUT',
+                'ACCESS_BLOCKED',
+              ],
+            },
+            { market: markets[i], page },
+          );
           const jsonData = getResponse.data;
 
           // 응답 데이터 로깅
@@ -100,7 +115,9 @@ export class ScrapingService {
 
       this.logger.debug('USA company scraping complete');
     } catch (error) {
-      this.logger.warn('Error occurred while scraping USA companies:', error);
+      ScrapingErrorHandler.handleError(error, {
+        context: 'USA company scraping',
+      });
     }
   }
 
@@ -205,7 +222,19 @@ export class ScrapingService {
         requestConfig.url = url;
         requestConfig.data = urlEncodedData;
 
-        const response = await axios(requestConfig);
+        const response = await ScrapingErrorHandler.executeWithRetry(
+          () => axios(requestConfig),
+          {
+            maxRetries: 3,
+            delayMs: 1000,
+            retryableErrors: [
+              'NETWORK_ERROR',
+              'REQUEST_TIMEOUT',
+              'ACCESS_BLOCKED',
+            ],
+          },
+          { country, page },
+        );
         const html = response.data.data;
         bind_scroll_handler = response.data.bind_scroll_handler;
 
@@ -219,47 +248,61 @@ export class ScrapingService {
         let currentDate: string;
         // 모든 tr 요소를 순회
         $('tr').each((index, element) => {
-          // theDay 클래스를 가진 td가 있는 경우 날짜를 갱신
-          if ($(element).find('.theDay').length > 0) {
-            const theDayId = $(element).find('.theDay').attr('id');
-            currentDate = theDayId.replace('theDay', '') + '000';
-          }
+          try {
+            if ($(element).find('.theDay').length > 0) {
+              const theDayId = $(element).find('.theDay').attr('id');
+              if (!theDayId) {
+                throw new ElementNotFoundException(
+                  '날짜 ID를 찾을 수 없습니다',
+                );
+              }
+              currentDate = theDayId.replace('theDay', '') + '000';
+            }
 
-          // js-event-item 클래스를 가진 tr만 처리
-          if ($(element).hasClass('js-event-item')) {
-            const time = $(element).find('.js-time').text().trim();
-            let country = $(element).find('.flagCur span').attr('title').trim();
-            country = CountryNameToCodeMap[country] || '미확인@' + country;
-            let importance = $(element).find('.sentiment').attr('title').trim();
-            importance = ImportanceLevelMap[importance];
-            const eventName = $(element).find('.event a').text().trim();
+            if ($(element).hasClass('js-event-item')) {
+              const time = $(element).find('.js-time').text().trim();
+              const countryElement = $(element).find('.flagCur span');
+              let country = countryElement.attr('title')?.trim();
+              country = CountryNameToCodeMap[country] || '미확인@' + country;
+              let importance = $(element)
+                .find('.sentiment')
+                .attr('title')
+                .trim();
+              importance = ImportanceLevelMap[importance];
+              const eventName = $(element).find('.event a').text().trim();
 
-            const sanitizeText = (text) =>
-              text.trim() === '&nbsp;' ? '' : text.trim();
+              const sanitizeText = (text) =>
+                text.trim() === '&nbsp;' ? '' : text.trim();
 
-            const actual = sanitizeText($(element).find('.act').text());
-            const forecast = sanitizeText($(element).find('.fore').text());
-            const previous = sanitizeText($(element).find('.prev').text());
+              const actual = sanitizeText($(element).find('.act').text());
+              const forecast = sanitizeText($(element).find('.fore').text());
+              const previous = sanitizeText($(element).find('.prev').text());
 
-            const dateObj = new Date(Number(currentDate));
-            const [hours, minutes] = time.split(':');
+              const dateObj = new Date(Number(currentDate));
+              const [hours, minutes] = time.split(':');
 
-            // dateObj에 시간을 추가
-            dateObj.setHours(Number(hours), Number(minutes));
+              // dateObj에 시간을 추가
+              dateObj.setHours(Number(hours), Number(minutes));
 
-            // 필요한 데이터 객체로 정리
-            const eventData = {
-              country,
-              releaseDate: dateObj.getTime(),
-              name: eventName,
-              importance,
-              actual,
-              forecast,
-              previous,
-            };
+              // 필요한 데이터 객체로 정리
+              const eventData = {
+                country,
+                releaseDate: dateObj.getTime(),
+                name: eventName,
+                importance,
+                actual,
+                forecast,
+                previous,
+              };
 
-            // 데이터를 배열에 추가
-            dataSet.push(eventData);
+              // 데이터를 배열에 추가
+              dataSet.push(eventData);
+            }
+          } catch (error) {
+            ScrapingErrorHandler.handleError(error, {
+              context: 'Economic indicator data parsing',
+              element: $(element).html(),
+            });
           }
         });
 
@@ -271,11 +314,10 @@ export class ScrapingService {
 
       this.logger.debug('Scraped and saved economic data successfully.');
     } catch (error) {
-      this.logger.error(
-        'Error occurred while economic scraping website',
-        error,
-        error.stack,
-      );
+      ScrapingErrorHandler.handleError(error, {
+        context: 'Economic indicator scraping',
+        scrapeDto,
+      });
     }
   }
 
@@ -374,7 +416,19 @@ export class ScrapingService {
         requestConfig.url = url;
         requestConfig.data = urlEncodedData;
 
-        const response = await axios(requestConfig);
+        const response = await ScrapingErrorHandler.executeWithRetry(
+          () => axios(requestConfig),
+          {
+            maxRetries: 3,
+            delayMs: 1000,
+            retryableErrors: [
+              'NETWORK_ERROR',
+              'REQUEST_TIMEOUT',
+              'ACCESS_BLOCKED',
+            ],
+          },
+          { country, page },
+        );
         const html = response.data.data;
         bind_scroll_handler = response.data.bind_scroll_handler;
         last_time_scope = response.data.last_time_scope;
@@ -385,93 +439,105 @@ export class ScrapingService {
         let currentDate;
 
         $('tr').each((index, element) => {
-          // 날짜 업데이트
-          // tr 내부의 td에 theDay 클래스가 있는지 확인하여 날짜 업데이트
-          const dateElement = $(element).find('td.theDay');
-          if (dateElement.length > 0) {
-            currentDate = dateElement.text().trim();
-            currentDate = parseDate(currentDate);
-          }
+          try {
+            const dateElement = $(element).find('td.theDay');
+            if (dateElement.length > 0) {
+              currentDate = dateElement.text().trim();
+              currentDate = parseDate(currentDate);
+            }
 
-          // 데이터 파싱
-          if ($(element).find('.earnCalCompany').length > 0) {
-            const ticker = $(element).find('.earnCalCompany a').text().trim();
-
-            // actualEPS와 forecastEPS 파싱
-            let actualEPS = '';
-            let forecastEPS = '';
-
-            // eps_actual 클래스를 가진 요소를 찾고, 그 옆에 있는 요소에서 forecastEPS 추출
-            const epsElement = $(element).find('td[class*="eps_actual"]');
-            if (epsElement.length > 0) {
-              actualEPS = epsElement.text().trim();
-              const forecastEPSElement = epsElement.next('td.leftStrong');
-              if (forecastEPSElement.length > 0) {
-                forecastEPS =
-                  forecastEPSElement.text().split('/&nbsp;&nbsp;')[1].trim() ||
-                  '';
+            if ($(element).find('.earnCalCompany').length > 0) {
+              const tickerElement = $(element).find('.earnCalCompany a');
+              if (!tickerElement.length) {
+                throw new ElementNotFoundException(
+                  '티커 정보를 찾을 수 없습니다',
+                );
               }
-            }
+              const ticker = tickerElement.text().trim();
 
-            // actualRevenue와 forecastRevenue 파싱
-            let actualRevenue = '';
-            let forecastRevenue = '';
+              // actualEPS와 forecastEPS 파싱
+              let actualEPS = '';
+              let forecastEPS = '';
 
-            // rev_actual 클래스를 가진 요소를 찾고, 그 옆에 있는 요소에서 forecastRevenue 추출
-            const revElement = $(element).find('td[class*="rev_actual"]');
-            if (revElement.length > 0) {
-              actualRevenue = revElement.text().trim();
-              const forecastRevenueElement = revElement.next('td.leftStrong');
-              if (forecastRevenueElement.length > 0) {
-                forecastRevenue =
-                  forecastRevenueElement
-                    .text()
-                    .split('/&nbsp;&nbsp;')[1]
-                    .trim() || '';
+              // eps_actual 클래스를 가진 요소를 찾고, 그 옆에 있는 요소에서 forecastEPS 추출
+              const epsElement = $(element).find('td[class*="eps_actual"]');
+              if (epsElement.length > 0) {
+                actualEPS = epsElement.text().trim();
+                const forecastEPSElement = epsElement.next('td.leftStrong');
+                if (forecastEPSElement.length > 0) {
+                  forecastEPS =
+                    forecastEPSElement
+                      .text()
+                      .split('/&nbsp;&nbsp;')[1]
+                      .trim() || '';
+                }
               }
+
+              // actualRevenue와 forecastRevenue 파싱
+              let actualRevenue = '';
+              let forecastRevenue = '';
+
+              // rev_actual 클래스를 가진 요소를 찾고, 그 옆에 있는 요소에서 forecastRevenue 추출
+              const revElement = $(element).find('td[class*="rev_actual"]');
+              if (revElement.length > 0) {
+                actualRevenue = revElement.text().trim();
+                const forecastRevenueElement = revElement.next('td.leftStrong');
+                if (forecastRevenueElement.length > 0) {
+                  forecastRevenue =
+                    forecastRevenueElement
+                      .text()
+                      .split('/&nbsp;&nbsp;')[1]
+                      .trim() || '';
+                }
+              }
+
+              let releaseTiming = '';
+              const releaseTimingElement = $(element).find(
+                'td.right.time span.genToolTip',
+              );
+              if (releaseTimingElement.length > 0) {
+                releaseTiming =
+                  releaseTimingElement.attr('data-tooltip')?.trim() || '';
+              }
+
+              if (releaseTiming === '개장 전') {
+                releaseTiming = ReleaseTiming.PRE_MARKET;
+              } else if (releaseTiming === '폐장 후') {
+                releaseTiming = ReleaseTiming.POST_MARKET;
+              } else {
+                releaseTiming = ReleaseTiming.UNKNOWN;
+              }
+
+              // 날짜 형식 변환
+              const releaseDate = currentDate.getTime();
+
+              this.logger.debug({
+                releaseDate,
+                releaseTiming,
+                actualEPS,
+                forecastEPS,
+                actualRevenue,
+                forecastRevenue,
+                ticker,
+                country,
+              });
+
+              // 데이터 객체 생성
+              dataSet.push({
+                releaseDate,
+                releaseTiming,
+                actualEPS,
+                forecastEPS,
+                actualRevenue,
+                forecastRevenue,
+                ticker,
+                country,
+              });
             }
-
-            let releaseTiming = '';
-            const releaseTimingElement = $(element).find(
-              'td.right.time span.genToolTip',
-            );
-            if (releaseTimingElement.length > 0) {
-              releaseTiming =
-                releaseTimingElement.attr('data-tooltip')?.trim() || '';
-            }
-
-            if (releaseTiming === '개장 전') {
-              releaseTiming = ReleaseTiming.PRE_MARKET;
-            } else if (releaseTiming === '폐장 후') {
-              releaseTiming = ReleaseTiming.POST_MARKET;
-            } else {
-              releaseTiming = ReleaseTiming.UNKNOWN;
-            }
-
-            // 날짜 형식 변환
-            const releaseDate = currentDate.getTime();
-
-            this.logger.debug({
-              releaseDate,
-              releaseTiming,
-              actualEPS,
-              forecastEPS,
-              actualRevenue,
-              forecastRevenue,
-              ticker,
-              country,
-            });
-
-            // 데이터 객체 생성
-            dataSet.push({
-              releaseDate,
-              releaseTiming,
-              actualEPS,
-              forecastEPS,
-              actualRevenue,
-              forecastRevenue,
-              ticker,
-              country,
+          } catch (error) {
+            ScrapingErrorHandler.handleError(error, {
+              context: 'Earnings data parsing',
+              element: $(element).html(),
             });
           }
         });
@@ -485,10 +551,10 @@ export class ScrapingService {
 
       this.logger.debug('Scraped and saved earnings data successfully.');
     } catch (error) {
-      this.logger.error(
-        'Error occurred while earnings scraping website',
-        error,
-      );
+      ScrapingErrorHandler.handleError(error, {
+        context: 'Earnings scraping',
+        scrapeDto,
+      });
     }
   }
 
@@ -640,7 +706,19 @@ export class ScrapingService {
         requestConfig.url = url;
         requestConfig.data = urlEncodedData;
 
-        const response = await axios(requestConfig);
+        const response = await ScrapingErrorHandler.executeWithRetry(
+          () => axios(requestConfig),
+          {
+            maxRetries: 3,
+            delayMs: 1000,
+            retryableErrors: [
+              'NETWORK_ERROR',
+              'REQUEST_TIMEOUT',
+              'ACCESS_BLOCKED',
+            ],
+          },
+          { country, page },
+        );
         const html = response.data.data;
         bind_scroll_handler = response.data.bind_scroll_handler;
         last_time_scope = response.data.last_time_scope;
@@ -653,36 +731,43 @@ export class ScrapingService {
 
         // 모든 tr 요소를 순회
         $('tr').each((index, element) => {
-          const flagElement = $(element).find('.flag span');
-          if (flagElement.length > 0) {
-            const exDividendDateString = $(element)
-              .find('td')
-              .eq(2)
-              .text()
-              .trim();
-            const exDividendDate = parseDate(exDividendDateString).getTime();
-            const dividendAmount = $(element).find('td').eq(3).text().trim();
-            const dividendYield = $(element).find('td').eq(6).text().trim();
-            const paymentDateString =
-              $(element).find('td').eq(5).attr('data-value') + '000';
-            const paymentDate =
-              Number(paymentDateString) > 0 ? Number(paymentDateString) : 0; // 없는 경우 0으로 넣음
-            const ticker = $(element).find('td').eq(1).find('a').text().trim();
+          try {
+            const flagElement = $(element).find('.flag span');
+            if (flagElement.length > 0) {
+              const exDividendDateElement = $(element).find('td').eq(2);
+              const exDividendDateString = exDividendDateElement.text().trim();
+              const exDividendDate = parseDate(exDividendDateString).getTime();
+              const dividendAmountElement = $(element).find('td').eq(3);
+              const dividendAmount = dividendAmountElement.text().trim();
+              const dividendYieldElement = $(element).find('td').eq(6);
+              const dividendYield = dividendYieldElement.text().trim();
+              const paymentDateString =
+                $(element).find('td').eq(5).attr('data-value') + '000';
+              const paymentDate =
+                Number(paymentDateString) > 0 ? Number(paymentDateString) : 0; // 없는 경우 0으로 넣음
+              const tickerElement = $(element).find('td').eq(1).find('a');
+              const ticker = tickerElement.text().trim();
 
-            // this.logger.debug(paymentDate);
-            // 데이터 객체로 정리
-            const eventData = {
-              country,
-              ticker,
-              exDividendDate,
-              dividendAmount,
-              previousDividendAmount: '', // 이전 배당금은 주어진 데이터에서 처리할 수 없으므로 빈 값으로 설정
-              paymentDate,
-              dividendYield,
-            };
+              // this.logger.debug(paymentDate);
+              // 데이터 객체로 정리
+              const eventData = {
+                country,
+                ticker,
+                exDividendDate,
+                dividendAmount,
+                previousDividendAmount: '', // 이전 배당금은 주어진 데이터에서 처리할 수 없으므로 빈 값으로 설정
+                paymentDate,
+                dividendYield,
+              };
 
-            // 데이터를 배열에 추가
-            dataSet.push(eventData);
+              // 데이터를 배열에 추가
+              dataSet.push(eventData);
+            }
+          } catch (error) {
+            ScrapingErrorHandler.handleError(error, {
+              context: 'Dividend data parsing',
+              element: $(element).html(),
+            });
           }
         });
 
@@ -696,10 +781,10 @@ export class ScrapingService {
 
       this.logger.debug('Scraped and saved dividend data successfully.');
     } catch (error) {
-      this.logger.error(
-        'Error occurred while dividend scraping website',
-        error,
-      );
+      ScrapingErrorHandler.handleError(error, {
+        context: 'Dividend scraping',
+        scrapeDto,
+      });
     }
   }
 
@@ -788,30 +873,4 @@ export class ScrapingService {
       }
     }
   }
-}
-
-function formatDate(dateString: string): string {
-  if (dateString.length !== 8) {
-    throw new Error('Invalid date format. Expected format: YYYYMMDD');
-  }
-
-  const year = dateString.substring(0, 4);
-  const month = dateString.substring(4, 6);
-  const day = dateString.substring(6, 8);
-
-  return `${year}-${month}-${day}`;
-}
-
-function parseDate(dateString: string): Date {
-  // "2024년 8월 2일 금요일" 형식을 Date 객체로 변환
-  const [year, month, day] = dateString
-    .replace('년', '')
-    .replace('월', '')
-    .replace('일', '')
-    .split(' ')
-    .map((part) => parseInt(part.trim()));
-
-  const date = new Date(year, month - 1, day);
-
-  return date;
 }
