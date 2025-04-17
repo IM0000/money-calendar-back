@@ -1,9 +1,14 @@
 import { Injectable, Logger, Body } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import {
+  NetworkException,
+  TimeoutException,
+  AccessBlockedException,
+  ScrapingException,
+} from '../common/exceptions/scraping.exceptions';
 import axios, { AxiosRequestConfig } from 'axios';
 import * as cheerio from 'cheerio';
 import { PrismaService } from '../prisma/prisma.service';
-import { ScrapeDto } from '../dto/scrape.dto';
+import { ProxyConfigDto, ScrapeDto } from './dto/scrape.dto';
 import {
   CountryCodeMap,
   CountryNameToCodeMap,
@@ -19,17 +24,11 @@ export class ScrapingService {
   private readonly logger = new Logger(ScrapingService.name);
   constructor(private readonly prisma: PrismaService) {}
 
-  @Cron('0 0 * * * *') // 매시간 정각에 실행
-  async handleCron(scrapeDto: ScrapeDto) {
-    this.logger.debug('Called when the current second is 0');
-    await this.scrapeEconomicIndicator(scrapeDto);
-  }
-
   async sleep(ms): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  async scrapeUSACompany(): Promise<void> {
+  async scrapeUSACompany(proxyConfig?: ProxyConfigDto): Promise<void> {
     try {
       const markets = ['NYSE', 'NASDAQ', 'AMEX'];
       const pageSize = 20;
@@ -38,7 +37,6 @@ export class ScrapingService {
         let page = 1;
         let totalCount = 0;
         while (true) {
-          // 요청 설정
           const getRequestConfig: AxiosRequestConfig = {
             method: 'get',
             url: `https://api.stock.naver.com/stock/exchange/${markets[i]}/marketValue?page=${page}&pageSize=${pageSize}`,
@@ -57,14 +55,15 @@ export class ScrapingService {
               'accept-language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
               connection: 'keep-alive',
             },
-            proxy: {
-              host: '127.0.0.1', // 프록시 서버 주소
-              port: 9090, // 프록시 서버 포트
-              protocol: 'http', // 프록시 서버 프로토콜
-            },
+            ...(proxyConfig && {
+              proxy: {
+                host: proxyConfig.host,
+                port: proxyConfig.port,
+                protocol: proxyConfig.protocol ?? 'http',
+              },
+            }),
           };
 
-          // GET 요청 보내기
           const getResponse = await ScrapingErrorHandler.executeWithRetry(
             () => axios(getRequestConfig),
             {
@@ -80,15 +79,10 @@ export class ScrapingService {
           );
           const jsonData = getResponse.data;
 
-          // 응답 데이터 로깅
-          console.log(jsonData);
-
-          // totalCount가 0이면 응답에서 가져옴
           if (totalCount === 0) {
             totalCount = jsonData.totalCount;
           }
 
-          // 현재 페이지의 데이터 처리
           const stocks = jsonData.stocks;
           const dataSet = stocks.map((stock: any) => ({
             ticker: stock.symbolCode,
@@ -97,17 +91,14 @@ export class ScrapingService {
             marketValue: stock.marketValue,
           }));
 
-          // 데이터셋 처리 로직 추가
           this.logger.debug(dataSet);
 
           await this.saveCompanyData(dataSet);
 
-          // 모든 페이지를 다 처리했으면 종료
           if (page * pageSize >= totalCount) break;
 
           await this.sleep(200);
 
-          // 다음 페이지로 넘어가기
           page += 1;
           this.logger.debug('company Scraping...');
         }
@@ -115,9 +106,21 @@ export class ScrapingService {
 
       this.logger.debug('USA company scraping complete');
     } catch (error) {
-      ScrapingErrorHandler.handleError(error, {
-        context: 'USA company scraping',
-      });
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          throw new TimeoutException(error);
+        }
+        if (error.response?.status === 403) {
+          throw new AccessBlockedException({ response: error.response?.data });
+        }
+        throw new NetworkException({ message: error.message });
+      }
+      throw new ScrapingException(
+        'USA company scraping failed',
+        undefined,
+        'USA_SCRAPE_ERROR',
+        error,
+      );
     }
   }
 
@@ -131,7 +134,6 @@ export class ScrapingService {
   ) {
     for (const data of companyData) {
       try {
-        // 회사 검색: ticker와 country를 기준으로 검색
         const existingCompany = await this.prisma.company.findFirst({
           where: {
             ticker: data.ticker,
@@ -140,18 +142,16 @@ export class ScrapingService {
         });
 
         if (existingCompany) {
-          // 회사가 존재하면 업데이트 (필요 시 업데이트할 필드 추가)
           await this.prisma.company.update({
             where: { id: existingCompany.id },
             data: {
-              name: data.name, // 이름 업데이트
+              name: data.name,
               marketValue: data.marketValue,
-              updatedAt: new Date(), // 업데이트 시간 갱신
+              updatedAt: new Date(),
             },
           });
           console.log(`Updated company: ${data.name} (${data.ticker})`);
         } else {
-          // 회사가 존재하지 않으면 새로 생성
           await this.prisma.company.create({
             data: {
               ticker: data.ticker,
@@ -170,7 +170,7 @@ export class ScrapingService {
 
   async scrapeEconomicIndicator(scrapeDto: ScrapeDto): Promise<void> {
     try {
-      const { country, dateFrom, dateTo } = scrapeDto;
+      const { country, dateFrom, dateTo, proxyConfig } = scrapeDto;
 
       const countryCode = CountryCodeMap[country];
 
@@ -187,11 +187,13 @@ export class ScrapingService {
           'x-requested-with': 'XMLHttpRequest',
           Referer: 'https://kr.investing.com/',
         },
-        proxy: {
-          host: '127.0.0.1', // 프록시 서버 주소
-          port: 9090, // 프록시 서버 포트
-          protocol: 'http', // 프록시 서버 프로토콜
-        },
+        ...(proxyConfig && {
+          proxy: {
+            host: proxyConfig.host,
+            port: proxyConfig.port,
+            protocol: proxyConfig.protocol ?? 'http',
+          },
+        }),
       };
 
       let page = 0;
@@ -238,15 +240,11 @@ export class ScrapingService {
         const html = response.data.data;
         bind_scroll_handler = response.data.bind_scroll_handler;
 
-        // cheerio로 파싱한 후의 HTML을 저장
         const $ = cheerio.load(html, { xmlMode: true });
 
-        // 데이터를 담을 배열 초기화
         const dataSet = [];
 
-        // 각 행을 순회하며 데이터 추출
         let currentDate: string;
-        // 모든 tr 요소를 순회
         $('tr').each((index, element) => {
           try {
             if ($(element).find('.theDay').length > 0) {
@@ -281,10 +279,8 @@ export class ScrapingService {
               const dateObj = new Date(Number(currentDate));
               const [hours, minutes] = time.split(':');
 
-              // dateObj에 시간을 추가
               dateObj.setHours(Number(hours), Number(minutes));
 
-              // 필요한 데이터 객체로 정리
               const eventData = {
                 country,
                 releaseDate: dateObj.getTime(),
@@ -295,7 +291,6 @@ export class ScrapingService {
                 previous,
               };
 
-              // 데이터를 배열에 추가
               dataSet.push(eventData);
             }
           } catch (error) {
@@ -307,17 +302,27 @@ export class ScrapingService {
         });
 
         await this.saveEconomicIndicatorData(dataSet);
-        // console.log(JSON.stringify(dataSet));
 
         this.logger.debug('economicIndicator Scraping...');
       }
 
       this.logger.debug('Scraped and saved economic data successfully.');
     } catch (error) {
-      ScrapingErrorHandler.handleError(error, {
-        context: 'Economic indicator scraping',
-        scrapeDto,
-      });
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          throw new TimeoutException(error);
+        }
+        if (error.response?.status === 403) {
+          throw new AccessBlockedException({ response: error.response.data });
+        }
+        throw new NetworkException({ message: error.message });
+      }
+      throw new ScrapingException(
+        'Economic indicator scraping failed',
+        undefined,
+        'ECONOMIC_INDICATOR_SCRAPE_ERROR',
+        error,
+      );
     }
   }
 
@@ -332,7 +337,6 @@ export class ScrapingService {
       });
 
       if (existingRecord) {
-        // 존재하면 업데이트
         await this.prisma.economicIndicator.update({
           where: { id: existingRecord.id },
           data: {
@@ -343,7 +347,6 @@ export class ScrapingService {
           },
         });
       } else {
-        // 존재하지 않으면 생성
         await this.prisma.economicIndicator.create({
           data: {
             country: data.country,
@@ -361,7 +364,7 @@ export class ScrapingService {
 
   async scrapeEarnings(scrapeDto: ScrapeDto): Promise<void> {
     try {
-      const { country, dateFrom, dateTo } = scrapeDto;
+      const { country, dateFrom, dateTo, proxyConfig } = scrapeDto;
 
       const countryCode = CountryCodeMap[country];
 
@@ -378,11 +381,13 @@ export class ScrapingService {
           'x-requested-with': 'XMLHttpRequest',
           Referer: 'https://kr.investing.com/',
         },
-        proxy: {
-          host: '127.0.0.1', // 프록시 서버 주소
-          port: 9090, // 프록시 서버 포트
-          protocol: 'http', // 프록시 서버 프로토콜
-        },
+        ...(proxyConfig && {
+          proxy: {
+            host: proxyConfig.host,
+            port: proxyConfig.port,
+            protocol: proxyConfig.protocol ?? 'http',
+          },
+        }),
       };
 
       let page = 0;
@@ -433,7 +438,6 @@ export class ScrapingService {
         bind_scroll_handler = response.data.bind_scroll_handler;
         last_time_scope = response.data.last_time_scope;
 
-        // cheerio로 파싱한 후의 HTML을 저장
         const $ = cheerio.load(html, { xmlMode: true });
         const dataSet = [];
         let currentDate;
@@ -455,7 +459,6 @@ export class ScrapingService {
               }
               const ticker = tickerElement.text().trim();
 
-              // actualEPS와 forecastEPS 파싱
               let actualEPS = '';
               let forecastEPS = '';
 
@@ -473,7 +476,6 @@ export class ScrapingService {
                 }
               }
 
-              // actualRevenue와 forecastRevenue 파싱
               let actualRevenue = '';
               let forecastRevenue = '';
 
@@ -508,7 +510,6 @@ export class ScrapingService {
                 releaseTiming = ReleaseTiming.UNKNOWN;
               }
 
-              // 날짜 형식 변환
               const releaseDate = currentDate.getTime();
 
               this.logger.debug({
@@ -522,7 +523,6 @@ export class ScrapingService {
                 country,
               });
 
-              // 데이터 객체 생성
               dataSet.push({
                 releaseDate,
                 releaseTiming,
@@ -546,15 +546,25 @@ export class ScrapingService {
         this.logger.debug('earnings Scraping...');
       }
 
-      // previous 업데이트
       await this.updateEarningsPreviousValues();
 
       this.logger.debug('Scraped and saved earnings data successfully.');
     } catch (error) {
-      ScrapingErrorHandler.handleError(error, {
-        context: 'Earnings scraping',
-        scrapeDto,
-      });
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          throw new TimeoutException(error);
+        }
+        if (error.response?.status === 403) {
+          throw new AccessBlockedException({ response: error.response.data });
+        }
+        throw new NetworkException({ message: error.message });
+      }
+      throw new ScrapingException(
+        'Earnings scraping failed',
+        undefined,
+        'EARNINGS_SCRAPE_ERROR',
+        error,
+      );
     }
   }
 
@@ -563,8 +573,8 @@ export class ScrapingService {
     for (const data of earningsData) {
       const company = await this.prisma.company.findFirst({
         where: {
-          ticker: data.ticker, // `ticker` 값을 기준으로 검색합니다.
-          country: data.country, // `country` 값을 기준으로 검색합니다.
+          ticker: data.ticker,
+          country: data.country,
         },
       });
 
@@ -575,7 +585,6 @@ export class ScrapingService {
         continue;
       }
 
-      // 존재하는 수익 데이터가 있는지 조회합니다.
       const existingRecord = await this.prisma.earnings.findFirst({
         where: {
           releaseDate: data.releaseDate,
@@ -584,7 +593,6 @@ export class ScrapingService {
       });
 
       if (existingRecord) {
-        // 기존 데이터가 존재하면 업데이트
         await this.prisma.earnings.update({
           where: { id: existingRecord.id },
           data: {
@@ -596,7 +604,6 @@ export class ScrapingService {
           },
         });
       } else {
-        // 기존 데이터가 없으면 새로운 데이터를 생성
         await this.prisma.earnings.create({
           data: {
             releaseDate: data.releaseDate,
@@ -618,27 +625,24 @@ export class ScrapingService {
   }
 
   async updateEarningsPreviousValues() {
-    // 이전 값이 없는 레코드만 가져옵니다.
     const earningsRecords = await this.prisma.earnings.findMany({
       where: {
-        previousEPS: '', // 이전 EPS가 비어있는 레코드
-        previousRevenue: '', // 이전 Revenue가 비어있는 레코드
+        previousEPS: '',
+        previousRevenue: '',
       },
-      orderBy: { releaseDate: 'asc' }, // 날짜순으로 정렬하여 처리
+      orderBy: { releaseDate: 'asc' },
     });
 
     for (const record of earningsRecords) {
-      // 이전의 가장 최신 Earnings 데이터 조회
       const previousRecord = await this.prisma.earnings.findFirst({
         where: {
           companyId: record.companyId,
           releaseDate: { lt: record.releaseDate }, // 현재 레코드보다 이전인 데이터만 조회
         },
-        orderBy: { releaseDate: 'desc' }, // 가장 최신의 이전 데이터만 가져옴
+        orderBy: { releaseDate: 'desc' },
       });
 
       if (previousRecord) {
-        // 이전 값이 있을 경우 업데이트
         await this.prisma.earnings.update({
           where: { id: record.id },
           data: {
@@ -652,7 +656,7 @@ export class ScrapingService {
 
   async scrapeDividend(scrapeDto: ScrapeDto): Promise<void> {
     try {
-      const { country, dateFrom, dateTo } = scrapeDto;
+      const { country, dateFrom, dateTo, proxyConfig } = scrapeDto;
 
       const countryCode = CountryCodeMap[country];
 
@@ -669,11 +673,13 @@ export class ScrapingService {
           'x-requested-with': 'XMLHttpRequest',
           Referer: 'https://kr.investing.com/',
         },
-        proxy: {
-          host: '127.0.0.1', // 프록시 서버 주소
-          port: 9090, // 프록시 서버 포트
-          protocol: 'http', // 프록시 서버 프로토콜
-        },
+        ...(proxyConfig && {
+          proxy: {
+            host: proxyConfig.host,
+            port: proxyConfig.port,
+            protocol: proxyConfig.protocol ?? 'http',
+          },
+        }),
       };
 
       let page = 0;
@@ -723,13 +729,10 @@ export class ScrapingService {
         bind_scroll_handler = response.data.bind_scroll_handler;
         last_time_scope = response.data.last_time_scope;
 
-        // cheerio로 파싱한 후의 HTML을 저장
         const $ = cheerio.load(html, { xmlMode: true });
 
-        // 데이터를 담을 배열 초기화
         const dataSet = [];
 
-        // 모든 tr 요소를 순회
         $('tr').each((index, element) => {
           try {
             const flagElement = $(element).find('.flag span');
@@ -744,23 +747,20 @@ export class ScrapingService {
               const paymentDateString =
                 $(element).find('td').eq(5).attr('data-value') + '000';
               const paymentDate =
-                Number(paymentDateString) > 0 ? Number(paymentDateString) : 0; // 없는 경우 0으로 넣음
+                Number(paymentDateString) > 0 ? Number(paymentDateString) : 0;
               const tickerElement = $(element).find('td').eq(1).find('a');
               const ticker = tickerElement.text().trim();
 
-              // this.logger.debug(paymentDate);
-              // 데이터 객체로 정리
               const eventData = {
                 country,
                 ticker,
                 exDividendDate,
                 dividendAmount,
-                previousDividendAmount: '', // 이전 배당금은 주어진 데이터에서 처리할 수 없으므로 빈 값으로 설정
+                previousDividendAmount: '',
                 paymentDate,
                 dividendYield,
               };
 
-              // 데이터를 배열에 추가
               dataSet.push(eventData);
             }
           } catch (error) {
@@ -773,7 +773,6 @@ export class ScrapingService {
 
         await this.saveDividendData(dataSet);
 
-        // console.log(JSON.stringify(dataSet));
         this.logger.debug('dividend Scraping...');
       }
 
@@ -781,20 +780,30 @@ export class ScrapingService {
 
       this.logger.debug('Scraped and saved dividend data successfully.');
     } catch (error) {
-      ScrapingErrorHandler.handleError(error, {
-        context: 'Dividend scraping',
-        scrapeDto,
-      });
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          throw new TimeoutException(error);
+        }
+        if (error.response?.status === 403) {
+          throw new AccessBlockedException({ response: error.response?.data });
+        }
+        throw new NetworkException({ message: error.message });
+      }
+      throw new ScrapingException(
+        'Dividend scraping failed',
+        undefined,
+        'DIVIDEND_SCRAPE_ERROR',
+        error,
+      );
     }
   }
 
   async saveDividendData(dividendData: any[]) {
     for (const data of dividendData) {
-      // 회사 정보를 검색합니다.
       const company = await this.prisma.company.findFirst({
         where: {
-          ticker: data.ticker, // `ticker` 값을 기준으로 검색합니다.
-          country: data.country, // `country` 값을 기준으로 검색합니다.
+          ticker: data.ticker,
+          country: data.country,
         },
       });
 
@@ -805,7 +814,6 @@ export class ScrapingService {
         continue;
       }
 
-      // 기존 배당 데이터가 있는지 조회합니다.
       const existingRecord = await this.prisma.dividend.findFirst({
         where: {
           exDividendDate: data.exDividendDate,
@@ -814,7 +822,6 @@ export class ScrapingService {
       });
 
       if (existingRecord) {
-        // 기존 데이터가 존재하면 업데이트
         await this.prisma.dividend.update({
           where: { id: existingRecord.id },
           data: {
@@ -825,7 +832,6 @@ export class ScrapingService {
           },
         });
       } else {
-        // 기존 데이터가 없으면 새로운 데이터를 생성
         await this.prisma.dividend.create({
           data: {
             exDividendDate: data.exDividendDate,
@@ -844,30 +850,27 @@ export class ScrapingService {
   }
 
   async updateDividendPreviousValues() {
-    // 이전 배당금 값이 없는 레코드만 가져옵니다.
     const dividendRecords = await this.prisma.dividend.findMany({
       where: {
-        previousDividendAmount: '', // 이전 배당금이 비어있는 레코드
+        previousDividendAmount: '',
       },
-      orderBy: { exDividendDate: 'asc' }, // 배당락일 순으로 정렬하여 처리
+      orderBy: { exDividendDate: 'asc' },
     });
 
     for (const record of dividendRecords) {
-      // 이전의 가장 최신 Dividend 데이터 조회
       const previousRecord = await this.prisma.dividend.findFirst({
         where: {
           companyId: record.companyId,
-          exDividendDate: { lt: record.exDividendDate }, // 현재 레코드보다 이전인 데이터만 조회
+          exDividendDate: { lt: record.exDividendDate },
         },
-        orderBy: { exDividendDate: 'desc' }, // 가장 최신의 이전 데이터만 가져옴
+        orderBy: { exDividendDate: 'desc' },
       });
 
       if (previousRecord) {
-        // 이전 값이 있을 경우 업데이트
         await this.prisma.dividend.update({
           where: { id: record.id },
           data: {
-            previousDividendAmount: previousRecord.dividendAmount, // 이전 배당금 설정
+            previousDividendAmount: previousRecord.dividendAmount,
           },
         });
       }

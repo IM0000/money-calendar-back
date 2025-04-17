@@ -1,7 +1,6 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { ScrapingService } from './scraping.service';
-import { ScrapeDto } from '../dto/scrape.dto';
-import { ScrapeCompanyDto } from '../dto/country.dto';
+import { ScrapeCompanyDto, ScrapeDto } from './dto/scrape.dto';
 
 @Controller('scraping')
 export class ScrapingController {
@@ -15,12 +14,12 @@ export class ScrapingController {
 
   @Post('company')
   async scrapeCompany(@Body() scrapeCompanyDto: ScrapeCompanyDto) {
-    const { country } = scrapeCompanyDto;
+    const { country, proxyConfig } = scrapeCompanyDto;
+
     if (country === 'USA') {
-      await this.scrapingService.scrapeUSACompany();
-    } else if (country === 'KOR') {
-      // await this.scrapingService.scrapeKoreaCompany();
+      await this.scrapingService.scrapeUSACompany(proxyConfig);
     }
+
     return 'Scraping completed';
   }
 

@@ -1,77 +1,92 @@
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpStatus } from '@nestjs/common';
 
 /**
- * 스크래핑 작업 중 발생하는 모든 예외의 기본 클래스
+ * Base class for all scraping-related domain exceptions.
  */
-export class ScrapingException extends HttpException {
+export class ScrapingException extends Error {
+  public readonly statusCode: number;
+  public readonly errorCode: string;
+  public readonly details?: any;
+
   constructor(
-    message = '스크래핑 중 오류가 발생했습니다',
-    statusCode = HttpStatus.INTERNAL_SERVER_ERROR,
-    public readonly errorCode = 'SCRAPING_ERROR',
-    public readonly details?: any,
+    message: string,
+    statusCode: number = HttpStatus.INTERNAL_SERVER_ERROR,
+    errorCode = 'SCRAPING_ERROR',
+    details?: any,
   ) {
+    super(message);
+    this.name = this.constructor.name;
+    this.statusCode = statusCode;
+    this.errorCode = errorCode;
+    this.details = details;
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+/**
+ * Thrown when a network error occurs during scraping.
+ */
+export class NetworkException extends ScrapingException {
+  constructor(details?: any) {
     super(
-      {
-        message,
-        error: 'Scraping Error',
-        errorCode,
-        details,
-      },
-      statusCode,
+      '네트워크 연결에 실패했습니다',
+      HttpStatus.SERVICE_UNAVAILABLE,
+      'NETWORK_ERROR',
+      details,
     );
   }
 }
 
 /**
- * 네트워크 연결 오류 클래스
- */
-export class NetworkException extends ScrapingException {
-  constructor(message = '네트워크 연결에 실패했습니다', details?: any) {
-    super(message, HttpStatus.SERVICE_UNAVAILABLE, 'NETWORK_ERROR', details);
-  }
-}
-
-/**
- * 웹페이지 요소를 찾을 수 없는 경우의 오류 클래스
- */
-export class ElementNotFoundException extends ScrapingException {
-  constructor(
-    message = '웹페이지에서 필요한 요소를 찾을 수 없습니다',
-    details?: any,
-  ) {
-    super(message, HttpStatus.BAD_REQUEST, 'ELEMENT_NOT_FOUND', details);
-  }
-}
-
-/**
- * 타임아웃 오류 클래스
+ * Thrown when an external request times out.
  */
 export class TimeoutException extends ScrapingException {
-  constructor(message = '요청 시간이 초과되었습니다', details?: any) {
-    super(message, HttpStatus.GATEWAY_TIMEOUT, 'REQUEST_TIMEOUT', details);
+  constructor(details?: any) {
+    super(
+      '요청 시간이 초과되었습니다',
+      HttpStatus.GATEWAY_TIMEOUT,
+      'REQUEST_TIMEOUT',
+      details,
+    );
   }
 }
 
 /**
- * 데이터 파싱 오류 클래스
+ * Thrown when parsing of data fails.
  */
 export class ParsingException extends ScrapingException {
-  constructor(message = '데이터 파싱 중 오류가 발생했습니다', details?: any) {
-    super(message, HttpStatus.BAD_REQUEST, 'PARSE_ERROR', details);
+  constructor(details?: any) {
+    super(
+      '데이터 파싱 중 오류가 발생했습니다',
+      HttpStatus.BAD_REQUEST,
+      'PARSE_ERROR',
+      details,
+    );
   }
 }
 
 /**
- * 웹사이트 구조 변경으로 인한 오류 클래스
+ * Thrown when the expected element cannot be found in the HTML.
+ */
+export class ElementNotFoundException extends ScrapingException {
+  constructor(details?: any) {
+    super(
+      '필수 HTML 요소를 찾을 수 없습니다',
+      HttpStatus.BAD_REQUEST,
+      'ELEMENT_NOT_FOUND',
+      details,
+    );
+  }
+}
+
+/**
+ * Thrown when the website structure has changed and scraping is no longer valid.
  */
 export class WebsiteStructureChangedException extends ScrapingException {
-  constructor(
-    message = '웹페이지 구조가 변경되어 데이터를 찾을 수 없습니다',
-    details?: any,
-  ) {
+  constructor(details?: any) {
     super(
-      message,
-      HttpStatus.BAD_REQUEST,
+      '웹사이트 구조가 변경되어 스크래핑이 실패했습니다',
+      HttpStatus.BAD_GATEWAY,
       'WEBSITE_STRUCTURE_CHANGED',
       details,
     );
@@ -79,10 +94,15 @@ export class WebsiteStructureChangedException extends ScrapingException {
 }
 
 /**
- * 웹사이트의 접근이 차단된 경우의 오류 클래스
+ * Thrown when access is blocked by the target site.
  */
 export class AccessBlockedException extends ScrapingException {
-  constructor(message = '웹사이트에서 접근이 차단되었습니다', details?: any) {
-    super(message, HttpStatus.TOO_MANY_REQUESTS, 'ACCESS_BLOCKED', details);
+  constructor(details?: any) {
+    super(
+      '스크래핑 접근이 차단되었습니다',
+      HttpStatus.FORBIDDEN,
+      'ACCESS_BLOCKED',
+      details,
+    );
   }
 }
