@@ -1,10 +1,10 @@
 import {
   IsEnum,
-  IsDateString,
   IsString,
   IsOptional,
   IsNumber,
   ValidateNested,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -32,10 +32,14 @@ export class ScrapeDto {
   })
   country: Country;
 
-  @IsDateString({}, { message: 'dateFrom must be a valid date string' }) // 날짜 형식 검사 YYYY-MM-DD
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'dateFrom must be in YYYY-MM-DD format',
+  })
   dateFrom: string;
 
-  @IsDateString({}, { message: 'dateTo must be a valid date string' }) // 날짜 형식 검사
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'dateFrom must be in YYYY-MM-DD format',
+  })
   dateTo: string;
 
   @IsOptional()
