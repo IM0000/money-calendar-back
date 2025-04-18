@@ -365,6 +365,10 @@ export class ScrapingService {
   async scrapeEarnings(scrapeDto: ScrapeDto): Promise<void> {
     try {
       const { country, dateFrom, dateTo, proxyConfig } = scrapeDto;
+      console.log(
+        `🚀 ~ ScrapingService ~ scrapeEarnings ~ { country, dateFrom, dateTo, proxyConfig }:`,
+        { country, dateFrom, dateTo, proxyConfig },
+      );
 
       const countryCode = CountryCodeMap[country];
 

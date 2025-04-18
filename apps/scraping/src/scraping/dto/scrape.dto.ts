@@ -4,9 +4,9 @@ import {
   IsOptional,
   IsNumber,
   ValidateNested,
-  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsValidDate } from '../../common/decorators/is-valid-date.decorator';
 
 export enum Country {
   USA = 'USA',
@@ -32,13 +32,13 @@ export class ScrapeDto {
   })
   country: Country;
 
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
-    message: 'dateFrom must be in YYYY-MM-DD format',
+  @IsValidDate({
+    message: 'dateTo must be a real calendar date in YYYYMMDD format',
   })
   dateFrom: string;
 
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
-    message: 'dateFrom must be in YYYY-MM-DD format',
+  @IsValidDate({
+    message: 'dateTo must be a real calendar date in YYYYMMDD format',
   })
   dateTo: string;
 

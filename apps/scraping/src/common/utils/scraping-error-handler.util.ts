@@ -33,7 +33,8 @@ export class ScrapingErrorHandler {
     if (axios.isAxiosError(error)) {
       // 타임아웃
       if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-        exception = new TimeoutException('요청 시간이 초과되었습니다', {
+        exception = new TimeoutException({
+          message: `요청 시간이 초과되었습니다: ${error.message}`,
           url: error.config?.url,
           method: error.config?.method,
           context,
@@ -44,27 +45,23 @@ export class ScrapingErrorHandler {
         error.response?.status === 403 ||
         error.response?.status === 429
       ) {
-        exception = new AccessBlockedException(
-          '웹사이트에서 접근이 차단되었습니다. 잠시 후 다시 시도하세요',
-          {
-            url: error.config?.url,
-            status: error.response?.status,
-            context,
-          },
-        );
+        exception = new AccessBlockedException({
+          message: `웹사이트에서 접근이 차단되었습니다. 잠시 후 다시 시도하세요: ${error.message}`,
+          url: error.config?.url,
+          status: error.response?.status,
+          context,
+        });
       }
       // 네트워크 오류
       else {
-        exception = new NetworkException(
-          `네트워크 연결에 실패했습니다: ${error.message}`,
-          {
-            url: error.config?.url,
-            method: error.config?.method,
-            code: error.code,
-            status: error.response?.status,
-            context,
-          },
-        );
+        exception = new NetworkException({
+          message: `네트워크 연결에 실패했습니다: ${error.message}`,
+          url: error.config?.url,
+          method: error.config?.method,
+          code: error.code,
+          status: error.response?.status,
+          context,
+        });
       }
     }
     // 요소를 찾을 수 없는 오류
@@ -73,10 +70,10 @@ export class ScrapingErrorHandler {
       error.message?.includes('element') ||
       error.message?.includes('XPath')
     ) {
-      exception = new ElementNotFoundException(
-        `웹페이지에서 요소를 찾을 수 없습니다: ${error.message}`,
-        { context },
-      );
+      exception = new ElementNotFoundException({
+        message: `웹페이지에서 요소를 찾을 수 없습니다: ${error.message}`,
+        context,
+      });
     }
     // 타임아웃 오류
     else if (
@@ -84,10 +81,10 @@ export class ScrapingErrorHandler {
       error.message?.includes('timeout') ||
       error.message?.includes('ETIMEDOUT')
     ) {
-      exception = new TimeoutException(
-        `요청 시간이 초과되었습니다: ${error.message}`,
-        { context },
-      );
+      exception = new TimeoutException({
+        message: `요청 시간이 초과되었습니다: ${error.message}`,
+        context,
+      });
     }
     // 파싱 오류
     else if (
@@ -95,10 +92,10 @@ export class ScrapingErrorHandler {
       error.message?.includes('JSON') ||
       error.message?.includes('Unexpected token')
     ) {
-      exception = new ParsingException(
-        `데이터 파싱 중 오류가 발생했습니다: ${error.message}`,
-        { context },
-      );
+      exception = new ParsingException({
+        message: `데이터 파싱 중 오류가 발생했습니다: ${error.message}`,
+        context,
+      });
     }
     // 기타 오류
     else {
