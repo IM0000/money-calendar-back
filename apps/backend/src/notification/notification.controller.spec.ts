@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationController } from './notification.controller';
 import { NotificationService } from './notification.service';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { ContentType } from '@prisma/client';
 import { UpdateUserNotificationSettingsDto } from './dto/notification.dto';
 
 describe('NotificationController', () => {
@@ -33,12 +35,16 @@ describe('NotificationController', () => {
           useValue: mockNotificationService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .compile();
 
     controller = module.get<NotificationController>(NotificationController);
     service = module.get<NotificationService>(NotificationService);
+  });
 
-    // 모든 모킹 함수 초기화
+  afterEach(() => {
     jest.clearAllMocks();
   });
 
@@ -47,211 +53,247 @@ describe('NotificationController', () => {
   });
 
   describe('getNotifications', () => {
-    it('should return user notifications with pagination', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
+    it('should get notifications for a user', async () => {
+      const mockResult = {
+        notifications: [{ id: 1, contentType: ContentType.EARNINGS }],
+        total: 1,
       };
-      const page = '2';
-      const limit = '5';
-      const expectedResult = {
-        notifications: [
-          { id: 1, contentType: 'EARNINGS', contentId: 1, userId: 1 },
-        ],
-        total: 10,
-      };
-
       mockNotificationService.getUserNotifications.mockResolvedValue(
-        expectedResult,
+        mockResult,
       );
 
-      const result = await controller.getNotifications(req as any, page, limit);
+      const req = { user: { id: 1, email: 'test@example.com' } };
+      const result = await controller.getNotifications(req as any, '1', '10');
 
-      expect(service.getUserNotifications).toHaveBeenCalledWith(
-        1,
-        Number(page),
-        Number(limit),
-      );
-      expect(result).toEqual(expectedResult);
+      expect(service.getUserNotifications).toHaveBeenCalledWith(1, 1, 10);
+      expect(result).toEqual(mockResult);
     });
   });
 
   describe('getUnreadCount', () => {
-    it('should return unread notifications count', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      };
-      const expectedResult = { count: 5 };
-
+    it('should get unread notifications count', async () => {
+      const mockResult = { count: 5 };
       mockNotificationService.getUnreadNotificationsCount.mockResolvedValue(
-        expectedResult,
+        mockResult,
       );
 
+      const req = { user: { id: 1, email: 'test@example.com' } };
       const result = await controller.getUnreadCount(req as any);
 
       expect(service.getUnreadNotificationsCount).toHaveBeenCalledWith(1);
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(mockResult);
     });
   });
 
   describe('markAsRead', () => {
     it('should mark notification as read', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      };
-      const id = '5';
-      const expectedResult = { message: '알림이 읽음으로 표시되었습니다.' };
+      const mockResult = { message: '알림이 읽음으로 변경되었습니다.' };
+      mockNotificationService.markAsRead.mockResolvedValue(mockResult);
 
-      mockNotificationService.markAsRead.mockResolvedValue(expectedResult);
+      const req = { user: { id: 1, email: 'test@example.com' } };
+      const result = await controller.markAsRead(req as any, '1');
 
-      const result = await controller.markAsRead(req as any, id);
-
-      expect(service.markAsRead).toHaveBeenCalledWith(1, parseInt(id));
-      expect(result).toEqual(expectedResult);
+      expect(service.markAsRead).toHaveBeenCalledWith(1, 1);
+      expect(result).toEqual(mockResult);
     });
   });
 
   describe('markAllAsRead', () => {
     it('should mark all notifications as read', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      };
-      const expectedResult = {
-        message: '모든 알림이 읽음으로 표시되었습니다.',
-        count: 3,
-      };
+      const mockResult = { message: '모든 알림이 읽음으로 변경되었습니다.' };
+      mockNotificationService.markAllAsRead.mockResolvedValue(mockResult);
 
-      mockNotificationService.markAllAsRead.mockResolvedValue(expectedResult);
-
+      const req = { user: { id: 1, email: 'test@example.com' } };
       const result = await controller.markAllAsRead(req as any);
 
       expect(service.markAllAsRead).toHaveBeenCalledWith(1);
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(mockResult);
     });
   });
 
   describe('deleteNotification', () => {
-    it('should delete user notification', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      };
-      const id = '5';
-      const expectedResult = { message: '알림이 성공적으로 삭제되었습니다.' };
-
+    it('should delete a notification', async () => {
+      const mockResult = { message: '알림이 삭제되었습니다.' };
       mockNotificationService.deleteUserNotification.mockResolvedValue(
-        expectedResult,
+        mockResult,
       );
 
-      const result = await controller.deleteNotification(req as any, id);
+      const req = { user: { id: 1, email: 'test@example.com' } };
+      const result = await controller.deleteNotification(req as any, '1');
 
-      expect(service.deleteUserNotification).toHaveBeenCalledWith(
-        1,
-        parseInt(id),
-      );
-      expect(result).toEqual(expectedResult);
+      expect(service.deleteUserNotification).toHaveBeenCalledWith(1, 1);
+      expect(result).toEqual(mockResult);
     });
   });
 
   describe('getNotificationSettings', () => {
-    it('should get user notification settings', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      };
-      const expectedResult = {
+    it('should get notification settings', async () => {
+      const mockResult = {
         emailEnabled: true,
-        pushEnabled: false,
-        preferredMethod: 'EMAIL',
+        pushEnabled: true,
+        preferredMethod: 'BOTH',
       };
-
       mockNotificationService.getUserNotificationSettings.mockResolvedValue(
-        expectedResult,
+        mockResult,
       );
 
+      const req = { user: { id: 1, email: 'test@example.com' } };
       const result = await controller.getNotificationSettings(req as any);
 
       expect(service.getUserNotificationSettings).toHaveBeenCalledWith(1);
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(mockResult);
     });
   });
 
   describe('updateNotificationSettings', () => {
-    it('should update user notification settings', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      };
-
-      const updateDto: UpdateUserNotificationSettingsDto = {
+    it('should update notification settings', async () => {
+      const dto: UpdateUserNotificationSettingsDto = {
         emailEnabled: false,
         pushEnabled: true,
-        preferredMethod: 'PUSH',
       };
-
-      const expectedResult = {
-        userId: 1,
-        ...updateDto,
-      };
-
+      const mockResult = { id: 1, userId: 1, ...dto };
       mockNotificationService.updateUserNotificationSettings.mockResolvedValue(
-        expectedResult,
+        mockResult,
       );
 
+      const req = { user: { id: 1, email: 'test@example.com' } };
       const result = await controller.updateNotificationSettings(
         req as any,
-        updateDto,
+        dto,
       );
 
       expect(service.updateUserNotificationSettings).toHaveBeenCalledWith(
         1,
-        updateDto,
+        dto,
       );
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(mockResult);
     });
   });
 
   describe('addEarningsNotification', () => {
     it('should add earnings notification', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      };
-      const id = '5';
-      const expectedResult = {
-        message: '실적 알림이 성공적으로 등록되었습니다.',
-        notification: { userId: 1, earningsId: 5 },
-      };
-
+      const mockResult = { userId: 1, earningsId: 1 };
       mockNotificationService.addEarningsNotification.mockResolvedValue(
-        expectedResult,
+        mockResult,
       );
 
-      const result = await controller.addEarningsNotification(req as any, id);
+      const req = { user: { id: 1, email: 'test@example.com' } };
+      const result = await controller.addEarningsNotification(req as any, '1');
 
-      expect(service.addEarningsNotification).toHaveBeenCalledWith(
+      expect(service.addEarningsNotification).toHaveBeenCalledWith(1, 1);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('removeEarningsNotification', () => {
+    it('should remove earnings notification', async () => {
+      const mockResult = { userId: 1, earningsId: 1 };
+      mockNotificationService.removeEarningsNotification.mockResolvedValue(
+        mockResult,
+      );
+
+      const req = { user: { id: 1, email: 'test@example.com' } };
+      const result = await controller.removeEarningsNotification(
+        req as any,
+        '1',
+      );
+
+      expect(service.removeEarningsNotification).toHaveBeenCalledWith(1, 1);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('addDividendNotification', () => {
+    it('should add dividend notification', async () => {
+      const mockResult = { userId: 1, dividendId: 1 };
+      mockNotificationService.addDividendNotification.mockResolvedValue(
+        mockResult,
+      );
+
+      const req = { user: { id: 1, email: 'test@example.com' } };
+      const result = await controller.addDividendNotification(req as any, '1');
+
+      expect(service.addDividendNotification).toHaveBeenCalledWith(1, 1);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('removeDividendNotification', () => {
+    it('should remove dividend notification', async () => {
+      const mockResult = { userId: 1, dividendId: 1 };
+      mockNotificationService.removeDividendNotification.mockResolvedValue(
+        mockResult,
+      );
+
+      const req = { user: { id: 1, email: 'test@example.com' } };
+      const result = await controller.removeDividendNotification(
+        req as any,
+        '1',
+      );
+
+      expect(service.removeDividendNotification).toHaveBeenCalledWith(1, 1);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('addEconomicIndicatorNotification', () => {
+    it('should add economic indicator notification', async () => {
+      const mockResult = { userId: 1, indicatorId: 1 };
+      mockNotificationService.addEconomicIndicatorNotification.mockResolvedValue(
+        mockResult,
+      );
+
+      const req = { user: { id: 1, email: 'test@example.com' } };
+      const result = await controller.addEconomicIndicatorNotification(
+        req as any,
+        '1',
+      );
+
+      expect(service.addEconomicIndicatorNotification).toHaveBeenCalledWith(
         1,
-        parseInt(id),
+        1,
       );
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('removeEconomicIndicatorNotification', () => {
+    it('should remove economic indicator notification', async () => {
+      const mockResult = { userId: 1, indicatorId: 1 };
+      mockNotificationService.removeEconomicIndicatorNotification.mockResolvedValue(
+        mockResult,
+      );
+
+      const req = { user: { id: 1, email: 'test@example.com' } };
+      const result = await controller.removeEconomicIndicatorNotification(
+        req as any,
+        '1',
+      );
+
+      expect(service.removeEconomicIndicatorNotification).toHaveBeenCalledWith(
+        1,
+        1,
+      );
+      expect(result).toEqual(mockResult);
     });
   });
 
   describe('getNotificationCalendar', () => {
     it('should get notification calendar', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
+      const mockResult = {
+        earnings: [{ id: 1, companyName: 'Apple' }],
+        dividends: [{ id: 1, companyName: 'Microsoft' }],
+        indicators: [{ id: 1, name: 'GDP' }],
       };
-      const expectedResult = {
-        economicIndicators: [{ id: 1, name: '지표1', hasNotification: true }],
-        earnings: [
-          { id: 2, company: { name: '회사1' }, hasNotification: true },
-        ],
-      };
-
       mockNotificationService.getNotificationCalendar.mockResolvedValue(
-        expectedResult,
+        mockResult,
       );
 
+      const req = { user: { id: 1, email: 'test@example.com' } };
       const result = await controller.getNotificationCalendar(req as any);
 
       expect(service.getNotificationCalendar).toHaveBeenCalledWith(1);
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(mockResult);
     });
   });
 });

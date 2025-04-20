@@ -1,6 +1,5 @@
-// prisma.service.ts
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient, EconomicIndicator, Earnings } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
@@ -9,50 +8,54 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor(private readonly eventEmitter: EventEmitter2) {
-    super({
-      // (필요시 로깅, 에러 핸들러 등 옵션 추가)
-    });
+    super(); // ★ 옵션 없이 그냥 호출
 
-    // Prisma 미들웨어로 변경 감지
-    this.$use(async (params, next) => {
-      // 경제지표 업데이트 전후 비교
-      if (params.model === 'EconomicIndicator' && params.action === 'update') {
-        const before = (await this.economicIndicator.findUnique({
-          where: params.args.where,
-        })) as EconomicIndicator | null;
+    // 1) defineExtension으로 훅 정의
+    const indicatorExt = Prisma.defineExtension((client) =>
+      client.$extends({
+        name: 'indicatorExt',
+        query: {
+          economicIndicator: {
+            async update({ args, query }) {
+              const before = await client.economicIndicator.findUnique({
+                where: args.where,
+              });
+              const after = await query(args);
+              if (before?.actual !== after.actual) {
+                eventEmitter.emit('indicator.actualChanged', { before, after });
+              }
+              return after;
+            },
+          },
+        },
+      }),
+    );
+    const earningsExt = Prisma.defineExtension((client) =>
+      client.$extends({
+        name: 'earningsExt',
+        query: {
+          earnings: {
+            async update({ args, query }) {
+              const before = await client.earnings.findUnique({
+                where: args.where,
+                include: { company: true },
+              });
+              const after = await query(args);
+              if (before?.actualEPS !== after.actualEPS) {
+                eventEmitter.emit('earnings.actualChanged', { before, after });
+              }
+              return after;
+            },
+          },
+        },
+      }),
+    );
 
-        const result = await next(params);
+    // 2) this.$extends 체인 → DynamicClientExtensionThis 반환
+    const extended = this.$extends(indicatorExt).$extends(earningsExt);
 
-        if (before && before.actual !== (result as EconomicIndicator).actual) {
-          this.eventEmitter.emit('indicator.actualChanged', {
-            before,
-            after: result,
-          });
-        }
-        return result;
-      }
-
-      // 실적 업데이트 전후 비교
-      if (params.model === 'Earnings' && params.action === 'update') {
-        const before = (await this.earnings.findUnique({
-          where: params.args.where,
-          include: { company: true },
-        })) as Earnings | null;
-
-        const result = await next(params);
-
-        if (before && before.actualEPS !== (result as Earnings).actualEPS) {
-          this.eventEmitter.emit('earnings.actualChanged', {
-            before,
-            after: result,
-          });
-        }
-        return result;
-      }
-
-      // 그 외 쿼리는 그대로
-      return next(params);
-    });
+    // 3) Object.assign으로 this(PrismaService)에 덮어쓰기
+    Object.assign(this, extended);
   }
 
   async onModuleInit() {

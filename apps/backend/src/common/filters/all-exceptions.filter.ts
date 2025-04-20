@@ -112,15 +112,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       );
     }
 
-    // 일반적인 브라우저 요청인 경우 (HTML 응답을 원하는 경우)
-    if (request.accepts('html')) {
-      // 에러 코드를 쿼리스트링에 담아 에러 페이지로 리다이렉트
-      const redirectUrl = `${frontendURL}/error?errorCode=${errorCode}&message=${encodeURIComponent(
-        errorMessage,
-      )}`;
-      return response.redirect(redirectUrl);
-    }
-
     // API 요청 등의 경우 JSON 응답
     const responseBody = {
       statusCode: status,

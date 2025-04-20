@@ -121,26 +121,19 @@ describe('EmailService', () => {
     });
   });
 
-  describe('sendNotificationEmail', () => {
-    it('알림 이메일을 보내야 합니다', async () => {
-      const notificationDto: SendNotificationEmailDto = {
-        email: 'test@example.com',
-        subject: '알림 제목',
-        content: '알림 내용',
-      };
+  it('transporter.sendMail 을 호출해야 합니다', async () => {
+    const dto = { email: 'a@b.com', subject: '제목', content: '내용' };
+    // sendMail 이 Promise 를 반환하도록 세팅
+    mockTransporter.sendMail.mockResolvedValue({ messageId: 'id123' });
 
-      // 콘솔 로그 스파이 설정
-      const consoleSpy = jest.spyOn(console, 'log');
+    await service.sendNotificationEmail(dto);
 
-      await service.sendNotificationEmail(notificationDto);
-
-      // 현재 구현은 로그만 출력하는 임시 코드이므로, 콘솔 로그 호출 확인
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '이메일 알림 발송:',
-        notificationDto,
-      );
-
-      consoleSpy.mockRestore();
-    });
+    expect(mockTransporter.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: dto.email,
+        subject: dto.subject,
+        html: expect.stringContaining(dto.content),
+      }),
+    );
   });
 });

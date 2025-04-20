@@ -48,8 +48,8 @@ export class EmailService {
   async sendNotificationEmail(dto: SendNotificationEmailDto) {
     const mailOptions: EmailOptions = {
       to: dto.email,
-      subject: '머니캘린더 알림',
-      html: `${dto.content}`,
+      subject: dto.subject,
+      html: dto.content,
     };
     return await this.transporter.sendMail(mailOptions);
   }
