@@ -290,7 +290,7 @@ export class ScrapingService {
                 forecast,
                 previous,
               };
-
+              this.logger.log(eventData);
               dataSet.push(eventData);
             }
           } catch (error) {

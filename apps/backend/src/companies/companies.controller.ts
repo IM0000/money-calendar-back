@@ -5,10 +5,13 @@ import {
   Query,
   ParseIntPipe,
   Request,
+  UseGuards,
 } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 
 @Controller('api/v1/companies')
+@UseGuards(JwtAuthGuard)
 export class CompaniesController {
   constructor(private readonly companiesService: CompaniesService) {}
 
@@ -19,7 +22,6 @@ export class CompaniesController {
     @Query('limit') limit: 5,
     @Request() req,
   ) {
-    // 인증된 사용자가 있다면 ID 추출
     const userId = req.user?.id;
     return this.companiesService.getCompanyEarnings(id, page, limit, userId);
   }
@@ -31,7 +33,6 @@ export class CompaniesController {
     @Query('limit') limit: 5,
     @Request() req,
   ) {
-    // 인증된 사용자가 있다면 ID 추출
     const userId = req.user?.id;
     return this.companiesService.getCompanyDividends(id, page, limit, userId);
   }
