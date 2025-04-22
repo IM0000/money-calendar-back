@@ -257,7 +257,7 @@ describe('SearchService', () => {
           skip: 0,
           take: 10,
           orderBy: [{ releaseDate: 'desc' }, { name: 'asc' }],
-          distinct: ['name', 'country'],
+          distinct: ['name', 'country', 'releaseDate'],
         },
       );
 
@@ -320,7 +320,7 @@ describe('SearchService', () => {
           skip: 0,
           take: searchDto.limit,
           orderBy: [{ releaseDate: 'desc' }, { name: 'asc' }],
-          distinct: ['name', 'country'],
+          distinct: ['name', 'country', 'releaseDate'],
         },
       );
 

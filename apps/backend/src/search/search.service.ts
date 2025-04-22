@@ -124,7 +124,7 @@ export class SearchService {
         skip,
         take: limit,
         orderBy: [{ releaseDate: 'desc' }, { name: 'asc' }],
-        distinct: ['name', 'country'],
+        distinct: ['name', 'country', 'releaseDate'],
       }),
       this.prisma.economicIndicator.count({
         where,
