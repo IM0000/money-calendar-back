@@ -4,6 +4,9 @@ import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { ScrapingModule } from './scraping/scraping.module';
 import { AppService } from './app.service';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { ScrapingLoggingInterceptor } from './common/interceptors/scraping-logging.interceptor';
 
 console.log('NODE_ENV:', process.env.NODE_ENV); // NODE_ENV 값 로그 출력
 // const envFilePath = join(
@@ -33,6 +36,16 @@ console.log('Loading environment variables from:', envFilePath);
     ScrapingModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ScrapingLoggingInterceptor,
+    },
+  ],
 })
 export class AppModule {}

@@ -4,6 +4,9 @@ import * as nodemailer from 'nodemailer';
 import { emailConfig } from './../config/email.config';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
+import { SendNotificationEmailDto } from '../notification/dto/notification.dto';
 
 interface EmailOptions {
   to: string;
@@ -18,12 +21,14 @@ export class EmailService {
   constructor(
     @Inject(emailConfig.KEY)
     private emailConfiguration: ConfigType<typeof emailConfig>,
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
   ) {
     this.transporter = nodemailer.createTransport({
-      service: emailConfiguration.service,
+      service: this.emailConfiguration.service,
       auth: {
-        user: emailConfiguration.auth.user,
-        pass: emailConfiguration.auth.pass,
+        user: this.emailConfiguration.auth.user,
+        pass: this.emailConfiguration.auth.pass,
       },
     });
   }
@@ -37,8 +42,15 @@ export class EmailService {
         <p>인증 코드의 유효 기간은 10분입니다.</p>
       `,
     };
-    this.logger.log('sendMemberJoinVerification end');
-    this.logger.log(mailOptions);
+    return await this.transporter.sendMail(mailOptions);
+  }
+
+  async sendNotificationEmail(dto: SendNotificationEmailDto) {
+    const mailOptions: EmailOptions = {
+      to: dto.email,
+      subject: dto.subject,
+      html: dto.content,
+    };
     return await this.transporter.sendMail(mailOptions);
   }
 }

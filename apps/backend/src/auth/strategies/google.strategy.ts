@@ -52,8 +52,8 @@ export class GoogleStrategy extends CustomOauthStrategy(
     }
 
     const user = {
-      provider: provider.toUpperCase(),
-      providerId: id,
+      provider: provider,
+      providerId: id.toString(),
       email: emails[0].value,
       firstName: name.givenName,
       lastName: name.familyName,

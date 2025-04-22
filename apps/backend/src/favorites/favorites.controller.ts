@@ -85,7 +85,7 @@ export class FavoritesController {
     return this.favoritesService.removeFavoriteDividends(userId, dividendId);
   }
 
-  @Post('/indicators/:id')
+  @Post('/economic-indicators/:id')
   async addFavoriteIndicator(
     @Req() req: RequestWithUser,
     @Param('id', ParseIntPipe) indicatorId: number,
@@ -94,7 +94,7 @@ export class FavoritesController {
     return this.favoritesService.addFavoriteIndicator(userId, indicatorId);
   }
 
-  @Delete('/indicators/:id')
+  @Delete('/economic-indicators/:id')
   async removeFavoriteIndicator(
     @Req() req: RequestWithUser,
     @Param('id', ParseIntPipe) indicatorId: number,

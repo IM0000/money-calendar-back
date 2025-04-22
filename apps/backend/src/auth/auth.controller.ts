@@ -18,7 +18,7 @@ import {
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/users.dto';
-import { VerifyDto } from './dto/auth.dto';
+import { OAuthConnectionDto, StatePayload, VerifyDto } from './dto/auth.dto';
 import { LoginDto } from './dto/auth.dto';
 import { DynamicAuthGuard } from './guard/dynamic-auth.guard';
 import { UserDto } from './dto/users.dto';
@@ -26,6 +26,7 @@ import { ErrorCodes } from '../common/enums/error-codes.enum';
 import { ConfigType } from '@nestjs/config';
 import { frontendConfig } from '../config/frontend.config';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
+import { RequestWithUser } from '../common/types/request-with-user';
 
 @Controller('api/v1/auth')
 export class AuthController {
@@ -45,7 +46,7 @@ export class AuthController {
   @Get('oauth/:provider')
   @UseGuards(DynamicAuthGuard)
   async oauthLogin(@Param('provider') provider: string) {
-    console.log('oauthLogin : ' + provider);
+    this.logger.log('oauthLogin : ' + provider);
   }
 
   /**
@@ -65,7 +66,6 @@ export class AuthController {
     const frontendURL = this.frontendConfiguration.baseUrl;
     // Passport를 통해 검증된 사용자 정보
     const oauthUser = req.user;
-    this.logger.log('oauthUser', oauthUser);
 
     if (!oauthUser) {
       return res.redirect(
@@ -74,35 +74,32 @@ export class AuthController {
     }
 
     // 연결 요청인지 확인 (마이페이지에서 연결 요청 시)
-    const oauthMethod = req.query.oauthMethod;
-    if (oauthMethod === 'connect' && req.user && req.user.id) {
+    const state = req.query.state;
+    if (state && typeof state === 'string') {
       // 이미 로그인된 사용자가 계정 연결을 요청한 경우
-      try {
-        await this.usersService.linkOAuthAccount(req.user.id, oauthUser);
-        return res.redirect(
-          `${frontendURL}/mypage?message=계정이 성공적으로 연결되었습니다.`,
-        );
-      } catch (error) {
-        this.logger.error('OAuth 계정 연결 중 오류 발생:', error);
-        return res.redirect(
-          `${frontendURL}/mypage?error=true&message=계정 연결에 실패했습니다. ${error.message}`,
-        );
-      }
+      const stateToken = state;
+      // state token 검증
+      const statePayload: StatePayload =
+        this.authService.verifyJwtToken(stateToken);
+
+      await this.usersService.linkOAuthAccount(statePayload.userId, oauthUser);
+
+      return res.redirect(
+        `${frontendURL}/mypage?message=계정이 성공적으로 연결되었습니다.`,
+      );
     }
 
-    // 일반 로그인 처리 (기존 코드)
+    // 일반 로그인 처리
     // oauth 인증 정보로 회원검색
     const userByOAuthId = await this.usersService.findUserByOAuthId(
       oauthUser.provider,
       oauthUser.providerId,
     );
-    this.logger.log(oauthUser);
-    this.logger.log('user', userByOAuthId);
 
     // 연동된 회원정보는 없는데,
     if (userByOAuthId === null) {
       this.logger.log('연동된 회원정보가 없어영', oauthUser.email);
-      //oauth 이메일로 메일인증된 회원정보가 있으면 그 게정에 연동시킴
+      //oauth 이메일로 메일인증된 회원정보가 있으면 그 계정에 연동시킴
       const userByOauthEmail = await this.usersService.findUserByEmail(
         oauthUser.email,
       );
@@ -181,10 +178,10 @@ export class AuthController {
    */
   @Post('verify')
   @HttpCode(HttpStatus.OK)
-  async verify(@Body() verifyDto: VerifyDto): Promise<UserDto> {
+  async verifyEmailCode(@Body() verifyDto: VerifyDto): Promise<UserDto> {
     const { email, code } = verifyDto;
     this.logger.log('/auth/verify', verifyDto);
-    const user = await this.usersService.verifyCode(email, code);
+    const user = await this.usersService.verifyEmailCode(email, code);
     this.logger.log('verify end', user);
     return user;
   }
@@ -216,5 +213,29 @@ export class AuthController {
   @Get('status')
   getStatus(@Req() req): any {
     return { isAuthenticated: true, user: req.user };
+  }
+
+  /**
+   * OAuth 계정 연결
+   */
+  @Post('/oauth/connect')
+  @UseGuards(JwtAuthGuard)
+  connectOAuthAccount(
+    @Req() req: RequestWithUser,
+    @Body() oauthConnectionDto: OAuthConnectionDto,
+  ) {
+    const { provider } = oauthConnectionDto;
+    const stateToken = this.authService.generateOAuthStateToken(
+      req.user.id,
+      provider,
+    );
+
+    // OAuth 인증 요청 URL을 반환
+    return {
+      message: '계정 연결을 위해 OAuth 인증 페이지로 이동하세요.',
+      redirectUrl: `/api/v1/auth/oauth/${provider}?state=${encodeURIComponent(
+        stateToken,
+      )}`,
+    };
   }
 }

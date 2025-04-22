@@ -41,7 +41,13 @@
       "sourceRoot": "apps/scraping/src",
       "compilerOptions": {
         "tsConfigPath": "apps/scraping/tsconfig.app.json",
-        "outDir": "dist/apps/scraping"
+        "outDir": "dist/apps/scraping",
+        "assets": [
+          {
+            "include": "../src/env/*.env",
+            "outDir": "dist/apps/scraping"
+          }
+        ]
       }
     }
   }

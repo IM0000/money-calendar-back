@@ -15,7 +15,7 @@ import { UserDto } from '../auth/dto/users.dto';
 import { ErrorCodes } from '../common/enums/error-codes.enum';
 import { generateSixDigitCode } from '../utils/code-generator';
 import { PrismaService } from '../prisma/prisma.service';
-import { UpdateProfileDto, OAuthConnectionDto } from './dto/profile.dto';
+import { UpdateProfileDto } from './dto/profile.dto';
 
 @Injectable()
 export class UsersService {
@@ -189,6 +189,7 @@ export class UsersService {
           create: {
             provider: oauthUser.provider,
             providerId: oauthUser.providerId,
+            oauthEmail: oauthUser.email,
           },
         },
       },
@@ -238,41 +239,44 @@ export class UsersService {
    * @param email 이메일 주소
    */
   async sendVerificationCode(email: string): Promise<void> {
-    this.logger.log(email);
+    this.logger.log(`sendVerificationCode: ${email}`);
     // 인증 코드 생성
-    const code = generateSixDigitCode(); // 숫자 6자리
+    const code = generateSixDigitCode(); // 6자리 숫자 코드 생성
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10분 후 만료
 
-    // 기존 인증 코드 삭제
-    await this.prisma.verificationCode.deleteMany({
-      where: { email },
-    });
+    // DB 작업들을 트랜잭션으로 묶어 원자성 보장
+    await this.prisma.$transaction(async (tx) => {
+      // 기존 인증 코드 삭제
+      await tx.verificationCode.deleteMany({
+        where: { email },
+      });
 
-    // 새 인증 코드 저장
-    await this.prisma.verificationCode.create({
-      data: {
-        email,
-        code,
-        expiresAt,
-      },
-    });
-
-    // 인증 안된 유저 객체 생성
-    const user = this.prisma.user.findUnique({
-      where: { email },
-    });
-    if (!user) {
-      await this.prisma.user.create({
+      // 새 인증 코드 저장
+      await tx.verificationCode.create({
         data: {
           email,
-          verified: false,
+          code,
+          expiresAt,
         },
       });
-    }
 
-    // 이메일 전송
+      // 사용자가 존재하지 않으면 생성
+      const existingUser = await tx.user.findUnique({
+        where: { email },
+      });
+      if (!existingUser) {
+        await tx.user.create({
+          data: {
+            email,
+            verified: false,
+          },
+        });
+      }
+    });
+
+    // 이메일 전송은 DB 트랜잭션 외부에서 실행
     await this.emailService.sendMemberJoinVerification(email, code);
-    this.logger.log(email, code);
+    this.logger.log(`Verification email sent to ${email} with code ${code}`);
   }
 
   /**
@@ -280,35 +284,36 @@ export class UsersService {
    * @param email 이메일 주소
    * @param code 인증 코드
    */
-  async verifyCode(email: string, code: string): Promise<UserDto> {
-    const verification = await this.prisma.verificationCode.findUnique({
-      where: { email },
-    });
-    this.logger.log(verification);
-    if (!verification || verification.code !== code) {
-      throw new BadRequestException({
-        errorCode: ErrorCodes.AUTH_002,
-        errorMessage: '유효하지 않은 인증 코드입니다.',
-      });
-    }
-
-    if (verification.expiresAt < new Date()) {
-      throw new BadRequestException({
-        errorCode: ErrorCodes.AUTH_001,
-        errorMessage: '인증 코드가 만료되었습니다.',
-      });
-    }
-
-    // 인증 완료 처리 (계정 생성)
-    const user = await this.createUserByEmail(email);
-    this.logger.log(user);
-    if (user) {
-      await this.prisma.user.update({
+  async verifyEmailCode(email: string, code: string): Promise<UserDto> {
+    return await this.prisma.$transaction(async (tx) => {
+      const verification = await tx.verificationCode.findUnique({
         where: { email },
-        data: { verified: true },
       });
-    }
-    return user;
+      this.logger.log(`verifyEmailCode: ${email}, code: ${code}`);
+      if (!verification || verification.code !== code) {
+        throw new BadRequestException({
+          errorCode: ErrorCodes.AUTH_002,
+          errorMessage: '유효하지 않은 인증 코드입니다.',
+        });
+      }
+
+      if (verification.expiresAt < new Date()) {
+        throw new BadRequestException({
+          errorCode: ErrorCodes.AUTH_001,
+          errorMessage: '인증 코드가 만료되었습니다.',
+        });
+      }
+
+      // 인증 완료 처리 (사용자 계정 생성 혹은 업데이트)
+      const user = await this.createUserByEmail(email);
+      if (user) {
+        await tx.user.update({
+          where: { email },
+          data: { verified: true },
+        });
+      }
+      return user;
+    });
   }
 
   /**
@@ -354,14 +359,20 @@ export class UsersService {
       const providers = ['google', 'kakao', 'apple', 'discord'];
       const oauthConnections = providers.map((provider) => {
         const isConnected = user.oauthAccounts.some(
-          (account) => account.provider === provider,
+          (account) => account.provider.toLowerCase() === provider,
         );
-        return { provider, connected: isConnected };
+        const oauthEmail = user.oauthAccounts.filter(
+          (account) => account.provider.toLowerCase() === provider,
+        )[0]?.oauthEmail;
+        return { provider, connected: isConnected, oauthEmail };
       });
+
+      const hasPassword = user.password !== null;
 
       return {
         id: user.id,
         email: user.email,
+        hasPassword,
         nickname: user.nickname,
         verified: user.verified,
         createdAt: user.createdAt,
@@ -428,13 +439,15 @@ export class UsersService {
         throw new NotFoundException('사용자를 찾을 수 없습니다.');
       }
 
-      // 현재 비밀번호 확인
-      const isPasswordValid = await bcrypt.compare(
-        currentPassword,
-        user.password,
-      );
-      if (!isPasswordValid) {
-        throw new BadRequestException('현재 비밀번호가 일치하지 않습니다.');
+      if (currentPassword && currentPassword !== '') {
+        // 현재 비밀번호 확인
+        const isPasswordValid = await bcrypt.compare(
+          currentPassword,
+          user.password,
+        );
+        if (!isPasswordValid) {
+          throw new BadRequestException('현재 비밀번호가 일치하지 않습니다.');
+        }
       }
 
       // 새 비밀번호 해싱
@@ -456,58 +469,34 @@ export class UsersService {
   }
 
   /**
-   * OAuth 계정 연결
+   * 사용자 비밀번호 확인
+   * @param userId 사용자 ID
+   * @param password 확인할 비밀번호
+   * @returns 비밀번호 일치 여부
    */
-  async connectOAuthAccount(
-    userId: number,
-    oauthConnectionDto: OAuthConnectionDto,
-  ) {
-    const { provider, accessToken, refreshToken } = oauthConnectionDto;
-
+  async verifyUserPassword(userId: number, password: string): Promise<boolean> {
     try {
-      // providerId는 실제로는 OAuth 프로바이더로부터 정보를 받아야 합니다.
-      // 여기서는 임시로 사용자 식별값에 시간을 붙여 모의 생성합니다.
-      const providerId = `${userId}_${Date.now()}`;
-
-      // 이미 연결된 계정이 있는지 확인
-      const existingAccount = await this.prisma.oAuthAccount.findFirst({
-        where: {
-          userId,
-          provider,
-        },
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
       });
 
-      // 이미 연결된 계정이 있다면 업데이트
-      if (existingAccount) {
-        await this.prisma.oAuthAccount.update({
-          where: { id: existingAccount.id },
-          data: {
-            accessToken,
-            refreshToken,
-            tokenExpiry: refreshToken
-              ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-              : null, // 30일 후
-          },
-        });
-      } else {
-        // 새로운 연결 생성
-        await this.prisma.oAuthAccount.create({
-          data: {
-            provider,
-            providerId,
-            accessToken,
-            refreshToken,
-            tokenExpiry: refreshToken
-              ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-              : null, // 30일 후
-            userId,
-          },
-        });
+      if (!user) {
+        throw new NotFoundException('사용자를 찾을 수 없습니다.');
       }
 
-      return { message: `${provider} 계정이 성공적으로 연결되었습니다.` };
+      // 비밀번호가 설정되지 않은 경우 (OAuth 계정)
+      if (!user.password) {
+        throw new BadRequestException(
+          '비밀번호가 설정되어 있지 않은 계정입니다.',
+        );
+      }
+
+      // 비밀번호 비교
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      return isPasswordValid;
     } catch (error) {
-      throw new BadRequestException('OAuth 계정 연결 중 오류가 발생했습니다.');
+      this.logError('verifyUserPassword', error, { userId });
+      throw error;
     }
   }
 
@@ -555,6 +544,56 @@ export class UsersService {
       throw new BadRequestException(
         'OAuth 계정 연결 해제 중 오류가 발생했습니다.',
       );
+    }
+  }
+
+  /**
+   * 계정 탈퇴
+   */
+  async deleteUser(userId: number, email: string, password: string) {
+    try {
+      // 사용자 존재 확인
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          oauthAccounts: true,
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      }
+
+      // 이메일 일치 확인
+      if (user.email !== email) {
+        throw new BadRequestException('이메일이 일치하지 않습니다.');
+      }
+
+      // // 계정 삭제 - 관련된 모든 데이터 삭제
+      // // OAuth 계정 먼저 삭제
+      // await this.prisma.oAuthAccount.deleteMany({
+      //   where: { userId: user.id },
+      // });
+
+      // // 알림 설정 삭제
+      // await this.prisma.userNotificationSettings.deleteMany({
+      //   where: { userId: user.id },
+      // });
+
+      // // 알림 삭제
+      // await this.prisma.notification.deleteMany({
+      //   where: { userId: user.id },
+      // });
+
+      // // 사용자 삭제
+      // await this.prisma.user.delete({
+      //   where: { id: user.id },
+      // });
+
+      return { message: '계정이 성공적으로 삭제되었습니다.' };
+    } catch (error) {
+      this.logError('deleteUser', error, { userId, email });
+      throw error;
     }
   }
 }

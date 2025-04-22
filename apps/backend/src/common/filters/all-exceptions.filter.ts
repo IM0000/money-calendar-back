@@ -6,13 +6,21 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  Inject,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ErrorCodes } from '../enums/error-codes.enum';
+import { frontendConfig } from '../../config/frontend.config';
+import { ConfigType } from '@nestjs/config';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
+
+  constructor(
+    @Inject(frontendConfig.KEY)
+    private frontendConfiguration: ConfigType<typeof frontendConfig>,
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -25,7 +33,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let errorMessage = '내부 서버 오류';
     let data = null;
     let stack = null;
+    let stackMessage = null;
 
+    if (exception instanceof Error) {
+      stackMessage = exception.message;
+    }
     // 개발 환경에서만 스택 트레이스 포함
     if (process.env.NODE_ENV !== 'production' && exception instanceof Error) {
       stack = exception.stack;
@@ -40,6 +52,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       requestParams: params,
       requestQuery: query,
       errorStack: stack,
+      stackMessage,
     };
 
     if (exception instanceof HttpException) {
@@ -74,9 +87,32 @@ export class AllExceptionsFilter implements ExceptionFilter {
             exception instanceof Error ? exception.message : String(exception),
         },
       );
+
+      // 에러 메시지가 Error 객체에서 온 경우 설정
+      if (exception instanceof Error) {
+        errorMessage = exception.message;
+      }
+    }
+    // 프론트엔드 URL 설정
+    const frontendURL =
+      this.frontendConfiguration.baseUrl || 'http://localhost:5173';
+
+    // OAuth 콜백 관련 요청 처리 (특히 계정 연결 관련)
+    if (
+      url.includes('/oauth') &&
+      url.includes('/callback') &&
+      request.query.state
+    ) {
+      // OAuth 연결 과정에서 오류가 발생한 경우 마이페이지로 리디렉션
+      this.logger.log('OAuth 콜백 처리 중 오류 발생, 마이페이지로 리디렉션');
+      return response.redirect(
+        `${frontendURL}/mypage?error=true&errorMessage=${encodeURIComponent(
+          stackMessage,
+        )}`,
+      );
     }
 
-    // 클라이언트에게 반환할 응답 객체
+    // API 요청 등의 경우 JSON 응답
     const responseBody = {
       statusCode: status,
       errorCode,
