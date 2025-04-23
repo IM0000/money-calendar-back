@@ -26,17 +26,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { HealthModule } from './health/health.module';
 import { TerminusModule } from '@nestjs/terminus';
 
-console.log('NODE_ENV:', process.env.NODE_ENV); // NODE_ENV 값 로그 출력
-// const envFilePath = join(
-//   __dirname,
-//   'config',
-//   'env',
-//   `.${process.env.NODE_ENV}.env`,
-// );
-// console.log('Loading environment variables from:', envFilePath); // envFilePath 로그 출력
-
 const NODE_ENV = process.env.NODE_ENV || 'development';
-console.log('NODE_ENV:', NODE_ENV);
 
 const envFilePath = join(
   process.cwd(),
@@ -72,6 +62,7 @@ console.log('Loading environment variables from:', envFilePath);
     CompaniesModule,
     HealthModule,
     TerminusModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [
