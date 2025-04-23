@@ -23,6 +23,8 @@ import { SearchModule } from './search/search.module';
 import { CompaniesModule } from './companies/companies.module';
 import { NotificationModule } from './notification/notification.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { HealthModule } from './health/health.module';
+import { TerminusModule } from '@nestjs/terminus';
 
 console.log('NODE_ENV:', process.env.NODE_ENV); // NODE_ENV 값 로그 출력
 // const envFilePath = join(
@@ -68,6 +70,8 @@ console.log('Loading environment variables from:', envFilePath);
     NotificationModule,
     SearchModule,
     CompaniesModule,
+    HealthModule,
+    TerminusModule,
   ],
   controllers: [AppController],
   providers: [
