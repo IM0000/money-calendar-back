@@ -11,7 +11,6 @@ import {
   HttpStatus,
   UseGuards,
   Req,
-  UnauthorizedException,
   Logger,
   Inject,
 } from '@nestjs/common';
@@ -33,7 +32,7 @@ export class AuthController {
   private readonly logger = new Logger(AuthController.name);
   constructor(
     @Inject(frontendConfig.KEY)
-    private frontendConfiguration: ConfigType<typeof frontendConfig>,
+    private readonly frontendConfiguration: ConfigType<typeof frontendConfig>,
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
   ) {}
@@ -98,7 +97,6 @@ export class AuthController {
 
     // 연동된 회원정보는 없는데,
     if (userByOAuthId === null) {
-      this.logger.log('연동된 회원정보가 없어영', oauthUser.email);
       //oauth 이메일로 메일인증된 회원정보가 있으면 그 계정에 연동시킴
       const userByOauthEmail = await this.usersService.findUserByEmail(
         oauthUser.email,
@@ -237,5 +235,38 @@ export class AuthController {
         stateToken,
       )}`,
     };
+  }
+
+  /**
+   * 비밀번호 재설정 요청 (이메일로 토큰 발송)
+   */
+  @Post('password-reset/request')
+  @HttpCode(HttpStatus.OK)
+  async requestPasswordReset(@Body('email') email: string) {
+    await this.authService.sendPasswordResetEmail(email);
+    return { message: '비밀번호 재설정 메일이 발송되었습니다.' };
+  }
+
+  /**
+   * 비밀번호 재설정 토큰 검증 (토큰이 유효하면 email 반환)
+   */
+  @Get('password-reset/verify')
+  async verifyResetToken(
+    @Query('token') token: string,
+  ): Promise<{ email: string }> {
+    const { email } = this.authService.verifyPasswordResetToken(token);
+    return { email };
+  }
+
+  /**
+   * 비밀번호 변경 (토큰 & new password)
+   */
+  @Post('password-reset')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: { token: string; password: string }) {
+    const { token, password } = dto;
+    const { email } = this.authService.verifyPasswordResetToken(token);
+    await this.usersService.updateUserPassword(email, password);
+    return { message: '비밀번호가 성공적으로 변경되었습니다.' };
   }
 }

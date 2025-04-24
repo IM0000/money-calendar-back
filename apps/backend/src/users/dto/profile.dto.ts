@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Length,
@@ -46,6 +47,15 @@ export class DeleteUserDto {
   password: string;
 }
 export class VerifyPasswordDto {
+  @IsString()
+  password: string;
+}
+
+export class UpdatePasswordDto {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
   @IsString()
   password: string;
 }

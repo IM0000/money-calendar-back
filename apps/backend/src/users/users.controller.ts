@@ -11,23 +11,21 @@ import {
   HttpCode,
   Query,
   Patch,
-  Inject,
   Logger,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { UpdatePasswordDto, UserDto } from '../auth/dto/users.dto';
+import { UserDto } from '../auth/dto/users.dto';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import {
   UpdateProfileDto,
   UpdateUserPasswordDto,
   DeleteUserDto,
   VerifyPasswordDto,
+  UpdatePasswordDto,
 } from './dto/profile.dto';
 import { Request } from 'express';
 import { NotificationService } from '../notification/notification.service';
 import { UpdateUserNotificationSettingsDto } from '../notification/dto/notification.dto';
-import { ConfigType } from '@nestjs/config';
-import { jwtConfig } from '../config/jwt.config';
 
 interface RequestWithUser extends Request {
   user: {
@@ -42,15 +40,12 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly notificationService: NotificationService,
-    @Inject(jwtConfig.KEY)
-    private jwtConfiguration: ConfigType<typeof jwtConfig>,
   ) {}
 
   @Put('/password')
   async updatePassword(
     @Body() updatePasswordDto: UpdatePasswordDto,
   ): Promise<{ message: string }> {
-    console.log(updatePasswordDto);
     await this.usersService.updateUserPassword(
       updatePasswordDto.email,
       updatePasswordDto.password,
