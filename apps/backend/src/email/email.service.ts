@@ -1,3 +1,4 @@
+import { frontendConfig } from './../config/frontend.config';
 // /email/email.service.ts
 import Mail from 'nodemailer/lib/mailer';
 import * as nodemailer from 'nodemailer';
@@ -20,7 +21,9 @@ export class EmailService {
   private transporter: Mail;
   constructor(
     @Inject(emailConfig.KEY)
-    private emailConfiguration: ConfigType<typeof emailConfig>,
+    private readonly emailConfiguration: ConfigType<typeof emailConfig>,
+    @Inject(frontendConfig.KEY)
+    private readonly frontendConfiguration: ConfigType<typeof frontendConfig>,
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {
@@ -50,6 +53,20 @@ export class EmailService {
       to: dto.email,
       subject: dto.subject,
       html: dto.content,
+    };
+    return await this.transporter.sendMail(mailOptions);
+  }
+
+  async sendPasswordResetEmail(
+    email: string,
+    passwordResetToken: string,
+  ): Promise<void> {
+    const resetUrl = `${this.frontendConfiguration.baseUrl}/users/password?token=${passwordResetToken}`;
+
+    const mailOptions: EmailOptions = {
+      to: email,
+      subject: '머니캘린더 비밀번호 재설정 안내',
+      html: `<p>아래 링크를 클릭하여 비밀번호를 재설정해주세요.<br/><a href="${resetUrl}">${resetUrl}</a></p>`,
     };
     return await this.transporter.sendMail(mailOptions);
   }

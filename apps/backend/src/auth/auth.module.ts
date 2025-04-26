@@ -17,11 +17,13 @@ import { appleConfig } from '../config/apple.config';
 import { kakaoConfig } from '../config/kakao.config';
 import { discordConfig } from '../config/discord.config';
 import { SharedModule } from '../shared/shared.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
     SharedModule,
     UsersModule,
+    EmailModule,
     ConfigModule.forFeature(jwtConfig),
     ConfigModule.forFeature(googleConfig),
     ConfigModule.forFeature(appleConfig),

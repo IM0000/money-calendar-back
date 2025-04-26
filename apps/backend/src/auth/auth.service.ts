@@ -1,3 +1,4 @@
+import { EmailService } from './../email/email.service';
 // /auth/auth.service.ts
 import { ForbiddenException, Logger } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
@@ -17,8 +18,9 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   constructor(
     @Inject(jwtConfig.KEY)
-    private jwtConfiguration: ConfigType<typeof jwtConfig>,
-    private readonly usersService: UsersService, // Users 관련 로직
+    private readonly jwtConfiguration: ConfigType<typeof jwtConfig>,
+    private readonly usersService: UsersService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -47,7 +49,6 @@ export class AuthService {
    */
   async loginWithEmail(loginDto: LoginDto): Promise<any> {
     const user = await this.usersService.findUserByEmail(loginDto.email);
-    this.logger.log('loginWithEmail', user);
 
     if (!user) {
       throw new ForbiddenException({
@@ -66,7 +67,7 @@ export class AuthService {
     }
 
     const isLogin = await this.validateUser(loginDto.email, loginDto.password);
-    this.logger.log('isLogin', isLogin);
+
     if (!isLogin) {
       throw new UnauthorizedException({
         errorCode: ErrorCodes.AUTH_002,
@@ -120,11 +121,9 @@ export class AuthService {
    */
   async generateVerificationToken(email: string): Promise<string> {
     const token = uuidv4(); // 고유한 토큰 생성
-    this.logger.log(token);
 
-    // 토큰을 데이터베이스에 저장 (예: Prisma 사용)
+    // 토큰을 데이터베이스에 저장
     await this.usersService.storeVerificationToken(token, email);
-    this.logger.log('generateVerificationToken', 'token', token);
     return token;
   }
 
@@ -159,5 +158,43 @@ export class AuthService {
 
   verifyJwtToken(token: string): any {
     return jwt.verify(token, this.jwtConfiguration.secret);
+  }
+
+  /**
+   * 비밀번호 재설정 토큰 생성
+   * @param email 사용자 이메일
+   * @returns JWT 토큰
+   */
+  generatePasswordResetToken(email: string): string {
+    return jwt.sign({ email }, this.jwtConfiguration.passwordResetSecret, {
+      expiresIn: '1h',
+    });
+  }
+
+  /**
+   * 비밀번호 재설정 토큰 검증
+   * @param token JWT 토큰
+   * @returns 페이로드에서 추출한 이메일
+   */
+  verifyPasswordResetToken(token: string): { email: string } {
+    try {
+      return jwt.verify(token, this.jwtConfiguration.passwordResetSecret) as {
+        email: string;
+      };
+    } catch {
+      throw new UnauthorizedException({
+        errorCode: ErrorCodes.AUTH_001,
+        errorMessage: '유효하지 않거나 만료된 토큰입니다.',
+      });
+    }
+  }
+
+  /**
+   * 비밀번호 재설정 이메일 발송
+   * @param email 사용자 이메일
+   */
+  async sendPasswordResetEmail(email: string): Promise<void> {
+    const token = this.generatePasswordResetToken(email);
+    await this.emailService.sendPasswordResetEmail(email, token);
   }
 }

@@ -45,8 +45,7 @@ export class CalendarController {
     const endTimestamp = new Date(query.endDate).getTime() + 86400000; // 하루 추가(23:59:59까지 포함)
 
     const userId = req.user?.id;
-    console.log(userId);
-    console.log(req);
+
     return await this.calendarService.getEarningsEvents(
       startTimestamp,
       endTimestamp,

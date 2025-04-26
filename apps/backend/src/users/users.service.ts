@@ -230,7 +230,7 @@ export class UsersService {
         verified: true, // 이메일 인증 완료 후 생성
       },
     });
-    console.log(`createUserByEmail : ${user}`);
+
     return user;
   }
 

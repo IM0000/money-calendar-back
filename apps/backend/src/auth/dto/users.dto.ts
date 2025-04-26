@@ -9,14 +9,6 @@ export class UserDto {
   createdAt: Date;
   updatedAt: Date;
 }
-
-export class UpdatePasswordDto {
-  @IsEmail()
-  @IsNotEmpty()
-  email: string;
-  password: string;
-}
-
 export class LoginDto {
   email: string;
   password: string;
