@@ -9,10 +9,13 @@ import {
   Body,
   Query,
   Req,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { UpdateUserNotificationSettingsDto } from './dto/notification.dto';
+import { filter, map } from 'rxjs';
 
 interface RequestWithUser extends Request {
   user: {
@@ -25,6 +28,15 @@ interface RequestWithUser extends Request {
 @UseGuards(JwtAuthGuard)
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
+
+  @Sse('stream')
+  stream(@Req() req): import('rxjs').Observable<MessageEvent> {
+    const userId = req.user.id;
+    return this.notificationService.notification$.pipe(
+      filter((n) => n.userId === userId),
+      map((n) => ({ data: n })),
+    );
+  }
 
   @Get()
   async getNotifications(
@@ -58,7 +70,13 @@ export class NotificationController {
     return this.notificationService.markAllAsRead(userId);
   }
 
-  @Delete(':id')
+  @Delete('all')
+  async deleteAllNotifications(@Req() req: RequestWithUser) {
+    const userId = req.user.id;
+    return this.notificationService.deleteAllUserNotifications(userId);
+  }
+
+  @Delete(':id(\\d+)')
   async deleteNotification(
     @Req() req: RequestWithUser,
     @Param('id') id: string,
