@@ -8,7 +8,9 @@ import {
   PrismaHealthIndicator,
 } from '@nestjs/terminus';
 import { PrismaService } from '../prisma/prisma.service';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
+@ApiTags('Health Check')
 @Controller('health')
 export class HealthController {
   constructor(
@@ -20,6 +22,10 @@ export class HealthController {
     private readonly memory: MemoryHealthIndicator,
   ) {}
 
+  @ApiOperation({
+    summary: '서비스 상태 확인',
+    description: 'API 서버, 데이터베이스 및 메모리 상태를 확인합니다.',
+  })
   @Get()
   @HealthCheck()
   check() {

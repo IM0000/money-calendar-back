@@ -7,6 +7,18 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { ApiProperty } from '@nestjs/swagger';
+
+export class ScrapingResponse<T> {
+  @ApiProperty({
+    description: '스크래핑 작업 완료 메시지',
+    example: 'Scraping completed',
+  })
+  message: string;
+
+  @ApiProperty({ description: '스크래핑 결과 데이터', required: false })
+  data?: T;
+}
 
 @Injectable()
 export class ScrapingLoggingInterceptor implements NestInterceptor {

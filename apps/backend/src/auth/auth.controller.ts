@@ -26,7 +26,17 @@ import { ConfigType } from '@nestjs/config';
 import { frontendConfig } from '../config/frontend.config';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
 import { RequestWithUser } from '../common/types/request-with-user';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
+import { ApiResponseWrapper } from '../common/decorators/api-response.decorator';
 
+@ApiTags('인증')
 @Controller('api/v1/auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
@@ -42,6 +52,12 @@ export class AuthController {
    * @param provider OAuth 제공자 이름
    * @param req 응답 객체
    */
+  @ApiOperation({ summary: 'OAuth 로그인 요청' })
+  @ApiParam({
+    name: 'provider',
+    description: 'OAuth 제공자(google, kakao 등)',
+    example: 'google',
+  })
   @Get('oauth/:provider')
   @UseGuards(DynamicAuthGuard)
   async oauthLogin(@Param('provider') provider: string) {
@@ -54,6 +70,12 @@ export class AuthController {
    * @param query OAuth 제공자로부터 받은 쿼리 파라미터
    * @param res 응답 객체
    */
+  @ApiOperation({ summary: 'OAuth 로그인 콜백 처리' })
+  @ApiParam({
+    name: 'provider',
+    description: 'OAuth 제공자(google, kakao 등)',
+    example: 'google',
+  })
   @Get('oauth/:provider/callback')
   @UseGuards(DynamicAuthGuard)
   async oauthCallback(
@@ -152,6 +174,8 @@ export class AuthController {
    * 이메일로 인증 코드 요청
    * @param registerDto 이메일 주소
    */
+  @ApiOperation({ summary: '이메일 인증 코드 요청' })
+  @ApiResponseWrapper(Object)
   @Post('register')
   @HttpCode(HttpStatus.OK)
   async register(
@@ -174,6 +198,8 @@ export class AuthController {
    * @param verifyDto 이메일, 인증 코드
    * @returns 상태 업데이트 된 유저 객체
    */
+  @ApiOperation({ summary: '인증 코드 검증' })
+  @ApiResponseWrapper(UserDto)
   @Post('verify')
   @HttpCode(HttpStatus.OK)
   async verifyEmailCode(@Body() verifyDto: VerifyDto): Promise<UserDto> {
@@ -189,6 +215,9 @@ export class AuthController {
    * @param token 이메일토큰
    * @returns email
    */
+  @ApiOperation({ summary: '이메일 인증 토큰 검증' })
+  @ApiQuery({ name: 'token', description: '이메일 인증 토큰' })
+  @ApiResponseWrapper(Object)
   @Get('email-verification')
   async getVerifyEmail(
     @Query('token') token: string,
@@ -199,58 +228,76 @@ export class AuthController {
   }
 
   /**
-   * 이메일과 비밀번호로 로그인
+   * 로그인 처리
    * @param loginDto 이메일, 비밀번호
+   * @returns 액세스 토큰 포함 로그인 정보
    */
+  @ApiOperation({ summary: '로그인' })
+  @ApiResponseWrapper(Object)
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto): Promise<any> {
-    return await this.authService.loginWithEmail(loginDto);
+    return this.authService.loginWithEmail(loginDto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  /**
+   * 현재 로그인 상태 확인 (JWT 토큰 검증)
+   */
+  @ApiOperation({ summary: '로그인 상태 확인' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponseWrapper(Object)
   @Get('status')
+  @UseGuards(JwtAuthGuard)
   getStatus(@Req() req): any {
-    return { isAuthenticated: true, user: req.user };
+    return { user: req.user };
   }
 
   /**
    * OAuth 계정 연결
    */
-  @Post('/oauth/connect')
+  @ApiOperation({ summary: 'OAuth 계정 연결' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponseWrapper(Object)
+  @Post('connect-oauth')
   @UseGuards(JwtAuthGuard)
   connectOAuthAccount(
     @Req() req: RequestWithUser,
     @Body() oauthConnectionDto: OAuthConnectionDto,
   ) {
+    const userId = req.user.id;
     const { provider } = oauthConnectionDto;
+
+    // auth/oauth/google?connect=true 형식으로 리다이렉트 시킬 수 있도록 state 토큰 생성
     const stateToken = this.authService.generateOAuthStateToken(
-      req.user.id,
+      userId,
       provider,
     );
+    const frontendURL = this.frontendConfiguration.baseUrl;
 
-    // OAuth 인증 요청 URL을 반환
     return {
-      message: '계정 연결을 위해 OAuth 인증 페이지로 이동하세요.',
-      redirectUrl: `/api/v1/auth/oauth/${provider}?state=${encodeURIComponent(
-        stateToken,
-      )}`,
+      redirectUrl: `${frontendURL}/api/v1/auth/oauth/${provider}?state=${stateToken}`,
     };
   }
 
   /**
-   * 비밀번호 재설정 요청 (이메일로 토큰 발송)
+   * 비밀번호 재설정 이메일 요청
    */
-  @Post('password-reset/request')
+  @ApiOperation({ summary: '비밀번호 재설정 이메일 요청' })
+  @ApiResponseWrapper(Object)
+  @Post('password-reset-request')
   @HttpCode(HttpStatus.OK)
   async requestPasswordReset(@Body('email') email: string) {
     await this.authService.sendPasswordResetEmail(email);
-    return { message: '비밀번호 재설정 메일이 발송되었습니다.' };
+    return { message: '비밀번호 재설정 이메일이 전송되었습니다.' };
   }
 
   /**
-   * 비밀번호 재설정 토큰 검증 (토큰이 유효하면 email 반환)
+   * 비밀번호 재설정 토큰 검증
    */
-  @Get('password-reset/verify')
+  @ApiOperation({ summary: '비밀번호 재설정 토큰 검증' })
+  @ApiQuery({ name: 'token', description: '비밀번호 재설정 토큰' })
+  @ApiResponseWrapper(Object)
+  @Get('verify-reset-token')
   async verifyResetToken(
     @Query('token') token: string,
   ): Promise<{ email: string }> {
@@ -261,6 +308,17 @@ export class AuthController {
   /**
    * 비밀번호 변경 (토큰 & new password)
    */
+  @ApiOperation({ summary: '비밀번호 재설정' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        token: { type: 'string', description: '비밀번호 재설정 토큰' },
+        password: { type: 'string', description: '새 비밀번호' },
+      },
+    },
+  })
+  @ApiResponseWrapper(Object)
   @Post('password-reset')
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() dto: { token: string; password: string }) {
