@@ -91,7 +91,7 @@ export class ScrapingService {
             marketValue: stock.marketValue,
           }));
 
-          this.logger.debug(dataSet);
+          // this.logger.debug(dataSet);
 
           await this.saveCompanyData(dataSet);
 
@@ -398,7 +398,7 @@ export class ScrapingService {
       let bind_scroll_handler = true;
       let last_time_scope = undefined;
 
-      while (page < 5 && bind_scroll_handler) {
+      while (page < 200 && bind_scroll_handler) {
         const url =
           'https://kr.investing.com/earnings-calendar/Service/getCalendarFilteredData';
         const data = {
@@ -516,16 +516,16 @@ export class ScrapingService {
 
               const releaseDate = currentDate.getTime();
 
-              this.logger.debug({
-                releaseDate,
-                releaseTiming,
-                actualEPS,
-                forecastEPS,
-                actualRevenue,
-                forecastRevenue,
-                ticker,
-                country,
-              });
+              // this.logger.debug({
+              //   releaseDate,
+              //   releaseTiming,
+              //   actualEPS,
+              //   forecastEPS,
+              //   actualRevenue,
+              //   forecastRevenue,
+              //   ticker,
+              //   country,
+              // });
 
               dataSet.push({
                 releaseDate,
@@ -573,7 +573,7 @@ export class ScrapingService {
   }
 
   async saveEarningsData(earningsData: any[]) {
-    this.logger.debug('earningsData', earningsData);
+    // this.logger.debug('earningsData', earningsData);
     for (const data of earningsData) {
       const company = await this.prisma.company.findFirst({
         where: {
@@ -583,9 +583,9 @@ export class ScrapingService {
       });
 
       if (!company) {
-        this.logger.warn(
-          `Company not found for ticker: ${data.ticker} and country: ${data.country}`,
-        );
+        // this.logger.warn(
+        //   `Company not found for ticker: ${data.ticker} and country: ${data.country}`,
+        // );
         continue;
       }
 
@@ -812,9 +812,9 @@ export class ScrapingService {
       });
 
       if (!company) {
-        this.logger.warn(
-          `Company not found for ticker: ${data.ticker} and country: ${data.country}`,
-        );
+        // this.logger.warn(
+        //   `Company not found for ticker: ${data.ticker} and country: ${data.country}`,
+        // );
         continue;
       }
 
