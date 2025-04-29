@@ -16,22 +16,25 @@ export class HealthController {
     private readonly http: HttpHealthIndicator,
     private readonly prismaIndicator: PrismaHealthIndicator,
     private readonly prisma: PrismaService,
-    private readonly disk: DiskHealthIndicator,
+    // private readonly disk: DiskHealthIndicator,
     private readonly memory: MemoryHealthIndicator,
   ) {}
 
   @Get()
   @HealthCheck()
   check() {
-    return this.health.check([
-      () => this.http.pingCheck('nestjs-docs', 'https://docs.nestjs.com'),
-      () =>
-        this.prismaIndicator.pingCheck('postgres', this.prisma, {
-          timeout: 1000,
-        }),
-      () =>
-        this.disk.checkStorage('storage', { path: '/', thresholdPercent: 0.5 }),
-      () => this.memory.checkHeap('memory_heap', 150 * 1024 * 1024),
-    ]);
+    try {
+      return this.health.check([
+        () => this.http.pingCheck('nestjs-docs', 'https://docs.nestjs.com'),
+        () =>
+          this.prismaIndicator.pingCheck('postgres', this.prisma, {
+            timeout: 1000,
+          }),
+        () => this.memory.checkHeap('memory_heap', 150 * 1024 * 1024),
+      ]);
+    } catch (error) {
+      console.error('Health Check Failed:', error.details);
+      throw error;
+    }
   }
 }
