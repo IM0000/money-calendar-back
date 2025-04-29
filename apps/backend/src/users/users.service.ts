@@ -1,9 +1,7 @@
-// users.service.ts
 import {
   BadRequestException,
   ConflictException,
   Injectable,
-  Logger,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -19,21 +17,13 @@ import { UpdateProfileDto } from './dto/profile.dto';
 
 @Injectable()
 export class UsersService {
-  private readonly logger = new Logger(UsersService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
   ) {}
 
   async findUserByEmail(email: string): Promise<User | null> {
-    try {
-      return await this.prisma.user.findUnique({
-        where: { email },
-      });
-    } catch (error) {
-      this.logError('findUserByEmail', error, { email });
-      throw error;
-    }
+    return await this.prisma.user.findUnique({ where: { email } });
   }
 
   async linkOAuthAccountToUser(
@@ -46,34 +36,23 @@ export class UsersService {
         where: { id: user.id },
         data: {
           oauthAccounts: {
-            create: {
-              provider,
-              providerId,
-            },
+            create: { provider, providerId },
           },
         },
-        include: {
-          oauthAccounts: true, // 연동된 OAuth 정보 포함
-        },
+        include: { oauthAccounts: true },
       });
-    } catch (error) {
-      throw new ConflictException('이미 OAuth 계정이 연동되어 있습니다.');
+    } catch {
+      throw new ConflictException({
+        errorCode: ErrorCodes.CONFLICT_001,
+        errorMessage: '이미 OAuth 계정이 연동되어 있습니다.',
+      });
     }
   }
 
-  // ID로 사용자 찾기 (JWT 검증 시 사용)
   async findUserById(userId: number): Promise<User | null> {
-    try {
-      return await this.prisma.user.findUnique({
-        where: { id: userId },
-      });
-    } catch (error) {
-      this.logError('findUserById', error, { userId });
-      throw error;
-    }
+    return await this.prisma.user.findUnique({ where: { id: userId } });
   }
 
-  // OAuth 제공자와 제공자 ID로 사용자 찾기
   async findUserByOAuthId(
     provider: string,
     providerId: string,
@@ -81,46 +60,34 @@ export class UsersService {
     return await this.prisma.user.findFirst({
       where: {
         oauthAccounts: {
-          some: {
-            provider,
-            providerId,
-          },
+          some: { provider, providerId },
         },
       },
-      include: {
-        oauthAccounts: true, // OAuth 정보도 함께 가져오기
-      },
+      include: { oauthAccounts: true },
     });
   }
 
-  /**
-   * 이메일 토큰으로 이메일 찾기
-   * @param token 이메일 토큰
-   * @returns 이메일 주소
-   */
   async findEmailFromVerificationToken(token: string): Promise<string> {
-    this.logger.log('findEmailFromVerificationToken', token);
     const verification = await this.prisma.verificationToken.findUnique({
       where: { token },
     });
-
-    this.logger.log('verification', verification);
     if (!verification || verification.expiresAt < new Date()) {
-      throw new BadRequestException('유효하지 않은 토큰입니다.');
+      throw new BadRequestException({
+        errorCode: ErrorCodes.AUTH_002,
+        errorMessage: '유효하지 않은 토큰입니다.',
+      });
     }
-
     return verification.email;
   }
 
-  // OAuth 사용자 생성
   async createUserFromOAuth(oauthUser: any): Promise<User> {
     const nickname =
       RandomNickList[Math.floor(Math.random() * RandomNickList.length)];
     return await this.prisma.user.create({
       data: {
         email: oauthUser.email,
-        nickname: nickname + new Date().getTime(),
-        verified: true, // OAuth 가입자는 이메일 인증 생략
+        nickname: nickname + Date.now(),
+        verified: true,
         oauthAccounts: {
           create: [
             {
@@ -130,13 +97,10 @@ export class UsersService {
           ],
         },
       },
-      include: {
-        oauthAccounts: true, // 생성된 OAuth 정보도 포함해서 반환
-      },
+      include: { oauthAccounts: true },
     });
   }
 
-  // 유저 비밀번호 업데이트
   async updateUserPassword(email: string, newPassword: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -145,22 +109,15 @@ export class UsersService {
         errorMessage: '해당 이메일의 사용자를 찾을 수 없습니다.',
       });
     }
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, 10);
     await this.prisma.user.update({
       where: { email },
-      data: { password: hashedPassword },
+      data: { password: hashed },
     });
   }
 
-  /**
-   * 기존 사용자 계정에 OAuth 계정 연동
-   * @param userId 연동할 사용자 ID
-   * @param oauthUser OAuth 사용자 정보
-   * @returns 연동된 사용자 정보
-   */
   async linkOAuthAccount(userId: number, oauthUser: any): Promise<User> {
-    // 1. 해당 OAuth 계정이 이미 다른 사용자에 연동되어 있는지 확인
-    const existingOAuthAccount = await this.prisma.oAuthAccount.findUnique({
+    const existing = await this.prisma.oAuthAccount.findUnique({
       where: {
         provider_providerId: {
           provider: oauthUser.provider,
@@ -168,21 +125,20 @@ export class UsersService {
         },
       },
     });
-
-    if (existingOAuthAccount) {
-      throw new ConflictException(
-        `해당 OAuth 계정(${oauthUser.provider})은 이미 다른 사용자에 연동되어 있습니다.`,
-      );
+    if (existing) {
+      throw new ConflictException({
+        errorCode: ErrorCodes.CONFLICT_001,
+        errorMessage: `해당 OAuth 계정(${oauthUser.provider})은 이미 다른 사용자에 연동되어 있습니다.`,
+      });
     }
-
-    // 2. 사용자가 존재하는지 확인
     const user = await this.findUserById(userId);
     if (!user) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      throw new NotFoundException({
+        errorCode: ErrorCodes.RESOURCE_001,
+        errorMessage: '사용자를 찾을 수 없습니다.',
+      });
     }
-
-    // 3. OAuth 계정 연동
-    const updatedUser = await this.prisma.user.update({
+    return await this.prisma.user.update({
       where: { id: userId },
       data: {
         oauthAccounts: {
@@ -193,407 +149,229 @@ export class UsersService {
           },
         },
       },
-      include: {
-        oauthAccounts: true, // 연동된 OAuth 정보 포함
-      },
+      include: { oauthAccounts: true },
     });
-
-    return updatedUser;
   }
 
-  /**
-   * 이메일로 사용자 생성
-   * @param email 이메일 주소
-   * @param password 비밀번호
-   */
   async createUserByEmail(email: string, password?: string): Promise<User> {
-    const existingUser = await this.findUserByEmail(email);
-    this.logger.log(`createUserByEmail : ${existingUser}`);
-    if (existingUser) {
+    const existing = await this.findUserByEmail(email);
+    if (existing) {
       throw new ConflictException({
         errorCode: ErrorCodes.CONFLICT_001,
         errorMessage: '이미 사용 중인 이메일입니다.',
-        data: existingUser,
+        data: existing,
       });
     }
-
-    const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+    const hashed = password ? await bcrypt.hash(password, 10) : null;
     const nickname = `${
       RandomNickList[Math.floor(Math.random() * RandomNickList.length)]
-    }${new Date().getTime()}`;
-
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        nickname,
-        verified: true, // 이메일 인증 완료 후 생성
-      },
+    }${Date.now()}`;
+    return await this.prisma.user.create({
+      data: { email, password: hashed, nickname, verified: true },
     });
-
-    return user;
   }
 
-  /**
-   * 이메일로 인증 코드 발송
-   * @param email 이메일 주소
-   */
   async sendVerificationCode(email: string): Promise<void> {
-    this.logger.log(`sendVerificationCode: ${email}`);
-    // 인증 코드 생성
-    const code = generateSixDigitCode(); // 6자리 숫자 코드 생성
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10분 후 만료
-
-    // DB 작업들을 트랜잭션으로 묶어 원자성 보장
+    const code = generateSixDigitCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     await this.prisma.$transaction(async (tx) => {
-      // 기존 인증 코드 삭제
-      await tx.verificationCode.deleteMany({
-        where: { email },
-      });
-
-      // 새 인증 코드 저장
-      await tx.verificationCode.create({
-        data: {
-          email,
-          code,
-          expiresAt,
-        },
-      });
-
-      // 사용자가 존재하지 않으면 생성
-      const existingUser = await tx.user.findUnique({
-        where: { email },
-      });
-      if (!existingUser) {
-        await tx.user.create({
-          data: {
-            email,
-            verified: false,
-          },
-        });
+      await tx.verificationCode.deleteMany({ where: { email } });
+      await tx.verificationCode.create({ data: { email, code, expiresAt } });
+      const existing = await tx.user.findUnique({ where: { email } });
+      if (!existing) {
+        await tx.user.create({ data: { email, verified: false } });
       }
     });
-
-    // 이메일 전송은 DB 트랜잭션 외부에서 실행
     await this.emailService.sendMemberJoinVerification(email, code);
-    this.logger.log(`Verification email sent to ${email} with code ${code}`);
   }
 
-  /**
-   * 인증 코드 검증
-   * @param email 이메일 주소
-   * @param code 인증 코드
-   */
   async verifyEmailCode(email: string, code: string): Promise<UserDto> {
     return await this.prisma.$transaction(async (tx) => {
       const verification = await tx.verificationCode.findUnique({
         where: { email },
       });
-      this.logger.log(`verifyEmailCode: ${email}, code: ${code}`);
       if (!verification || verification.code !== code) {
         throw new BadRequestException({
           errorCode: ErrorCodes.AUTH_002,
           errorMessage: '유효하지 않은 인증 코드입니다.',
         });
       }
-
       if (verification.expiresAt < new Date()) {
         throw new BadRequestException({
           errorCode: ErrorCodes.AUTH_001,
           errorMessage: '인증 코드가 만료되었습니다.',
         });
       }
-
-      // 인증 완료 처리 (사용자 계정 생성 혹은 업데이트)
       const user = await this.createUserByEmail(email);
       if (user) {
-        await tx.user.update({
-          where: { email },
-          data: { verified: true },
-        });
+        await tx.user.update({ where: { email }, data: { verified: true } });
       }
       return user;
     });
   }
 
-  /**
-   * 이메일 토큰 저장, 제한시간 5분
-   * @param token 이메일 토큰
-   * @param email 이메일
-   */
   async storeVerificationToken(token: string, email: string): Promise<void> {
-    this.logger.log(token, email);
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5분 후 만료
-    try {
-      const result = await this.prisma.verificationToken.create({
-        data: {
-          token,
-          email,
-          expiresAt,
-        },
-      });
-
-      this.logger.log(result);
-    } catch (error) {
-      this.logger.error('Error storing verification token:', error);
-    }
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    await this.prisma.verificationToken.create({
+      data: { token, email, expiresAt },
+    });
   }
 
-  /**
-   * 사용자 프로필 조회
-   */
   async getUserProfile(userId: number) {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          oauthAccounts: true,
-        },
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { oauthAccounts: true },
+    });
+    if (!user) {
+      throw new NotFoundException({
+        errorCode: ErrorCodes.RESOURCE_001,
+        errorMessage: '사용자를 찾을 수 없습니다.',
       });
-
-      if (!user) {
-        throw new NotFoundException('사용자를 찾을 수 없습니다.');
-      }
-
-      // 클라이언트에 반환할 데이터 형식으로 가공
-      const providers = ['google', 'kakao', 'apple', 'discord'];
-      const oauthConnections = providers.map((provider) => {
-        const isConnected = user.oauthAccounts.some(
-          (account) => account.provider.toLowerCase() === provider,
-        );
-        const oauthEmail = user.oauthAccounts.filter(
-          (account) => account.provider.toLowerCase() === provider,
-        )[0]?.oauthEmail;
-        return { provider, connected: isConnected, oauthEmail };
-      });
-
-      const hasPassword = user.password !== null;
-
-      return {
-        id: user.id,
-        email: user.email,
-        hasPassword,
-        nickname: user.nickname,
-        verified: user.verified,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        oauthConnections,
-      };
-    } catch (error) {
-      this.logError('getUserProfile', error, { userId });
-      throw error;
     }
+    const providers = ['google', 'kakao', 'apple', 'discord'];
+    const oauthConnections = providers.map((provider) => {
+      const account = user.oauthAccounts.find(
+        (a) => a.provider.toLowerCase() === provider,
+      );
+      return {
+        provider,
+        connected: !!account,
+        oauthEmail: account?.oauthEmail,
+      };
+    });
+    return {
+      id: user.id,
+      email: user.email,
+      hasPassword: user.password !== null,
+      nickname: user.nickname,
+      verified: user.verified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      oauthConnections,
+    };
   }
 
-  /**
-   * 사용자 프로필 업데이트
-   */
-  async updateUserProfile(userId: number, updateProfileDto: UpdateProfileDto) {
-    try {
-      // 사용자 존재 확인
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
+  async updateUserProfile(userId: number, updateDto: UpdateProfileDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException({
+        errorCode: ErrorCodes.RESOURCE_001,
+        errorMessage: '사용자를 찾을 수 없습니다.',
       });
-
-      if (!user) {
-        throw new NotFoundException('사용자를 찾을 수 없습니다.');
-      }
-
-      // 닉네임 업데이트
-      const updatedUser = await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          ...updateProfileDto,
-        },
-      });
-
-      return {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        nickname: updatedUser.nickname,
-        verified: updatedUser.verified,
-        createdAt: updatedUser.createdAt,
-        updatedAt: updatedUser.updatedAt,
-      };
-    } catch (error) {
-      this.logError('updateUserProfile', error, { userId, updateProfileDto });
-      throw error;
     }
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { ...updateDto },
+    });
+    return {
+      id: updated.id,
+      email: updated.email,
+      nickname: updated.nickname,
+      verified: updated.verified,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+    };
   }
 
-  /**
-   * 사용자 비밀번호 변경
-   */
   async changeUserPassword(
     userId: number,
     currentPassword: string,
     newPassword: string,
   ) {
-    try {
-      // 사용자 존재 확인
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException({
+        errorCode: ErrorCodes.RESOURCE_001,
+        errorMessage: '사용자를 찾을 수 없습니다.',
       });
-
-      if (!user) {
-        throw new NotFoundException('사용자를 찾을 수 없습니다.');
-      }
-
-      if (currentPassword && currentPassword !== '') {
-        // 현재 비밀번호 확인
-        const isPasswordValid = await bcrypt.compare(
-          currentPassword,
-          user.password,
-        );
-        if (!isPasswordValid) {
-          throw new BadRequestException('현재 비밀번호가 일치하지 않습니다.');
-        }
-      }
-
-      // 새 비밀번호 해싱
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-      // 비밀번호 업데이트
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          password: hashedPassword,
-        },
-      });
-
-      return { message: '비밀번호가 성공적으로 변경되었습니다.' };
-    } catch (error) {
-      this.logError('changeUserPassword', error, { userId });
-      throw error;
     }
-  }
-
-  /**
-   * 사용자 비밀번호 확인
-   * @param userId 사용자 ID
-   * @param password 확인할 비밀번호
-   * @returns 비밀번호 일치 여부
-   */
-  async verifyUserPassword(userId: number, password: string): Promise<boolean> {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
+    if (
+      currentPassword &&
+      !(await bcrypt.compare(currentPassword, user.password))
+    ) {
+      throw new BadRequestException({
+        errorCode: ErrorCodes.VALIDATION_002,
+        errorMessage: '현재 비밀번호가 일치하지 않습니다.',
       });
-
-      if (!user) {
-        throw new NotFoundException('사용자를 찾을 수 없습니다.');
-      }
-
-      // 비밀번호가 설정되지 않은 경우 (OAuth 계정)
-      if (!user.password) {
-        throw new BadRequestException(
-          '비밀번호가 설정되어 있지 않은 계정입니다.',
-        );
-      }
-
-      // 비밀번호 비교
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      return isPasswordValid;
-    } catch (error) {
-      this.logError('verifyUserPassword', error, { userId });
-      throw error;
     }
-  }
-
-  // 에러 로깅 개선을 위한 공통 함수 추가
-  private logError(methodName: string, error: any, params?: any) {
-    this.logger.error(`Error in UsersService.${methodName}: ${error.message}`, {
-      service: 'UsersService',
-      method: methodName,
-      error: error.stack || error.message,
-      params: params ? JSON.stringify(params) : undefined,
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed },
     });
-    return error;
+    return { message: '비밀번호가 성공적으로 변경되었습니다.' };
   }
 
-  /**
-   * OAuth 계정 연결 해제
-   */
+  async verifyUserPassword(userId: number, password: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException({
+        errorCode: ErrorCodes.RESOURCE_001,
+        errorMessage: '사용자를 찾을 수 없습니다.',
+      });
+    }
+    if (!user.password) {
+      throw new BadRequestException({
+        errorCode: ErrorCodes.ACCOUNT_001,
+        errorMessage: '비밀번호가 설정되어 있지 않은 계정입니다.',
+      });
+    }
+    return await bcrypt.compare(password, user.password);
+  }
+
   async disconnectOAuthAccount(userId: number, provider: string) {
-    try {
-      // 연결된 모든 계정 조회
-      const connectedAccounts = await this.prisma.oAuthAccount.findMany({
-        where: { userId },
-      });
-
-      // 최소 하나의 로그인 방법 유지 확인
-      if (connectedAccounts.length <= 1) {
-        throw new ForbiddenException(
+    const connected = await this.prisma.oAuthAccount.findMany({
+      where: { userId },
+    });
+    if (connected.length <= 1) {
+      throw new ForbiddenException({
+        errorCode: ErrorCodes.RESOURCE_003,
+        errorMessage:
           '최소 하나의 로그인 방법이 필요합니다. 소셜 계정 연결을 해제할 수 없습니다.',
-        );
-      }
-
-      // 해당 프로바이더의 연결 제거
-      await this.prisma.oAuthAccount.deleteMany({
-        where: {
-          userId,
-          provider,
-        },
       });
-      return { message: `${provider} 계정 연결이 해제되었습니다.` };
-    } catch (error) {
-      this.logError('disconnectOAuthAccount', error, { userId, provider });
-      if (error instanceof ForbiddenException) {
-        throw error;
-      }
-      throw new BadRequestException(
-        'OAuth 계정 연결 해제 중 오류가 발생했습니다.',
-      );
     }
+    await this.prisma.oAuthAccount.deleteMany({ where: { userId, provider } });
+    return { message: `${provider} 계정 연결이 해제되었습니다.` };
   }
 
-  /**
-   * 계정 탈퇴
-   */
-  async deleteUser(userId: number, email: string, password: string) {
-    try {
-      // 사용자 존재 확인
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          oauthAccounts: true,
-        },
+  async deleteUser(
+    userId: number,
+    email: string,
+    password: string,
+  ): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { oauthAccounts: true },
+    });
+    if (!user) {
+      throw new NotFoundException({
+        errorCode: ErrorCodes.RESOURCE_001,
+        errorMessage: '사용자를 찾을 수 없습니다.',
       });
-
-      if (!user) {
-        throw new NotFoundException('사용자를 찾을 수 없습니다.');
-      }
-
-      // 이메일 일치 확인
-      if (user.email !== email) {
-        throw new BadRequestException('이메일이 일치하지 않습니다.');
-      }
-
-      // // 계정 삭제 - 관련된 모든 데이터 삭제
-      // // OAuth 계정 먼저 삭제
-      // await this.prisma.oAuthAccount.deleteMany({
-      //   where: { userId: user.id },
-      // });
-
-      // // 알림 설정 삭제
-      // await this.prisma.userNotificationSettings.deleteMany({
-      //   where: { userId: user.id },
-      // });
-
-      // // 알림 삭제
-      // await this.prisma.notification.deleteMany({
-      //   where: { userId: user.id },
-      // });
-
-      // // 사용자 삭제
-      // await this.prisma.user.delete({
-      //   where: { id: user.id },
-      // });
-
-      return { message: '계정이 성공적으로 삭제되었습니다.' };
-    } catch (error) {
-      this.logError('deleteUser', error, { userId, email });
-      throw error;
     }
+
+    if (user.email !== email) {
+      throw new BadRequestException({
+        errorCode: ErrorCodes.VALIDATION_002,
+        errorMessage: '이메일이 일치하지 않습니다.',
+      });
+    }
+
+    if (!user.password) {
+      throw new BadRequestException({
+        errorCode: ErrorCodes.ACCOUNT_001,
+        errorMessage: '비밀번호가 설정되어 있지 않은 계정입니다.',
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw new BadRequestException({
+        errorCode: ErrorCodes.VALIDATION_002,
+        errorMessage: '비밀번호가 일치하지 않습니다.',
+      });
+    }
+
+    return { message: '계정이 성공적으로 삭제되었습니다.' };
   }
 }

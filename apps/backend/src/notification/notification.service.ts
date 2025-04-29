@@ -1,14 +1,25 @@
 // notification.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ContentType } from '@prisma/client';
 import {
   CreateNotificationDto,
   UpdateUserNotificationSettingsDto,
 } from './dto/notification.dto';
+import { Notification as NotificationEntity } from '@prisma/client';
+import { Observable, Subject } from 'rxjs';
+import { ErrorCodes } from '../common/enums/error-codes.enum';
 
 @Injectable()
 export class NotificationService {
+  private readonly notificationSubject = new Subject<NotificationEntity>();
+  public readonly notification$: Observable<NotificationEntity> =
+    this.notificationSubject.asObservable();
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -27,21 +38,27 @@ export class NotificationService {
           include: { user: { include: { notificationSettings: true } } },
         });
       default:
-        throw new NotFoundException('지원하지 않는 콘텐츠 타입입니다.');
+        throw new NotFoundException({
+          errorCode: ErrorCodes.RESOURCE_001,
+          errorMessage: '지원하지 않는 콘텐츠 타입입니다.',
+        });
     }
   }
 
   /**
    * Notification 레코드 생성
    */
-  createNotification(dto: CreateNotificationDto) {
-    return this.prisma.notification.create({
+  async createNotification(dto: CreateNotificationDto) {
+    const notif = await this.prisma.notification.create({
       data: {
         contentType: dto.contentType,
         contentId: dto.contentId,
         userId: dto.userId,
       },
     });
+
+    this.notificationSubject.next(notif);
+    return notif;
   }
 
   /**
@@ -89,7 +106,10 @@ export class NotificationService {
           create: { userId, earningsId: contentId },
         });
       default:
-        throw new NotFoundException('지원하지 않는 콘텐츠 타입입니다.');
+        throw new NotFoundException({
+          errorCode: ErrorCodes.RESOURCE_001,
+          errorMessage: '지원하지 않는 콘텐츠 타입입니다.',
+        });
     }
   }
 
@@ -111,7 +131,10 @@ export class NotificationService {
           where: { userId_earningsId: { userId, earningsId: contentId } },
         });
       default:
-        throw new NotFoundException('지원하지 않는 콘텐츠 타입입니다.');
+        throw new NotFoundException({
+          errorCode: ErrorCodes.RESOURCE_001,
+          errorMessage: '지원하지 않는 콘텐츠 타입입니다.',
+        });
     }
   }
 
@@ -190,8 +213,17 @@ export class NotificationService {
     const noti = await this.prisma.notification.findUnique({
       where: { id: notificationId },
     });
-    if (!noti || noti.userId !== userId) {
-      throw new NotFoundException('알림을 찾을 수 없거나 권한이 없습니다.');
+    if (!noti) {
+      throw new NotFoundException({
+        errorCode: ErrorCodes.RESOURCE_001,
+        errorMessage: '해당 알림을 찾을 수 없습니다.',
+      });
+    }
+    if (noti.userId !== userId) {
+      throw new ForbiddenException({
+        errorCode: ErrorCodes.AUTHZ_001,
+        errorMessage: '해당 알림에 접근할 권한이 없습니다.',
+      });
     }
     await this.prisma.notification.update({
       where: { id: notificationId },
@@ -215,11 +247,27 @@ export class NotificationService {
     const noti = await this.prisma.notification.findUnique({
       where: { id: notificationId },
     });
-    if (!noti || noti.userId !== userId) {
-      throw new NotFoundException('알림을 찾을 수 없거나 권한이 없습니다.');
+    if (!noti) {
+      throw new NotFoundException({
+        errorCode: ErrorCodes.RESOURCE_001,
+        errorMessage: '삭제할 알림을 찾을 수 없습니다.',
+      });
+    }
+    if (noti.userId !== userId) {
+      throw new ForbiddenException({
+        errorCode: ErrorCodes.AUTHZ_001,
+        errorMessage: '해당 알림을 삭제할 권한이 없습니다.',
+      });
     }
     await this.prisma.notification.delete({ where: { id: notificationId } });
     return { message: '알림이 삭제되었습니다.' };
+  }
+
+  async deleteAllUserNotifications(userId: number): Promise<{ count: number }> {
+    const result = await this.prisma.notification.deleteMany({
+      where: { userId },
+    });
+    return { count: result.count };
   }
 
   async addEarningsNotification(userId: number, earningsId: number) {
@@ -246,7 +294,12 @@ export class NotificationService {
         contentId: dividendId,
       },
     });
-    if (!noti) throw new NotFoundException('배당 알림이 없습니다.');
+    if (!noti) {
+      throw new NotFoundException({
+        errorCode: ErrorCodes.RESOURCE_001,
+        errorMessage: '배당 알림이 없습니다.',
+      });
+    }
     await this.prisma.notification.delete({ where: { id: noti.id } });
     return { message: '배당 알림이 해제되었습니다.' };
   }

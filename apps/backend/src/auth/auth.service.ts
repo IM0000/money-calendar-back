@@ -1,6 +1,10 @@
 import { EmailService } from './../email/email.service';
 // /auth/auth.service.ts
-import { ForbiddenException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
@@ -140,8 +144,12 @@ export class AuthService {
       OAuthProviderEnum.Discord.toString(),
       OAuthProviderEnum.Kakao.toString(),
     ];
+
     if (!validProviders.includes(provider)) {
-      throw new Error(`지원하지 않는 OAuth 제공자입니다: ${provider}`);
+      throw new BadRequestException({
+        errorCode: ErrorCodes.OAUTH_001,
+        errorMessage: `지원하지 않는 OAuth 제공자입니다: ${provider}`,
+      });
     }
 
     const statePayload = {
