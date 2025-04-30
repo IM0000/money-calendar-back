@@ -1,8 +1,10 @@
-📖 개요
+# Money Calendar ✨
+
+## 📖 개요
 
 주식 시장 이벤트(실적, 배당, 경제지표 등)를 수집·가공하여 API로 제공하고, 사용자 설정에 따른 알림을 제공하는 백엔드 서비스입니다.
 
-⚙️ 주요 기능
+## ⚙️ 주요 기능
 
 - **RESTful API (CRUD)**: 사용자, 실적, 배당, 경제지표 등의 데이터 관리
 - **데이터 스크래핑**: 주식 시장 데이터 자동 수집 및 가공
@@ -11,7 +13,7 @@
 - **DB 관리**: Prisma + PostgreSQL
 - **헬스 체크**: NestJS Terminus
 
-🛠️ 기술 스택
+## 🛠️ 기술 스택
 
 | 구분        | 기술 및 라이브러리 |
 | ----------- | ------------------ |
@@ -24,9 +26,9 @@
 | 인증        | Passport, JWT      |
 | 이메일      | Nodemailer         |
 
-🚀 설치 및 실행
+## 🚀 설치 및 실행
 
-**클론**
+**clone**
 
 ```bash
 git clone https://github.com/your-username/backend-project.git
@@ -105,7 +107,7 @@ pnpm start:dev:scraping  # 개발 모드
 pnpm start:scraping      # 프로덕션
 ```
 
-📚 프로젝트 구조
+## 📚 프로젝트 구조
 
 ```
 backend-project/
@@ -169,17 +171,13 @@ backend-project/
 └── .gitignore                  # Git 무시 파일 설정
 ```
 
-✅ 테스트
+## ✅ 테스트
 
 ```bash
 # 단위 테스트
 pnpm test
 ```
 
-📄 라이선스
+## 📄 라이선스
 
-MIT © Sangjun Lim
-
-📫 연락처
-
-이메일: imsang0000@gmail.com
+GPL © Sangjun Lim
