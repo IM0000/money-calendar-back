@@ -107,6 +107,10 @@ pnpm start:dev:scraping  # 개발 모드
 pnpm start:scraping      # 프로덕션
 ```
 
+## 📚 API 문서
+
+Swagger UI: http://localhost:3001/api/docs
+
 ## 📚 프로젝트 구조
 
 ```
