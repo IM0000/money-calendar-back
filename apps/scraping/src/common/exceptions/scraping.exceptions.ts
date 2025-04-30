@@ -1,11 +1,17 @@
 import { HttpStatus } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * Base class for all scraping-related domain exceptions.
  */
 export class ScrapingException extends Error {
+  @ApiProperty({ description: 'HTTP 상태 코드', example: 500 })
   public readonly statusCode: number;
+
+  @ApiProperty({ description: '에러 코드', example: 'SCRAPING_ERROR' })
   public readonly errorCode: string;
+
+  @ApiProperty({ description: '에러 상세 정보', required: false })
   public readonly details?: any;
 
   constructor(

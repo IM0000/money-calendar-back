@@ -77,11 +77,11 @@ export class NotificationService {
   /**
    * 유저 알림 설정 수정
    */
-  updateUserNotificationSettings(
+  async updateUserNotificationSettings(
     userId: number,
     dto: UpdateUserNotificationSettingsDto,
   ) {
-    return this.prisma.userNotificationSettings.upsert({
+    return await this.prisma.userNotificationSettings.upsert({
       where: { userId },
       update: dto,
       create: { userId, ...dto },

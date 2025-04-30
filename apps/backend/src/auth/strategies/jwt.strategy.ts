@@ -30,6 +30,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     if (!user) {
       throw new Error('유효하지 않은 사용자입니다.');
     }
-    return user; // Request에 사용자 정보 저장
+
+    const { password, ...userWithoutPassword } = user;
+
+    return { user: userWithoutPassword }; // Request에 사용자 정보 저장
   }
 }
