@@ -40,7 +40,7 @@ export class FavoritesController {
   @Get()
   async getAllFavorites(@Req() req: RequestWithUser) {
     const userId = req.user.id;
-    return this.favoritesService.getAllFavorites(userId);
+    return await this.favoritesService.getAllFavorites(userId);
   }
 
   @ApiOperation({ summary: '즐겨찾기 캘린더 이벤트 조회' })
@@ -66,7 +66,7 @@ export class FavoritesController {
     const startTimestamp = new Date(startDate).getTime();
     const endTimestamp = new Date(endDate).getTime();
 
-    return this.favoritesService.getFavoriteCalendarEvents(
+    return await this.favoritesService.getFavoriteCalendarEvents(
       userId,
       startTimestamp,
       endTimestamp,
@@ -82,7 +82,7 @@ export class FavoritesController {
     @Param('id', ParseIntPipe) earningsId: number,
   ) {
     const userId = req.user.id;
-    return this.favoritesService.addFavoriteEarnings(userId, earningsId);
+    return await this.favoritesService.addFavoriteEarnings(userId, earningsId);
   }
 
   @ApiOperation({ summary: '실적 즐겨찾기 삭제' })
@@ -94,7 +94,10 @@ export class FavoritesController {
     @Param('id', ParseIntPipe) earningsId: number,
   ) {
     const userId = req.user.id;
-    return this.favoritesService.removeFavoriteEarnings(userId, earningsId);
+    return await this.favoritesService.removeFavoriteEarnings(
+      userId,
+      earningsId,
+    );
   }
 
   @ApiOperation({ summary: '배당 즐겨찾기 추가' })
@@ -106,7 +109,7 @@ export class FavoritesController {
     @Param('id', ParseIntPipe) dividendId: number,
   ) {
     const userId = req.user.id;
-    return this.favoritesService.addFavoriteDividends(userId, dividendId);
+    return await this.favoritesService.addFavoriteDividends(userId, dividendId);
   }
 
   @ApiOperation({ summary: '배당 즐겨찾기 삭제' })
@@ -118,7 +121,10 @@ export class FavoritesController {
     @Param('id', ParseIntPipe) dividendId: number,
   ) {
     const userId = req.user.id;
-    return this.favoritesService.removeFavoriteDividends(userId, dividendId);
+    return await this.favoritesService.removeFavoriteDividends(
+      userId,
+      dividendId,
+    );
   }
 
   @ApiOperation({ summary: '경제지표 즐겨찾기 추가' })
@@ -130,7 +136,10 @@ export class FavoritesController {
     @Param('id', ParseIntPipe) indicatorId: number,
   ) {
     const userId = req.user.id;
-    return this.favoritesService.addFavoriteIndicator(userId, indicatorId);
+    return await this.favoritesService.addFavoriteIndicator(
+      userId,
+      indicatorId,
+    );
   }
 
   @ApiOperation({ summary: '경제지표 즐겨찾기 삭제' })
@@ -142,6 +151,9 @@ export class FavoritesController {
     @Param('id', ParseIntPipe) indicatorId: number,
   ) {
     const userId = req.user.id;
-    return this.favoritesService.removeFavoriteIndicator(userId, indicatorId);
+    return await this.favoritesService.removeFavoriteIndicator(
+      userId,
+      indicatorId,
+    );
   }
 }

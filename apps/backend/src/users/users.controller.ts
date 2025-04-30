@@ -63,7 +63,7 @@ export class UsersController {
   @ApiResponseWrapper(UserDto)
   @Post('/email')
   async getUserByEmail(@Body('email') email: string): Promise<UserDto | null> {
-    return this.usersService.findUserByEmail(email);
+    return await this.usersService.findUserByEmail(email);
   }
 
   /**
@@ -76,7 +76,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async getProfile(@Req() req: RequestWithUser) {
     const userId = req.user.id;
-    return this.usersService.getUserProfile(userId);
+    return await this.usersService.getUserProfile(userId);
   }
 
   /**
@@ -92,7 +92,7 @@ export class UsersController {
     @Body() updateProfileDto: UpdateProfileDto,
   ) {
     const userId = req.user.id;
-    return this.usersService.updateUserProfile(userId, updateProfileDto);
+    return await this.usersService.updateUserProfile(userId, updateProfileDto);
   }
 
   /**
@@ -108,7 +108,7 @@ export class UsersController {
     @Body() updatePasswordDto: UpdateUserPasswordDto,
   ) {
     const userId = req.user.id;
-    return this.usersService.changeUserPassword(
+    return await this.usersService.changeUserPassword(
       userId,
       updatePasswordDto.currentPassword,
       updatePasswordDto.newPassword,
@@ -128,7 +128,7 @@ export class UsersController {
     @Body() deleteUserDto: DeleteUserDto,
   ) {
     const userId = req.user.id;
-    return this.usersService.deleteUser(
+    return await this.usersService.deleteUser(
       userId,
       deleteUserDto.email,
       deleteUserDto.password,
@@ -149,7 +149,7 @@ export class UsersController {
     @Param('provider') provider: string,
   ) {
     const userId = req.user.id;
-    return this.usersService.disconnectOAuthAccount(userId, provider);
+    return await this.usersService.disconnectOAuthAccount(userId, provider);
   }
 
   /**
@@ -166,7 +166,7 @@ export class UsersController {
     @Query('limit') limit = '10',
   ) {
     const userId = req.user.id;
-    return this.notificationService.getUserNotifications(
+    return await this.notificationService.getUserNotifications(
       userId,
       parseInt(page),
       parseInt(limit),
@@ -183,7 +183,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async getUnreadNotificationsCount(@Req() req: RequestWithUser) {
     const userId = req.user.id;
-    return this.notificationService.getUnreadNotificationsCount(userId);
+    return await this.notificationService.getUnreadNotificationsCount(userId);
   }
 
   /**
@@ -196,7 +196,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async getNotificationSettings(@Req() req: RequestWithUser) {
     const userId = req.user.id;
-    return this.notificationService.getUserNotificationSettings(userId);
+    return await this.notificationService.getUserNotificationSettings(userId);
   }
 
   /**
@@ -212,7 +212,7 @@ export class UsersController {
     @Body() updateSettingsDto: UpdateUserNotificationSettingsDto,
   ) {
     const userId = req.user.id;
-    return this.notificationService.updateUserNotificationSettings(
+    return await this.notificationService.updateUserNotificationSettings(
       userId,
       updateSettingsDto,
     );

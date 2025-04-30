@@ -181,12 +181,10 @@ export class AuthController {
   async register(
     @Body() registerDto: RegisterDto,
   ): Promise<{ token: string; message: string }> {
-    this.logger.log('registerDto', registerDto);
     const { email } = registerDto;
     await this.usersService.sendVerificationCode(email);
     const emailVerificationToken =
       await this.authService.generateVerificationToken(email);
-    this.logger.log('register end', emailVerificationToken);
     return {
       token: emailVerificationToken,
       message: '인증 코드가 이메일로 전송되었습니다.',
@@ -204,9 +202,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async verifyEmailCode(@Body() verifyDto: VerifyDto): Promise<UserDto> {
     const { email, code } = verifyDto;
-    this.logger.log('/auth/verify', verifyDto);
     const user = await this.usersService.verifyEmailCode(email, code);
-    this.logger.log('verify end', user);
     return user;
   }
 
@@ -222,7 +218,6 @@ export class AuthController {
   async getVerifyEmail(
     @Query('token') token: string,
   ): Promise<{ email: string }> {
-    this.logger.log('email-verification', token);
     const email = await this.usersService.findEmailFromVerificationToken(token);
     return { email };
   }
@@ -237,7 +232,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto): Promise<any> {
-    return this.authService.loginWithEmail(loginDto);
+    return await this.authService.loginWithEmail(loginDto);
   }
 
   /**
@@ -249,7 +244,7 @@ export class AuthController {
   @Get('status')
   @UseGuards(JwtAuthGuard)
   getStatus(@Req() req): any {
-    return { user: req.user };
+    return { isAuthenticated: true, user: req.user };
   }
 
   /**

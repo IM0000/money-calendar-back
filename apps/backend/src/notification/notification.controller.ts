@@ -73,7 +73,7 @@ export class NotificationController {
     @Query('limit') limit = '100',
   ) {
     const userId = req.user.id;
-    return this.notificationService.getUserNotifications(
+    return await this.notificationService.getUserNotifications(
       userId,
       parseInt(page),
       parseInt(limit),
@@ -85,7 +85,7 @@ export class NotificationController {
   @Get('unread/count')
   async getUnreadCount(@Req() req: RequestWithUser) {
     const userId = req.user.id;
-    return this.notificationService.getUnreadNotificationsCount(userId);
+    return await this.notificationService.getUnreadNotificationsCount(userId);
   }
 
   @ApiOperation({ summary: '알림을 읽음으로 표시' })
@@ -94,7 +94,7 @@ export class NotificationController {
   @Put(':id/read')
   async markAsRead(@Req() req: RequestWithUser, @Param('id') id: string) {
     const userId = req.user.id;
-    return this.notificationService.markAsRead(userId, parseInt(id));
+    return await this.notificationService.markAsRead(userId, parseInt(id));
   }
 
   @ApiOperation({ summary: '모든 알림을 읽음으로 표시' })
@@ -102,7 +102,7 @@ export class NotificationController {
   @Put('read/all')
   async markAllAsRead(@Req() req: RequestWithUser) {
     const userId = req.user.id;
-    return this.notificationService.markAllAsRead(userId);
+    return await this.notificationService.markAllAsRead(userId);
   }
 
   @ApiOperation({ summary: '모든 알림 삭제' })
@@ -110,7 +110,7 @@ export class NotificationController {
   @Delete('all')
   async deleteAllNotifications(@Req() req: RequestWithUser) {
     const userId = req.user.id;
-    return this.notificationService.deleteAllUserNotifications(userId);
+    return await this.notificationService.deleteAllUserNotifications(userId);
   }
 
   @ApiOperation({ summary: '특정 알림 삭제' })
@@ -122,7 +122,7 @@ export class NotificationController {
     @Param('id') id: string,
   ) {
     const userId = req.user.id;
-    return this.notificationService.deleteUserNotification(
+    return await this.notificationService.deleteUserNotification(
       userId,
       parseInt(id),
     );
@@ -133,7 +133,7 @@ export class NotificationController {
   @Get('settings')
   async getNotificationSettings(@Req() req: RequestWithUser) {
     const userId = req.user.id;
-    return this.notificationService.getUserNotificationSettings(userId);
+    return await this.notificationService.getUserNotificationSettings(userId);
   }
 
   @ApiOperation({ summary: '알림 설정 업데이트' })
@@ -144,7 +144,7 @@ export class NotificationController {
     @Body() updateSettingsDto: UpdateUserNotificationSettingsDto,
   ) {
     const userId = req.user.id;
-    return this.notificationService.updateUserNotificationSettings(
+    return await this.notificationService.updateUserNotificationSettings(
       userId,
       updateSettingsDto,
     );
@@ -160,7 +160,7 @@ export class NotificationController {
     @Param('id') id: string,
   ) {
     const userId = req.user.id;
-    return this.notificationService.addEarningsNotification(
+    return await this.notificationService.addEarningsNotification(
       userId,
       parseInt(id),
     );
@@ -175,7 +175,7 @@ export class NotificationController {
     @Param('id') id: string,
   ) {
     const userId = req.user.id;
-    return this.notificationService.removeEarningsNotification(
+    return await this.notificationService.removeEarningsNotification(
       userId,
       parseInt(id),
     );
@@ -191,7 +191,7 @@ export class NotificationController {
     @Param('id') id: string,
   ) {
     const userId = req.user.id;
-    return this.notificationService.addDividendNotification(
+    return await this.notificationService.addDividendNotification(
       userId,
       parseInt(id),
     );
@@ -206,7 +206,7 @@ export class NotificationController {
     @Param('id') id: string,
   ) {
     const userId = req.user.id;
-    return this.notificationService.removeDividendNotification(
+    return await this.notificationService.removeDividendNotification(
       userId,
       parseInt(id),
     );
@@ -222,7 +222,7 @@ export class NotificationController {
     @Param('id') id: string,
   ) {
     const userId = req.user.id;
-    return this.notificationService.addEconomicIndicatorNotification(
+    return await this.notificationService.addEconomicIndicatorNotification(
       userId,
       parseInt(id),
     );
@@ -237,7 +237,7 @@ export class NotificationController {
     @Param('id') id: string,
   ) {
     const userId = req.user.id;
-    return this.notificationService.removeEconomicIndicatorNotification(
+    return await this.notificationService.removeEconomicIndicatorNotification(
       userId,
       parseInt(id),
     );
@@ -249,6 +249,6 @@ export class NotificationController {
   @Get('calendar')
   async getNotificationCalendar(@Req() req: RequestWithUser) {
     const userId = req.user.id;
-    return this.notificationService.getNotificationCalendar(userId);
+    return await this.notificationService.getNotificationCalendar(userId);
   }
 }
