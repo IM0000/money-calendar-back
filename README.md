@@ -182,6 +182,17 @@ backend-project/
 pnpm test
 ```
 
+## 추가 개선점
+
+1. 모노레포 서비스별 도커 이미지 및 CI/CD 워크플로우 분리
+2. 메일발송을 비동기 메세지 큐로 전환 (BullMQ, RabbitMQ, Kafka)
+   -> 알림서버를 신규로 구성하여 이벤트 소비(외부 이메일 서비스 연동 (AWS SES, SendGrid, Mailgun 등))
+3. SSE 기반 알림 문제점 보완
+   - 인스턴스 수평 확장 불가, 메모리/커넥션 부담
+     -> Redis Pub/Sub 이용하여 이벤트 중앙화 및 커넥션 안정성 증대
+4. winston 로거 및 로테이트 파일 적용
+   
+
 ## 📄 라이선스
 
 GPL © Sangjun Lim
