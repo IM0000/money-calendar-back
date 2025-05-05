@@ -8,6 +8,7 @@ import { ConfigType } from '@nestjs/config';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { SendNotificationEmailDto } from '../notification/dto/notification.dto';
+import { EmailProvider } from './email-provider.interface';
 
 interface EmailOptions {
   to: string;
@@ -18,23 +19,11 @@ interface EmailOptions {
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: Mail;
   constructor(
-    @Inject(emailConfig.KEY)
-    private readonly emailConfiguration: ConfigType<typeof emailConfig>,
+    @Inject('EmailProvider') private readonly provider: EmailProvider,
     @Inject(frontendConfig.KEY)
     private readonly frontendConfiguration: ConfigType<typeof frontendConfig>,
-    private readonly configService: ConfigService,
-    private readonly prisma: PrismaService,
-  ) {
-    this.transporter = nodemailer.createTransport({
-      service: this.emailConfiguration.service,
-      auth: {
-        user: this.emailConfiguration.auth.user,
-        pass: this.emailConfiguration.auth.pass,
-      },
-    });
-  }
+  ) {}
 
   async sendMemberJoinVerification(emailAddress: string, code: string) {
     const mailOptions: EmailOptions = {
@@ -45,7 +34,7 @@ export class EmailService {
         <p>인증 코드의 유효 기간은 10분입니다.</p>
       `,
     };
-    return await this.transporter.sendMail(mailOptions);
+    return await this.provider.sendMail(mailOptions);
   }
 
   async sendNotificationEmail(dto: SendNotificationEmailDto) {
@@ -54,7 +43,7 @@ export class EmailService {
       subject: dto.subject,
       html: dto.content,
     };
-    return await this.transporter.sendMail(mailOptions);
+    return await this.provider.sendMail(mailOptions);
   }
 
   async sendPasswordResetEmail(
@@ -68,6 +57,6 @@ export class EmailService {
       subject: '머니캘린더 비밀번호 재설정 안내',
       html: `<p>아래 링크를 클릭하여 비밀번호를 재설정해주세요.<br/><a href="${resetUrl}">${resetUrl}</a></p>`,
     };
-    return await this.transporter.sendMail(mailOptions);
+    return await this.provider.sendMail(mailOptions);
   }
 }

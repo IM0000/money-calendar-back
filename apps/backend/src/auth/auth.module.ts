@@ -16,14 +16,14 @@ import { googleConfig } from '../config/google.config';
 import { appleConfig } from '../config/apple.config';
 import { kakaoConfig } from '../config/kakao.config';
 import { discordConfig } from '../config/discord.config';
-import { SharedModule } from '../shared/shared.module';
 import { EmailModule } from '../email/email.module';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [
-    SharedModule,
     UsersModule,
     EmailModule,
+    PrismaModule,
     ConfigModule.forFeature(jwtConfig),
     ConfigModule.forFeature(googleConfig),
     ConfigModule.forFeature(appleConfig),
