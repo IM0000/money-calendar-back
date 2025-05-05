@@ -7,6 +7,7 @@ import {
 import { HealthController } from './health.controller';
 import { HttpModule } from '@nestjs/axios';
 import { TerminusLogger } from './terminus-logger.service';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { TerminusLogger } from './terminus-logger.service';
     TerminusModule.forRoot({
       logger: TerminusLogger,
     } as TerminusModuleOptions),
+    PrismaModule,
   ],
   controllers: [HealthController],
   providers: [PrismaHealthIndicator],

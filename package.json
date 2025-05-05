@@ -33,6 +33,7 @@
     "prisma:generate:scraping:prod": "dotenv -e apps/scraping/src/config/env/.production.env -- npx prisma generate --schema=apps/scraping/prisma/schema.prisma"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.799.0",
     "@nestjs/axios": "^4.0.0",
     "@nestjs/common": "^9.0.0",
     "@nestjs/config": "^3.2.3",

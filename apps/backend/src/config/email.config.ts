@@ -8,4 +8,6 @@ export const emailConfig = registerAs('email', () => ({
     pass: process.env.EMAIL_AUTH_PASSWORD,
   },
   baseUrl: process.env.EMAIL_BASE_URL,
+  from: process.env.EMAIL_FROM,
+  useSes: process.env.EMAIL_USE_SES === 'true',
 }));

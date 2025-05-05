@@ -25,6 +25,8 @@ import { NotificationModule } from './notification/notification.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { HealthModule } from './health/health.module';
 import { TerminusModule } from '@nestjs/terminus';
+import { awsConfig } from './config/aws.config';
+import { PrismaModule } from './prisma/prisma.module';
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
@@ -42,6 +44,7 @@ console.log('Loading environment variables from:', envFilePath);
       isGlobal: true, // ConfigModule을 전역으로 설정
       envFilePath: [envFilePath],
       load: [
+        awsConfig,
         frontendConfig,
         emailConfig,
         jwtConfig,
@@ -63,6 +66,7 @@ console.log('Loading environment variables from:', envFilePath);
     HealthModule,
     TerminusModule,
     HealthModule,
+    PrismaModule,
   ],
   controllers: [AppController],
   providers: [
