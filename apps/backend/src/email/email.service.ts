@@ -1,12 +1,7 @@
-import { frontendConfig } from './../config/frontend.config';
 // /email/email.service.ts
-import Mail from 'nodemailer/lib/mailer';
-import * as nodemailer from 'nodemailer';
-import { emailConfig } from './../config/email.config';
+import { frontendConfig } from './../config/frontend.config';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
-import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../prisma/prisma.service';
 import { SendNotificationEmailDto } from '../notification/dto/notification.dto';
 import { EmailProvider } from './email-provider.interface';
 

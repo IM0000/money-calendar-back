@@ -17,10 +17,6 @@ export class SesProvider implements EmailProvider {
   ) {
     this.client = new SESClient({
       region: this.awsConfiguration.region,
-      credentials: {
-        accessKeyId: this.awsConfiguration.accessKeyId,
-        secretAccessKey: this.awsConfiguration.secretAccessKey,
-      },
     });
     this.sender = this.emailConfiguration.from;
   }
