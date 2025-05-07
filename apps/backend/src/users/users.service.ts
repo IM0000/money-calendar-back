@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { User } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { RandomNickList } from '../common/random-nick.constants';
 import { EmailService } from '../email/email.service';
 import { UserDto } from '../auth/dto/users.dto';

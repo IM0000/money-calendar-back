@@ -4,7 +4,7 @@ import { UsersService } from '../users/users.service';
 import { ConfigType } from '@nestjs/config';
 import { jwtConfig } from '../config/jwt.config';
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { OAuthProviderEnum } from './enum/oauth-provider.enum';
 

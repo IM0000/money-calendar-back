@@ -14,7 +14,7 @@ import { ConfigType } from '@nestjs/config';
 import { jwtConfig } from '../config/jwt.config';
 import { v4 as uuidv4 } from 'uuid';
 import { ErrorCodes } from '../common/enums/error-codes.enum';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { OAuthProviderEnum } from './enum/oauth-provider.enum';
 
 @Injectable()
