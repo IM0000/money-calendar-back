@@ -24,7 +24,7 @@
 | 웹 스크래핑 | Axios, Cheerio     |
 | Testing     | Jest               |
 | 인증        | Passport, JWT      |
-| 이메일      | Nodemailer         |
+| 이메일      | AWS SES, Nodemailer         |
 
 ## 🚀 설치 및 실행
 
