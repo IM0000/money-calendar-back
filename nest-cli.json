@@ -44,7 +44,7 @@
         "outDir": "dist/apps/scraping",
         "assets": [
           {
-            "include": "../src/env/*.env",
+            "include": "../src/config/env/*.env",
             "outDir": "dist/apps/scraping"
           }
         ]
