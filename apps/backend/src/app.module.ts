@@ -27,6 +27,7 @@ import { HealthModule } from './health/health.module';
 import { TerminusModule } from '@nestjs/terminus';
 import { awsConfig } from './config/aws.config';
 import { PrismaModule } from './prisma/prisma.module';
+import { IngestModule } from './ingest/ingest.module';
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
@@ -67,6 +68,7 @@ console.log('Loading environment variables from:', envFilePath);
     TerminusModule,
     HealthModule,
     PrismaModule,
+    IngestModule,
   ],
   controllers: [AppController],
   providers: [

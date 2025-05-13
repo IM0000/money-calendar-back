@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { GetCalendarDto, GetCompanyHistoryDto } from './dto/get-calendar.dto';
 import { CalendarService } from './calendar.service';
-import { OptionalJwtAuthGuard } from '../auth/guard/optional-jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/jwt/optional-jwt-auth.guard';
 
 @Controller('api/v1/calendar')
 @UseGuards(OptionalJwtAuthGuard)

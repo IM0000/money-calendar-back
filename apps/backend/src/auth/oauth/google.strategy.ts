@@ -1,4 +1,4 @@
-import { ErrorCodes } from './../../common/enums/error-codes.enum';
+import { ErrorCodes } from '../../common/enums/error-codes.enum';
 import {
   Inject,
   Injectable,

@@ -6,7 +6,7 @@ import {
   Inject,
   Logger,
 } from '@nestjs/common';
-import { OAuthGuardFactory } from './../strategies/oauth-strategy.factory';
+import { OAuthGuardFactory } from './oauth-strategy.factory';
 import { Observable } from 'rxjs';
 import { frontendConfig } from '../../config/frontend.config';
 import { ConfigType } from '@nestjs/config';

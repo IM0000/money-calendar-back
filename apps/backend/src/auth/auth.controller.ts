@@ -19,12 +19,12 @@ import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/users.dto';
 import { OAuthConnectionDto, StatePayload, VerifyDto } from './dto/auth.dto';
 import { LoginDto } from './dto/auth.dto';
-import { DynamicAuthGuard } from './guard/dynamic-auth.guard';
+import { DynamicAuthGuard } from './oauth/dynamic-auth.guard';
 import { UserDto } from './dto/users.dto';
 import { ErrorCodes } from '../common/enums/error-codes.enum';
 import { ConfigType } from '@nestjs/config';
 import { frontendConfig } from '../config/frontend.config';
-import { JwtAuthGuard } from './guard/jwt-auth.guard';
+import { JwtAuthGuard } from './jwt/jwt-auth.guard';
 import { RequestWithUser } from '../common/types/request-with-user';
 import {
   ApiTags,

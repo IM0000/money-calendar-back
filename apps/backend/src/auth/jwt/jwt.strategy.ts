@@ -1,4 +1,3 @@
-// /auth/jwt.strategy.ts
 import { jwtConfig } from '../../config/jwt.config';
 import { Inject, Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
@@ -33,6 +32,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     const { password, ...userWithoutPassword } = user;
 
-    return { user: userWithoutPassword }; // Request에 사용자 정보 저장
+    return userWithoutPassword; // Request에 사용자 정보 저장
   }
 }

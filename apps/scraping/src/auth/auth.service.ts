@@ -1,22 +1,22 @@
-import { Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { ingestJwtConfig } from '../config/ingest-jwt.config';
-import * as jwt from 'jsonwebtoken';
+import { JwtService } from '@nestjs/jwt';
 
+@Injectable()
 export class AuthService {
   constructor(
     @Inject(ingestJwtConfig.KEY)
     private readonly jwtConfiguration: ConfigType<typeof ingestJwtConfig>,
+    private readonly jwtService: JwtService,
   ) {}
 
   generateDataIngestionToken(): string {
-    const payload = { sub: 'scraper', scope: 'ingest' };
+    const payload = { type: 'ingest', sub: 'scraper', scope: 'ingest' };
 
-    const secret = this.jwtConfiguration.ingestionSecret;
+    const secret = this.jwtConfiguration.secret;
     const expiresIn = this.jwtConfiguration.expiration;
 
-    return jwt.sign(payload, secret, {
-      expiresIn,
-    });
+    return this.jwtService.sign(payload, { secret, expiresIn });
   }
 }

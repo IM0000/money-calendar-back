@@ -1,11 +1,13 @@
-import { Controller, Get, Query, Request } from '@nestjs/common';
+import { Controller, Get, Query, Request, UseGuards } from '@nestjs/common';
 import { SearchService } from './search.service';
 import { SearchCompanyDto, SearchIndicatorDto } from './dto/search.dto';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ApiResponseWrapper } from '../common/decorators/api-response.decorator';
+import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 
 @ApiTags('검색')
 @Controller('api/v1/search')
+@UseGuards(JwtAuthGuard)
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 

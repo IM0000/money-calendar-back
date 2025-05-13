@@ -83,6 +83,7 @@ export class IngestService {
         forecast: data.forecast,
         previous: data.previous ?? '',
       };
+      console.log(payload);
       if (existing) {
         await this.prisma.economicIndicator.update({
           where: { id: existing.id },

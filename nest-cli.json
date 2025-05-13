@@ -1,8 +1,6 @@
 {
   "collection": "@nestjs/schematics",
   "monorepo": true,
-  "root": "apps",
-  "sourceRoot": "apps",
   "entryFile": "main",
   "language": "ts",
   "generateOptions": {
@@ -21,7 +19,7 @@
     "backend": {
       "type": "application",
       "root": "apps/backend",
-      "entryFile": "main",
+      "entryFile": "src/main",
       "sourceRoot": "apps/backend/src",
       "compilerOptions": {
         "tsConfigPath": "apps/backend/tsconfig.app.json",
@@ -37,7 +35,7 @@
     "scraping": {
       "type": "application",
       "root": "apps/scraping",
-      "entryFile": "main",
+      "entryFile": "src/main",
       "sourceRoot": "apps/scraping/src",
       "compilerOptions": {
         "tsConfigPath": "apps/scraping/tsconfig.app.json",

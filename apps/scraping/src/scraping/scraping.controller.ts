@@ -5,6 +5,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ScrapingResponse } from '../common/interceptors/scraping-logging.interceptor';
 import { ExceptionResponse } from '../common/filters/all-exceptions.filter';
 import { PersistenceService } from '../persistence/persistence.service';
+import * as fs from 'fs';
 
 @ApiTags('스크래핑')
 @Controller('scraping')

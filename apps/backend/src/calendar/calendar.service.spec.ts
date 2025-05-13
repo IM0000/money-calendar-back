@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CalendarService } from './calendar.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReleaseTiming } from '@prisma/client';
-import { NotFoundException } from '@nestjs/common';
 
 describe('CalendarService', () => {
   let service: CalendarService;

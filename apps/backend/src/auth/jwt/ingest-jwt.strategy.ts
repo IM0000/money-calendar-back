@@ -5,7 +5,7 @@ import { ConfigType } from '@nestjs/config';
 import { ingestJwtConfig } from '../../config/ingest-jwt.config';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy, 'ingestJwt') {
+export class IngestJwtStrategy extends PassportStrategy(Strategy, 'ingestJwt') {
   constructor(
     @Inject(ingestJwtConfig.KEY)
     private ingestJwtConfiguration: ConfigType<typeof ingestJwtConfig>,

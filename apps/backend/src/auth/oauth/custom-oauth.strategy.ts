@@ -1,6 +1,7 @@
 import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { Strategy } from 'passport-discord';
+
 export default function CustomOauthStrategy(strategy: Strategy, name) {
   return class extends PassportStrategy(strategy, name) {
     readonly config: any;

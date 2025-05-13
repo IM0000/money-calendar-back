@@ -22,6 +22,7 @@ import { formatDate, parseDate } from '../common/utils/convert-date';
 @Injectable()
 export class ScrapingService {
   private readonly logger = new Logger(ScrapingService.name);
+  private readonly TIMEOUT_MS = 60000;
   constructor(private readonly prisma: PrismaService) {}
 
   async sleep(ms): Promise<void> {
@@ -63,7 +64,7 @@ export class ScrapingService {
                 protocol: proxyConfig.protocol ?? 'http',
               },
             }),
-            timeout: 10000,
+            timeout: this.TIMEOUT_MS,
           };
 
           const getResponse = await ScrapingErrorHandler.executeWithRetry(
@@ -152,7 +153,7 @@ export class ScrapingService {
             protocol: proxyConfig.protocol ?? 'http',
           },
         }),
-        timeout: 10000,
+        timeout: this.TIMEOUT_MS,
       };
 
       let page = 0;
@@ -314,7 +315,7 @@ export class ScrapingService {
             protocol: proxyConfig.protocol ?? 'http',
           },
         }),
-        timeout: 10000,
+        timeout: this.TIMEOUT_MS,
       };
 
       let page = 0;
@@ -508,7 +509,7 @@ export class ScrapingService {
             protocol: proxyConfig.protocol ?? 'http',
           },
         }),
-        timeout: 10000,
+        timeout: this.TIMEOUT_MS,
       };
 
       let page = 0;
