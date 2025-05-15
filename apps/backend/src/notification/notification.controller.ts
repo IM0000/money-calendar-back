@@ -75,7 +75,6 @@ export class NotificationController {
     @Query('limit') limit = '100',
   ) {
     const userId = req.user.id;
-    console.log('getNotifications userId= ' + userId);
     return await this.notificationService.getUserNotifications(
       userId,
       parseInt(page),
