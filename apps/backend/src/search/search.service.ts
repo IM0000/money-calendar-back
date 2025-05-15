@@ -29,38 +29,47 @@ export class SearchService {
       ...(country ? { country } : {}),
     };
 
-    // 1) Raw SQL WHERE 절 문자열 생성
-    const whereClauses: string[] = [];
-    const params: (string | number)[] = [];
+    // 2) 파라미터 배열과 WHERE 절 동적 생성
+    const params: unknown[] = [];
+    const conditions: string[] = [];
 
     if (query) {
-      whereClauses.push(
-        `("name" ILIKE '%' || $1 || '%' OR "ticker" ILIKE '%' || $1 || '%')`,
+      params.push(`%${query}%`);
+      conditions.push(
+        `("name" ILIKE $${params.length} OR "ticker" ILIKE $${params.length})`,
       );
-      params.push(query);
     }
+
     if (country) {
-      whereClauses.push(`"country" = $${params.length + 1}`);
       params.push(country);
+      conditions.push(`"country" = $${params.length}`);
     }
-    const whereSQL = whereClauses.length
-      ? `WHERE ${whereClauses.join(' AND ')}`
+
+    const whereSql = conditions.length
+      ? `WHERE ${conditions.join(' AND ')}`
       : '';
 
-    // 2) Raw SQL로 우선순위 정렬 + 페이징
-    // Raw SQL로 정렬 + 페이징
-    const items = await this.prisma.$queryRaw<Company[]>`
-      SELECT *
-        FROM "Company"
-        ${whereSQL ? Prisma.raw(whereSQL) : Prisma.empty}
-        ORDER BY
-          (CASE WHEN "ticker" ILIKE '%' || ${query} || '%' THEN 0 ELSE 1 END),
-          "name" ASC
-        LIMIT ${limit}
-        OFFSET ${skip};
-      `;
+    // 3) LIMIT / OFFSET 은 항상 뒤에 붙이기
+    params.push(limit, skip);
+    const limitPlaceholder = `$${params.length - 1}`; // 마지막에서 두 번째
+    const offsetPlaceholder = `$${params.length}`; // 마지막
 
-    // 3) 전체 건수는 기존 count 사용
+    // 4) 최종 SQL 문자열 조립
+    const sql = `
+    SELECT *
+      FROM "Company"
+      ${whereSql}
+      ORDER BY
+        (CASE WHEN "ticker" ILIKE $1 THEN 0 ELSE 1 END),
+        "name" ASC
+      LIMIT ${limitPlaceholder}
+      OFFSET ${offsetPlaceholder};
+  `;
+
+    // 5) Raw query 실행 (문자열 + 파라미터 분리)
+    const items = await this.prisma.$queryRawUnsafe<Company[]>(sql, ...params);
+
+    // 6) 전체 건수 조회
     const total = await this.prisma.company.count({ where });
 
     // 4) favorites 매핑

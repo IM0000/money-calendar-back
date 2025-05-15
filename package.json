@@ -15,10 +15,10 @@
     "format": "pnpm prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start:backend": "NODE_ENV=production pnpm nest start backend",
     "start:scraping": "NODE_ENV=production pnpm nest start scraping",
-    "start:dev:backend": "NODE_ENV=development pnpm exec nest start backend --watch --entryFile src/main",
-    "start:dev:scraping": "NODE_ENV=development pnpm exec nest start scraping --watch --entryFile src/main",
-    "start:prod:backend": "NODE_ENV=production pnpm run build:backend && pnpm exec node dist/apps/backend/src/main.js",
-    "start:prod:scraping": "NODE_ENV=production pnpm run build:scraping && pnpm exec node dist/apps/scraping/src/main.js",
+    "start:dev:backend": "NODE_ENV=development pnpm exec nest start backend --watch",
+    "start:dev:scraping": "NODE_ENV=development pnpm exec nest start scraping --watch",
+    "start:prod:backend": "NODE_ENV=production node dist/src/main.js",
+    "start:prod:scraping": "NODE_ENV=production node dist/src/main.js",
     "lint": "pnpm eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "pnpm jest",
     "test:watch": "pnpm jest --watch",
@@ -28,9 +28,9 @@
     "test:e2e:scraping": "pnpm jest --config ./apps/scraping/test/jest-e2e.json",
     "prisma:migrate:dev:backend": "dotenv -e ./apps/backend/src/config/env/.development.env -- prisma migrate dev --name update --schema=./apps/backend/prisma/schema.prisma",
     "prisma:generate:backend:dev": "dotenv -e apps/backend/src/config/env/.development.env -- npx prisma generate --schema=prisma/schema.prisma",
-    "prisma:generate:backend:prod": "dotenv -e apps/backend/src/config/env/.production.env -- npx prisma generate --schema=prisma/schema.prisma",
+    "prisma:generate:backend:prod": "npx prisma generate --schema=prisma/schema.prisma",
     "prisma:generate:scraping:dev": "dotenv -e apps/scraping/src/config/env/.development.env -- npx prisma generate --schema=prisma/schema.prisma",
-    "prisma:generate:scraping:prod": "dotenv -e apps/scraping/src/config/env/.production.env -- npx prisma generate --schema=prisma/schema.prisma"
+    "prisma:generate:scraping:prod": "npx prisma generate --schema=prisma/schema.prisma"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.799.0",

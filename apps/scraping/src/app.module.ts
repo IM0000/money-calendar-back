@@ -17,19 +17,19 @@ import { ingestJwtConfig } from './config/ingest-jwt.config';
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 console.log('NODE_ENV:', NODE_ENV);
-
-const envFilePath = join(
-  process.cwd(),
-  'apps/scraping/src/config/env',
-  `.${NODE_ENV}.env`,
-);
-console.log('Loading environment variables from:', envFilePath);
-
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [envFilePath],
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
+      envFilePath:
+        process.env.NODE_ENV !== 'production'
+          ? join(
+              process.cwd(),
+              'apps/scraping/src/config/env',
+              `.${process.env.NODE_ENV}.env`,
+            )
+          : undefined,
       load: [ingestJwtConfig],
       validationSchema,
     }),

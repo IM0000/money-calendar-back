@@ -20,13 +20,13 @@
       "type": "application",
       "root": "apps/backend",
       "entryFile": "src/main",
-      "sourceRoot": "apps/backend/src",
+      "sourceRoot": "apps/backend",
       "compilerOptions": {
         "tsConfigPath": "apps/backend/tsconfig.app.json",
         "outDir": "dist/apps/backend",
         "assets": [
           {
-            "include": "../src/config/env/*.env",
+            "include": "src/config/env/*.env",
             "outDir": "dist/apps/backend"
           }
         ]
@@ -36,13 +36,13 @@
       "type": "application",
       "root": "apps/scraping",
       "entryFile": "src/main",
-      "sourceRoot": "apps/scraping/src",
+      "sourceRoot": "apps/scraping",
       "compilerOptions": {
         "tsConfigPath": "apps/scraping/tsconfig.app.json",
         "outDir": "dist/apps/scraping",
         "assets": [
           {
-            "include": "../src/config/env/*.env",
+            "include": "src/config/env/*.env",
             "outDir": "dist/apps/scraping"
           }
         ]
