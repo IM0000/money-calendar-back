@@ -5,7 +5,7 @@ import { UsersService } from '../users/users.service';
 import { frontendConfig } from '../config/frontend.config';
 import { RegisterDto, UserDto } from './dto/users.dto';
 import { VerifyDto, LoginDto, OAuthConnectionDto } from './dto/auth.dto';
-import { OAuthGuardFactory } from './strategies/oauth-strategy.factory';
+import { OAuthGuardFactory } from './oauth/oauth-strategy.factory';
 import { OAuthProviderEnum } from './enum/oauth-provider.enum';
 
 describe('AuthController', () => {

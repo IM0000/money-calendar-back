@@ -5,10 +5,9 @@ import { EmailService } from '../email/email.service';
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 jest.mock('bcrypt');
 

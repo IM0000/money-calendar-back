@@ -1,8 +1,6 @@
 {
   "collection": "@nestjs/schematics",
   "monorepo": true,
-  "root": "apps",
-  "sourceRoot": "apps",
   "entryFile": "main",
   "language": "ts",
   "generateOptions": {
@@ -21,14 +19,14 @@
     "backend": {
       "type": "application",
       "root": "apps/backend",
-      "entryFile": "main",
-      "sourceRoot": "apps/backend/src",
+      "entryFile": "src/main",
+      "sourceRoot": "apps/backend",
       "compilerOptions": {
         "tsConfigPath": "apps/backend/tsconfig.app.json",
         "outDir": "dist/apps/backend",
         "assets": [
           {
-            "include": "../src/config/env/*.env",
+            "include": "src/config/env/*.env",
             "outDir": "dist/apps/backend"
           }
         ]
@@ -37,14 +35,14 @@
     "scraping": {
       "type": "application",
       "root": "apps/scraping",
-      "entryFile": "main",
-      "sourceRoot": "apps/scraping/src",
+      "entryFile": "src/main",
+      "sourceRoot": "apps/scraping",
       "compilerOptions": {
         "tsConfigPath": "apps/scraping/tsconfig.app.json",
         "outDir": "dist/apps/scraping",
         "assets": [
           {
-            "include": "../src/env/*.env",
+            "include": "src/config/env/*.env",
             "outDir": "dist/apps/scraping"
           }
         ]

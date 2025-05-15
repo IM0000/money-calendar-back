@@ -22,14 +22,16 @@ import { formatDate, parseDate } from '../common/utils/convert-date';
 @Injectable()
 export class ScrapingService {
   private readonly logger = new Logger(ScrapingService.name);
+  private readonly TIMEOUT_MS = 60000;
   constructor(private readonly prisma: PrismaService) {}
 
   async sleep(ms): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  async scrapeUSACompany(proxyConfig?: ProxyConfigDto): Promise<void> {
+  async scrapeUSACompany(proxyConfig?: ProxyConfigDto): Promise<any[]> {
     try {
+      const dataList = [];
       const markets = ['NYSE', 'NASDAQ', 'AMEX'];
       const pageSize = 20;
 
@@ -62,6 +64,7 @@ export class ScrapingService {
                 protocol: proxyConfig.protocol ?? 'http',
               },
             }),
+            timeout: this.TIMEOUT_MS,
           };
 
           const getResponse = await ScrapingErrorHandler.executeWithRetry(
@@ -91,9 +94,7 @@ export class ScrapingService {
             marketValue: stock.marketValue,
           }));
 
-          // this.logger.debug(dataSet);
-
-          await this.saveCompanyData(dataSet);
+          dataList.push(...dataSet);
 
           if (page * pageSize >= totalCount) break;
 
@@ -105,6 +106,7 @@ export class ScrapingService {
       }
 
       this.logger.debug('USA company scraping complete');
+      return dataList;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.code === 'ECONNABORTED') {
@@ -124,52 +126,9 @@ export class ScrapingService {
     }
   }
 
-  async saveCompanyData(
-    companyData: {
-      ticker: string;
-      name: string;
-      country: string;
-      marketValue: string;
-    }[],
-  ) {
-    for (const data of companyData) {
-      try {
-        const existingCompany = await this.prisma.company.findFirst({
-          where: {
-            ticker: data.ticker,
-            country: data.country,
-          },
-        });
-
-        if (existingCompany) {
-          await this.prisma.company.update({
-            where: { id: existingCompany.id },
-            data: {
-              name: data.name,
-              marketValue: data.marketValue,
-              updatedAt: new Date(),
-            },
-          });
-          console.log(`Updated company: ${data.name} (${data.ticker})`);
-        } else {
-          await this.prisma.company.create({
-            data: {
-              ticker: data.ticker,
-              name: data.name,
-              country: data.country,
-              marketValue: data.marketValue,
-            },
-          });
-          console.log(`Created new company: ${data.name} (${data.ticker})`);
-        }
-      } catch (error) {
-        console.error(`Error saving company data for ${data.ticker}:`, error);
-      }
-    }
-  }
-
-  async scrapeEconomicIndicator(scrapeDto: ScrapeDto): Promise<void> {
+  async scrapeEconomicIndicator(scrapeDto: ScrapeDto): Promise<any[]> {
     try {
+      const dataList = [];
       const { country, dateFrom, dateTo, proxyConfig } = scrapeDto;
 
       const countryCode = CountryCodeMap[country];
@@ -194,6 +153,7 @@ export class ScrapingService {
             protocol: proxyConfig.protocol ?? 'http',
           },
         }),
+        timeout: this.TIMEOUT_MS,
       };
 
       let page = 0;
@@ -242,8 +202,6 @@ export class ScrapingService {
 
         const $ = cheerio.load(html, { xmlMode: true });
 
-        const dataSet = [];
-
         let currentDate: string;
         $('tr').each((index, element) => {
           try {
@@ -291,7 +249,7 @@ export class ScrapingService {
                 previous,
               };
               this.logger.log(eventData);
-              dataSet.push(eventData);
+              dataList.push(eventData);
             }
           } catch (error) {
             ScrapingErrorHandler.handleError(error, {
@@ -301,12 +259,12 @@ export class ScrapingService {
           }
         });
 
-        await this.saveEconomicIndicatorData(dataSet);
-
         this.logger.debug('economicIndicator Scraping...');
       }
 
-      this.logger.debug('Scraped and saved economic data successfully.');
+      this.logger.debug('Scraped economic data successfully.');
+      this.logger.debug(dataList);
+      return dataList;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.code === 'ECONNABORTED') {
@@ -326,44 +284,9 @@ export class ScrapingService {
     }
   }
 
-  async saveEconomicIndicatorData(economicIndicators: any[]) {
-    for (const data of economicIndicators) {
-      const existingRecord = await this.prisma.economicIndicator.findFirst({
-        where: {
-          name: data.name,
-          country: data.country,
-          releaseDate: data.releaseDate,
-        },
-      });
-
-      if (existingRecord) {
-        await this.prisma.economicIndicator.update({
-          where: { id: existingRecord.id },
-          data: {
-            importance: data.importance,
-            actual: data.actual,
-            forecast: data.forecast,
-            previous: data.previous,
-          },
-        });
-      } else {
-        await this.prisma.economicIndicator.create({
-          data: {
-            country: data.country,
-            releaseDate: data.releaseDate,
-            name: data.name,
-            importance: data.importance,
-            actual: data.actual,
-            forecast: data.forecast,
-            previous: data.previous,
-          },
-        });
-      }
-    }
-  }
-
-  async scrapeEarnings(scrapeDto: ScrapeDto): Promise<void> {
+  async scrapeEarnings(scrapeDto: ScrapeDto): Promise<any[]> {
     try {
+      const dataList = [];
       const { country, dateFrom, dateTo, proxyConfig } = scrapeDto;
       console.log(
         `🚀 ~ ScrapingService ~ scrapeEarnings ~ { country, dateFrom, dateTo, proxyConfig }:`,
@@ -392,6 +315,7 @@ export class ScrapingService {
             protocol: proxyConfig.protocol ?? 'http',
           },
         }),
+        timeout: this.TIMEOUT_MS,
       };
 
       let page = 0;
@@ -443,7 +367,6 @@ export class ScrapingService {
         last_time_scope = response.data.last_time_scope;
 
         const $ = cheerio.load(html, { xmlMode: true });
-        const dataSet = [];
         let currentDate;
 
         $('tr').each((index, element) => {
@@ -516,18 +439,7 @@ export class ScrapingService {
 
               const releaseDate = currentDate.getTime();
 
-              // this.logger.debug({
-              //   releaseDate,
-              //   releaseTiming,
-              //   actualEPS,
-              //   forecastEPS,
-              //   actualRevenue,
-              //   forecastRevenue,
-              //   ticker,
-              //   country,
-              // });
-
-              dataSet.push({
+              dataList.push({
                 releaseDate,
                 releaseTiming,
                 actualEPS,
@@ -546,13 +458,11 @@ export class ScrapingService {
           }
         });
 
-        await this.saveEarningsData(dataSet);
         this.logger.debug('earnings Scraping...');
       }
 
-      await this.updateEarningsPreviousValues();
-
-      this.logger.debug('Scraped and saved earnings data successfully.');
+      this.logger.debug('Scraped earnings data successfully.');
+      return dataList;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.code === 'ECONNABORTED') {
@@ -572,94 +482,9 @@ export class ScrapingService {
     }
   }
 
-  async saveEarningsData(earningsData: any[]) {
-    // this.logger.debug('earningsData', earningsData);
-    for (const data of earningsData) {
-      const company = await this.prisma.company.findFirst({
-        where: {
-          ticker: data.ticker,
-          country: data.country,
-        },
-      });
-
-      if (!company) {
-        // this.logger.warn(
-        //   `Company not found for ticker: ${data.ticker} and country: ${data.country}`,
-        // );
-        continue;
-      }
-
-      const existingRecord = await this.prisma.earnings.findFirst({
-        where: {
-          releaseDate: data.releaseDate,
-          companyId: company.id,
-        },
-      });
-
-      if (existingRecord) {
-        await this.prisma.earnings.update({
-          where: { id: existingRecord.id },
-          data: {
-            releaseTiming: data.releaseTiming,
-            actualEPS: data.actualEPS,
-            forecastEPS: data.forecastEPS,
-            actualRevenue: data.actualRevenue,
-            forecastRevenue: data.forecastRevenue,
-          },
-        });
-      } else {
-        await this.prisma.earnings.create({
-          data: {
-            releaseDate: data.releaseDate,
-            releaseTiming: data.releaseTiming,
-            actualEPS: data.actualEPS,
-            forecastEPS: data.forecastEPS,
-            previousEPS: '',
-            actualRevenue: data.actualRevenue,
-            forecastRevenue: data.forecastRevenue,
-            previousRevenue: '',
-            company: {
-              connect: { id: company.id },
-            },
-            country: data.country,
-          },
-        });
-      }
-    }
-  }
-
-  async updateEarningsPreviousValues() {
-    const earningsRecords = await this.prisma.earnings.findMany({
-      where: {
-        previousEPS: '',
-        previousRevenue: '',
-      },
-      orderBy: { releaseDate: 'asc' },
-    });
-
-    for (const record of earningsRecords) {
-      const previousRecord = await this.prisma.earnings.findFirst({
-        where: {
-          companyId: record.companyId,
-          releaseDate: { lt: record.releaseDate }, // 현재 레코드보다 이전인 데이터만 조회
-        },
-        orderBy: { releaseDate: 'desc' },
-      });
-
-      if (previousRecord) {
-        await this.prisma.earnings.update({
-          where: { id: record.id },
-          data: {
-            previousEPS: previousRecord.actualEPS,
-            previousRevenue: previousRecord.actualRevenue,
-          },
-        });
-      }
-    }
-  }
-
-  async scrapeDividend(scrapeDto: ScrapeDto): Promise<void> {
+  async scrapeDividend(scrapeDto: ScrapeDto): Promise<any[]> {
     try {
+      const dataList = [];
       const { country, dateFrom, dateTo, proxyConfig } = scrapeDto;
 
       const countryCode = CountryCodeMap[country];
@@ -684,6 +509,7 @@ export class ScrapingService {
             protocol: proxyConfig.protocol ?? 'http',
           },
         }),
+        timeout: this.TIMEOUT_MS,
       };
 
       let page = 0;
@@ -735,8 +561,6 @@ export class ScrapingService {
 
         const $ = cheerio.load(html, { xmlMode: true });
 
-        const dataSet = [];
-
         $('tr').each((index, element) => {
           try {
             const flagElement = $(element).find('.flag span');
@@ -765,7 +589,7 @@ export class ScrapingService {
                 dividendYield,
               };
 
-              dataSet.push(eventData);
+              dataList.push(eventData);
             }
           } catch (error) {
             ScrapingErrorHandler.handleError(error, {
@@ -775,14 +599,11 @@ export class ScrapingService {
           }
         });
 
-        await this.saveDividendData(dataSet);
-
         this.logger.debug('dividend Scraping...');
       }
 
-      await this.updateDividendPreviousValues();
-
-      this.logger.debug('Scraped and saved dividend data successfully.');
+      this.logger.debug('Scraped dividend data successfully.');
+      return dataList;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.code === 'ECONNABORTED') {
@@ -799,85 +620,6 @@ export class ScrapingService {
         'DIVIDEND_SCRAPE_ERROR',
         error,
       );
-    }
-  }
-
-  async saveDividendData(dividendData: any[]) {
-    for (const data of dividendData) {
-      const company = await this.prisma.company.findFirst({
-        where: {
-          ticker: data.ticker,
-          country: data.country,
-        },
-      });
-
-      if (!company) {
-        // this.logger.warn(
-        //   `Company not found for ticker: ${data.ticker} and country: ${data.country}`,
-        // );
-        continue;
-      }
-
-      const existingRecord = await this.prisma.dividend.findFirst({
-        where: {
-          exDividendDate: data.exDividendDate,
-          companyId: company.id,
-        },
-      });
-
-      if (existingRecord) {
-        await this.prisma.dividend.update({
-          where: { id: existingRecord.id },
-          data: {
-            dividendAmount: data.dividendAmount,
-            paymentDate: data.paymentDate,
-            previousDividendAmount: data.previousDividendAmount,
-            dividendYield: data.dividendYield,
-          },
-        });
-      } else {
-        await this.prisma.dividend.create({
-          data: {
-            exDividendDate: data.exDividendDate,
-            dividendAmount: data.dividendAmount,
-            previousDividendAmount: data.previousDividendAmount,
-            paymentDate: data.paymentDate,
-            dividendYield: data.dividendYield,
-            company: {
-              connect: { id: company.id },
-            },
-            country: data.country,
-          },
-        });
-      }
-    }
-  }
-
-  async updateDividendPreviousValues() {
-    const dividendRecords = await this.prisma.dividend.findMany({
-      where: {
-        previousDividendAmount: '',
-      },
-      orderBy: { exDividendDate: 'asc' },
-    });
-
-    for (const record of dividendRecords) {
-      const previousRecord = await this.prisma.dividend.findFirst({
-        where: {
-          companyId: record.companyId,
-          exDividendDate: { lt: record.exDividendDate },
-        },
-        orderBy: { exDividendDate: 'desc' },
-      });
-
-      if (previousRecord) {
-        await this.prisma.dividend.update({
-          where: { id: record.id },
-          data: {
-            previousDividendAmount: previousRecord.dividendAmount,
-          },
-        });
-      }
     }
   }
 }

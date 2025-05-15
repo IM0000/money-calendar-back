@@ -13,9 +13,9 @@ import {
   MessageEvent,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import { UpdateUserNotificationSettingsDto } from './dto/notification.dto';
-import { filter, map } from 'rxjs';
+import { filter, map, tap } from 'rxjs/operators';
 import {
   ApiTags,
   ApiOperation,
@@ -48,7 +48,9 @@ export class NotificationController {
     const userId = req.user.id;
     return this.notificationService.notification$.pipe(
       filter((n) => n.userId === userId),
-      map((n) => ({ data: n })),
+      map((n) => {
+        return { data: n };
+      }),
     );
   }
 

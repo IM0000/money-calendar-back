@@ -1,0 +1,30 @@
+# Node/Nest 관련
+node_modules
+dist
+build
+*.log
+
+# 환경설정
+.env
+.env.*
+*.local
+
+# 테스트 관련
+coverage
+test
+__tests__/
+*.spec.ts
+*.test.ts
+jest.config.*
+.vitest.*
+
+# IDE/OS 관련
+.DS_Store
+.vscode
+.idea
+*.swp
+*.swo
+
+# Git 관련
+.git
+.gitignore

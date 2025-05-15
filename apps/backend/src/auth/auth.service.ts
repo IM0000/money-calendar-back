@@ -1,11 +1,9 @@
 import { EmailService } from './../email/email.service';
-// /auth/auth.service.ts
 import {
   BadRequestException,
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import * as jwt from 'jsonwebtoken';
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/auth.dto';
@@ -14,8 +12,9 @@ import { ConfigType } from '@nestjs/config';
 import { jwtConfig } from '../config/jwt.config';
 import { v4 as uuidv4 } from 'uuid';
 import { ErrorCodes } from '../common/enums/error-codes.enum';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { OAuthProviderEnum } from './enum/oauth-provider.enum';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
@@ -23,6 +22,8 @@ export class AuthService {
   constructor(
     @Inject(jwtConfig.KEY)
     private readonly jwtConfiguration: ConfigType<typeof jwtConfig>,
+    @Inject('JWT') private readonly jwt: JwtService,
+    @Inject('PASSWORD_RESET_JWT') private readonly passwordResetJwt: JwtService,
     private readonly usersService: UsersService,
     private readonly emailService: EmailService,
   ) {}
@@ -78,7 +79,7 @@ export class AuthService {
         errorMessage: '잘못된 이메일 또는 비밀번호입니다.',
       });
     }
-    const token = this.generateJwtToken(user);
+    const token = this.generateJwtAccessToken(user);
 
     const { password, ...userWithoutPassword } = user;
 
@@ -92,7 +93,7 @@ export class AuthService {
    */
   async loginWithOAuth(user: User): Promise<any> {
     // JWT 토큰 생성
-    const token = this.generateJwtToken(user);
+    const token = this.generateJwtAccessToken(user);
 
     const { password, ...userWithoutPassword } = user;
 
@@ -104,8 +105,9 @@ export class AuthService {
    * @param user 사용자 정보
    * @returns JWT 토큰
    */
-  private generateJwtToken(user: User): string {
+  private generateJwtAccessToken(user: User): string {
     const payload = {
+      type: 'access',
       sub: user.id, // 토큰의 subject (주체)로 사용자 ID 설정
       email: user.email,
       nickname: user.nickname,
@@ -114,8 +116,7 @@ export class AuthService {
     const secret = this.jwtConfiguration.secret;
     const expiresIn = this.jwtConfiguration.expiration;
 
-    // JWT 생성
-    return jwt.sign(payload, secret, { expiresIn });
+    return this.jwt.sign(payload, { secret, expiresIn });
   }
 
   /**
@@ -153,11 +154,16 @@ export class AuthService {
     }
 
     const statePayload = {
+      type: 'access',
       oauthMethod: 'connect',
       userId,
       provider,
     };
-    const stateToken = jwt.sign(statePayload, this.jwtConfiguration.secret, {
+
+    const secret = this.jwtConfiguration.secret;
+
+    const stateToken = this.jwt.sign(statePayload, {
+      secret,
       expiresIn: '5m',
     });
 
@@ -165,7 +171,15 @@ export class AuthService {
   }
 
   verifyJwtToken(token: string): any {
-    return jwt.verify(token, this.jwtConfiguration.secret);
+    try {
+      const secret = this.jwtConfiguration.secret;
+      return this.jwt.verify(token, { secret });
+    } catch (error) {
+      throw new UnauthorizedException({
+        errorCode: ErrorCodes.AUTH_001,
+        errorMessage: '유효하지 않거나 만료된 토큰입니다.',
+      });
+    }
   }
 
   /**
@@ -174,7 +188,14 @@ export class AuthService {
    * @returns JWT 토큰
    */
   generatePasswordResetToken(email: string): string {
-    return jwt.sign({ email }, this.jwtConfiguration.passwordResetSecret, {
+    const payload = {
+      type: 'passwordReset',
+      email,
+    };
+    const secret = this.jwtConfiguration.passwordResetSecret;
+
+    return this.passwordResetJwt.sign(payload, {
+      secret,
       expiresIn: '1h',
     });
   }
@@ -186,7 +207,8 @@ export class AuthService {
    */
   verifyPasswordResetToken(token: string): { email: string } {
     try {
-      return jwt.verify(token, this.jwtConfiguration.passwordResetSecret) as {
+      const secret = this.jwtConfiguration.secret;
+      return this.jwt.verify(token, { secret }) as {
         email: string;
       };
     } catch {

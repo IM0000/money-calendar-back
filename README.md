@@ -50,7 +50,7 @@ FRONTEND_URL=http://localhost:5173
 # JWT 설정
 JWT_SECRET=your_jwt_secret
 JWT_EXPIRATION=3600s
-JWT_PASSWORD_RESET_SECRET=your_password_reset_secret
+PASSWORD_RESET_JWT_SECRET=your_password_reset_secret
 
 # Google OAuth
 GOOGLE_CLIENT_ID=your_google_client_id

@@ -1,13 +1,13 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-kakao';
 import { AuthService } from '../auth.service';
 import { kakaoConfig } from '../../config/kakao.config';
 import { ConfigType } from '@nestjs/config';
 import { OAuthProviderEnum } from '../enum/oauth-provider.enum';
+import CustomOauthStrategy from './custom-oauth.strategy';
 
 @Injectable()
-export class KakaoStrategy extends PassportStrategy(
+export class KakaoStrategy extends CustomOauthStrategy(
   Strategy,
   OAuthProviderEnum.Kakao,
 ) {

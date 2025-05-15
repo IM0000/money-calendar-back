@@ -27,22 +27,25 @@ import { HealthModule } from './health/health.module';
 import { TerminusModule } from '@nestjs/terminus';
 import { awsConfig } from './config/aws.config';
 import { PrismaModule } from './prisma/prisma.module';
+import { IngestModule } from './ingest/ingest.module';
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
-
-const envFilePath = join(
-  process.cwd(),
-  'apps/backend/src/config/env',
-  `.${NODE_ENV}.env`,
-);
-console.log('Loading environment variables from:', envFilePath);
-
+console.log('NODE_ENV:', NODE_ENV);
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true, // ConfigModule을 전역으로 설정
-      envFilePath: [envFilePath],
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
+      // envFilePath는 개발 시에만 읽도록 분기
+      envFilePath:
+        process.env.NODE_ENV !== 'production'
+          ? join(
+              process.cwd(),
+              'apps/backend/src/config/env',
+              `.${process.env.NODE_ENV}.env`,
+            )
+          : undefined,
       load: [
         awsConfig,
         frontendConfig,
@@ -67,6 +70,7 @@ console.log('Loading environment variables from:', envFilePath);
     TerminusModule,
     HealthModule,
     PrismaModule,
+    IngestModule,
   ],
   controllers: [AppController],
   providers: [

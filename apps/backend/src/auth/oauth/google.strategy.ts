@@ -1,4 +1,4 @@
-import { ErrorCodes } from './../../common/enums/error-codes.enum';
+import { ErrorCodes } from '../../common/enums/error-codes.enum';
 import {
   Inject,
   Injectable,
@@ -39,7 +39,6 @@ export class GoogleStrategy extends CustomOauthStrategy(
     profile: any,
     done: VerifyCallback,
   ): Promise<any> {
-    this.logger.log('GoogleStrategy.validate() called', profile);
     const { id, name, emails, provider } = profile;
 
     if (!id || !emails[0].value) {
