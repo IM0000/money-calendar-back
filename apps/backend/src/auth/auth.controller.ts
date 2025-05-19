@@ -141,7 +141,7 @@ export class AuthController {
           userByOauthEmail,
         );
         return res.redirect(
-          `${frontendURL}/auth/success?token=${loginResult.accessToken}`,
+          `${frontendURL}/auth/success#token=${loginResult.accessToken}`,
         );
       }
 
@@ -153,7 +153,7 @@ export class AuthController {
       const loginResult = await this.authService.loginWithOAuth(createdUser);
 
       return res.redirect(
-        `${frontendURL}/auth/success?token=${loginResult.accessToken}`,
+        `${frontendURL}/auth/success#token=${loginResult.accessToken}`,
       );
     }
 
@@ -161,7 +161,7 @@ export class AuthController {
     if (userByOAuthId.email && userByOAuthId.verified) {
       const loginResult = await this.authService.loginWithOAuth(userByOAuthId);
       return res.redirect(
-        `${frontendURL}/auth/success?token=${loginResult.accessToken}`,
+        `${frontendURL}/auth/success#token=${loginResult.accessToken}`,
       );
     }
 
@@ -253,7 +253,7 @@ export class AuthController {
   @ApiOperation({ summary: 'OAuth 계정 연결' })
   @ApiBearerAuth('JWT-auth')
   @ApiResponseWrapper(Object)
-  @Post('connect-oauth')
+  @Post('oauth/connect')
   @UseGuards(JwtAuthGuard)
   connectOAuthAccount(
     @Req() req: RequestWithUser,
@@ -279,7 +279,7 @@ export class AuthController {
    */
   @ApiOperation({ summary: '비밀번호 재설정 이메일 요청' })
   @ApiResponseWrapper(Object)
-  @Post('password-reset-request')
+  @Post('password-reset/request')
   @HttpCode(HttpStatus.OK)
   async requestPasswordReset(@Body('email') email: string) {
     await this.authService.sendPasswordResetEmail(email);
@@ -292,7 +292,7 @@ export class AuthController {
   @ApiOperation({ summary: '비밀번호 재설정 토큰 검증' })
   @ApiQuery({ name: 'token', description: '비밀번호 재설정 토큰' })
   @ApiResponseWrapper(Object)
-  @Get('verify-reset-token')
+  @Get('password-reset/verify')
   async verifyResetToken(
     @Query('token') token: string,
   ): Promise<{ email: string }> {
