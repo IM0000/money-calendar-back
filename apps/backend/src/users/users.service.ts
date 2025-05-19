@@ -118,6 +118,7 @@ export class UsersService {
     return await this.prisma.user.update({
       where: { id: userId },
       data: {
+        verified: true,
         oauthAccounts: {
           create: {
             provider: oauthUser.provider,

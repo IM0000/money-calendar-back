@@ -84,6 +84,7 @@ export class AuthController {
     @Req() req: any,
     @Res() res: any,
   ) {
+    this.logger.log('callback query : ', query);
     const frontendURL = this.frontendConfiguration.baseUrl;
     // Passport를 통해 검증된 사용자 정보
     const oauthUser = req.user;
@@ -126,11 +127,7 @@ export class AuthController {
 
       this.logger.log('userByOauthEmail', userByOauthEmail);
 
-      if (
-        userByOauthEmail &&
-        userByOauthEmail.email &&
-        userByOauthEmail.verified
-      ) {
+      if (userByOauthEmail && userByOauthEmail.email) {
         // 연동
         await this.usersService.linkOAuthAccount(
           userByOauthEmail.id,
