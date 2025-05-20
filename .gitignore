@@ -39,3 +39,6 @@ lerna-debug.log*
 # Ignore environment files
 *.env
 .env
+
+# dp dump
+.sql

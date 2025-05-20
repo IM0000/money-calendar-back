@@ -6,7 +6,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { IngestJwtAuthGuard } from '../auth/jwt/ingest-jwt-auth.gurad';
+import { IngestJwtAuthGuard } from '../auth/jwt/ingest-jwt-auth.guard';
 import { IngestDto } from './dto/ingest.dto';
 import { IngestService } from './ingest.service';
 

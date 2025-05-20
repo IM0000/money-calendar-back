@@ -7,7 +7,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { OptionalJwtAuthGuard } from './optional-jwt-auth.guard';
 import { IngestJwtStrategy } from './ingest-jwt.strategy';
-import { IngestJwtAuthGuard } from './ingest-jwt-auth.gurad';
+import { IngestJwtAuthGuard } from './ingest-jwt-auth.guard';
 import { ingestJwtConfig } from '../../config/ingest-jwt.config';
 import { UsersModule } from '../../users/users.module';
 
