@@ -11,7 +11,7 @@ import { IngestDto } from './dto/ingest.dto';
 import { IngestService } from './ingest.service';
 
 @UseGuards(IngestJwtAuthGuard)
-@Controller('ingest')
+@Controller('/api/v1/ingest')
 export class IngestController {
   constructor(private readonly ingestService: IngestService) {}
 
