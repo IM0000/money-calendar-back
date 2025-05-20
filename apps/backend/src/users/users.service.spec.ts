@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 
-jest.mock('bcrypt');
+jest.mock('bcryptjs');
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -350,11 +350,12 @@ describe('UsersService', () => {
         data: {
           oauthAccounts: {
             create: {
-              provider: oauthUser.provider,
-              providerId: oauthUser.providerId,
-              oauthEmail: oauthUser.email,
+              provider: 'google',
+              providerId: '123456',
+              oauthEmail: 'oauth@example.com',
             },
           },
+          verified: true,
         },
         include: {
           oauthAccounts: true,

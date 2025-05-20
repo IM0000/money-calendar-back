@@ -86,19 +86,33 @@ describe('SearchService', () => {
     indicatorNotification: {
       findMany: jest.fn(),
     },
-    $queryRaw: jest
-      .fn()
-      .mockImplementation(
-        (template: TemplateStringsArray, ...values: any[]) => {
-          // template는 문자열 배열이며, 여기에 join()을 직접 적용할 수 있습니다.
-          const sqlQuery = template.join(' ');
-          return { sql: sqlQuery, values };
-        },
-      ),
+    $queryRaw: jest.fn().mockResolvedValue(mockCompanies),
+    $queryRawUnsafe: jest.fn().mockResolvedValue(mockCompanies),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    // 각 메서드를 jest.fn()으로 재할당
+    mockPrismaService.$queryRaw = jest.fn().mockResolvedValue(mockCompanies);
+    mockPrismaService.company.count = jest
+      .fn()
+      .mockResolvedValue(mockCompanies.length);
+    mockPrismaService.favoriteEarnings.findMany = jest
+      .fn()
+      .mockResolvedValue([]);
+    mockPrismaService.favoriteDividends.findMany = jest
+      .fn()
+      .mockResolvedValue([]);
+    mockPrismaService.economicIndicator.findMany = jest
+      .fn()
+      .mockResolvedValue([]);
+    mockPrismaService.economicIndicator.count = jest.fn().mockResolvedValue(0);
+    mockPrismaService.favoriteIndicator.findMany = jest
+      .fn()
+      .mockResolvedValue([]);
+    mockPrismaService.indicatorNotification.findMany = jest
+      .fn()
+      .mockResolvedValue([]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -128,7 +142,10 @@ describe('SearchService', () => {
 
       const result = await service.searchCompanies(searchDto);
 
-      expect(mockPrismaService.$queryRaw).toHaveBeenCalled();
+      const called =
+        mockPrismaService.$queryRaw.mock.calls.length > 0 ||
+        mockPrismaService.$queryRawUnsafe.mock.calls.length > 0;
+      expect(called).toBe(true);
       expect(mockPrismaService.company.count).toHaveBeenCalled();
 
       expect(result).toEqual({
@@ -173,14 +190,25 @@ describe('SearchService', () => {
 
       const result = await service.searchCompanies(searchDto);
 
-      expect(mockPrismaService.$queryRaw).toHaveBeenCalled();
+      const called =
+        mockPrismaService.$queryRaw.mock.calls.length > 0 ||
+        mockPrismaService.$queryRawUnsafe.mock.calls.length > 0;
+      expect(called).toBe(true);
 
       // WHERE 조건이 올바르게 생성되었는지 확인
-      const queryRawArgs = mockPrismaService.$queryRaw.mock.calls[0];
-      expect(queryRawArgs[0].join('')).toContain('SELECT *');
-      expect(queryRawArgs[0].join('')).toContain('ORDER BY');
-      expect(queryRawArgs[0].join('')).toContain('LIMIT');
-      expect(queryRawArgs[0].join('')).toContain('OFFSET');
+      const queryRawCall =
+        mockPrismaService.$queryRaw.mock.calls[0] ||
+        mockPrismaService.$queryRawUnsafe.mock.calls[0];
+      let queryStr = '';
+      if (Array.isArray(queryRawCall[0])) {
+        queryStr = queryRawCall[0].join('');
+      } else {
+        queryStr = String(queryRawCall[0]);
+      }
+      expect(queryStr).toContain('SELECT *');
+      expect(queryStr).toContain('ORDER BY');
+      expect(queryStr).toContain('LIMIT');
+      expect(queryStr).toContain('OFFSET');
 
       expect(mockPrismaService.company.count).toHaveBeenCalledWith({
         where: expect.objectContaining({
