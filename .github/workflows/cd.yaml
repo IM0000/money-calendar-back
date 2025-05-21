@@ -32,7 +32,13 @@ jobs:
 
       - name: Buildx build & push x86 image
         run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.repository#*/ }}"
+
+          OWNER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+          REPO=$(echo  "$REPO"  | tr '[:upper:]' '[:lower:]')
+
+          IMAGE="ghcr.io/$OWNER/$REPO"
           TAG=${{ github.sha }}
           docker buildx build \
             --platform linux/amd64 \
