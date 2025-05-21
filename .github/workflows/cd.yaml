@@ -53,4 +53,4 @@ jobs:
           aws deploy create-deployment \
           --application-name moneycalendar \
           --deployment-group-name moneycalendar-backend-group \
-          --revision revisionType=GitHub,gitHubLocation={repository=${{ github.repository }},commitId=${{ github.sha }}}
+          --revision "revisionType=GitHub,gitHubLocation={repository=${{ github.repository }},commitId=${{ github.sha }}}"
