@@ -1,9 +1,10 @@
 import { jwtConfig } from '../../config/jwt.config';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigType } from '@nestjs/config';
 import { UsersService } from '../../users/users.service';
+import { ErrorCodes } from '../../common/enums/error-codes.enum';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -27,7 +28,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: any) {
     const user = await this.usersService.findUserById(payload.sub); // sub는 사용자 ID
     if (!user) {
-      throw new Error('유효하지 않은 사용자입니다.');
+      throw new UnauthorizedException({
+        errorCode: ErrorCodes.AUTHZ_001,
+        errorMessage: '유효하지 않은 토큰입니다.',
+      });
     }
 
     const { password, ...userWithoutPassword } = user;

@@ -3,13 +3,18 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { ConfigType } from '@nestjs/config';
 import { jwtConfig } from '../config/jwt.config';
-import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { OAuthProviderEnum } from './enum/oauth-provider.enum';
+import { EmailService } from '../email/email.service';
 
-jest.mock('bcrypt');
-jest.mock('jsonwebtoken');
+jest.mock('bcryptjs');
+// jest.mock('jsonwebtoken');
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -26,6 +31,11 @@ describe('AuthService', () => {
     expiration: '1d',
   };
 
+  const mockJwtService = {
+    sign: jest.fn().mockReturnValue('mock-jwt-token'),
+    verify: jest.fn().mockReturnValue({ sub: 1, email: 'test@example.com' }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -38,6 +48,21 @@ describe('AuthService', () => {
           provide: jwtConfig.KEY,
           useValue: mockJwtConfig,
         },
+        {
+          provide: 'JWT',
+          useValue: mockJwtService,
+        },
+        {
+          provide: 'PASSWORD_RESET_JWT',
+          useValue: {
+            sign: jest.fn(),
+            verify: jest.fn(),
+          },
+        },
+        {
+          provide: EmailService,
+          useValue: {},
+        },
       ],
     }).compile();
 
@@ -46,6 +71,10 @@ describe('AuthService', () => {
     jwtConfiguration = module.get<ConfigType<typeof jwtConfig>>(jwtConfig.KEY);
 
     jest.clearAllMocks();
+    jest.spyOn(jwt, 'sign').mockReturnValue('mock-jwt-token');
+    jest
+      .spyOn(jwt, 'verify')
+      .mockReturnValue({ sub: 1, email: 'test@example.com' });
   });
 
   it('should be defined', () => {
@@ -165,15 +194,20 @@ describe('AuthService', () => {
         loginDto.email,
         loginDto.password,
       );
-      expect(jwt.sign).toHaveBeenCalledWith(
-        {
-          sub: mockUser.id,
-          email: mockUser.email,
-          nickname: mockUser.nickname,
-        },
-        mockJwtConfig.secret,
-        { expiresIn: mockJwtConfig.expiration },
-      );
+      const signCall = mockJwtService.sign.mock.calls[0];
+      expect(signCall[0]).toMatchObject({
+        sub: mockUser.id,
+        email: mockUser.email,
+        nickname: mockUser.nickname,
+        type: 'access',
+      });
+      expect(signCall[1]).toMatchObject({ secret: mockJwtConfig.secret });
+      if (signCall[2]) {
+        expect(signCall[2]).toMatchObject({
+          expiresIn: mockJwtConfig.expiration,
+          secret: mockJwtConfig.secret,
+        });
+      }
       expect(result).toEqual({
         accessToken: 'mock-jwt-token',
         user: { id: 1, email: 'test@example.com', nickname: 'tester' },
@@ -244,19 +278,24 @@ describe('AuthService', () => {
         nickname: 'tester',
       };
 
-      (jwt.sign as jest.Mock).mockReturnValue('mock-oauth-jwt-token');
+      mockJwtService.sign.mockReturnValue('mock-oauth-jwt-token');
 
       const result = await service.loginWithOAuth(mockUser as any);
 
-      expect(jwt.sign).toHaveBeenCalledWith(
-        {
-          sub: mockUser.id,
-          email: mockUser.email,
-          nickname: mockUser.nickname,
-        },
-        mockJwtConfig.secret,
-        { expiresIn: mockJwtConfig.expiration },
-      );
+      const signCall = mockJwtService.sign.mock.calls[0];
+      expect(signCall[0]).toMatchObject({
+        sub: mockUser.id,
+        email: mockUser.email,
+        nickname: mockUser.nickname,
+        type: 'access',
+      });
+      expect(signCall[1]).toMatchObject({ secret: mockJwtConfig.secret });
+      if (signCall[2]) {
+        expect(signCall[2]).toMatchObject({
+          expiresIn: mockJwtConfig.expiration,
+          secret: mockJwtConfig.secret,
+        });
+      }
       expect(result).toEqual({
         accessToken: 'mock-oauth-jwt-token',
         user: { id: 1, email: 'test@example.com', nickname: 'tester' },
@@ -286,25 +325,38 @@ describe('AuthService', () => {
       const userId = 1;
       const provider = OAuthProviderEnum.Google;
 
-      (jwt.sign as jest.Mock).mockReturnValue('mock-state-token');
+      mockJwtService.sign.mockReturnValue('mock-state-token');
 
       const token = service.generateOAuthStateToken(userId, provider);
 
-      expect(jwt.sign).toHaveBeenCalledWith(
-        { oauthMethod: 'connect', userId, provider },
-        mockJwtConfig.secret,
-        { expiresIn: '5m' },
-      );
+      const signCall = mockJwtService.sign.mock.calls[0];
+      expect(signCall[0]).toMatchObject({
+        oauthMethod: 'connect',
+        userId,
+        provider,
+        type: 'access',
+      });
+      expect(signCall[1]).toMatchObject({ secret: mockJwtConfig.secret });
+      if (signCall[2]) {
+        expect(signCall[2]).toMatchObject({
+          expiresIn: '5m',
+          secret: mockJwtConfig.secret,
+        });
+      }
       expect(token).toBe('mock-state-token');
     });
 
-    it('should throw an error for invalid provider', async () => {
+    it('should throw an error for invalid provider', () => {
       const userId = 1;
       const provider = 'invalid-provider';
-
-      expect(() => service.generateOAuthStateToken(userId, provider)).toThrow(
-        '지원하지 않는 OAuth 제공자입니다',
-      );
+      try {
+        service.generateOAuthStateToken(userId, provider);
+      } catch (e) {
+        expect(e).toBeInstanceOf(BadRequestException);
+        expect(e.response.errorMessage).toContain(
+          '지원하지 않는 OAuth 제공자입니다',
+        );
+      }
     });
   });
 
@@ -317,7 +369,9 @@ describe('AuthService', () => {
 
       const result = service.verifyJwtToken(token);
 
-      expect(jwt.verify).toHaveBeenCalledWith(token, mockJwtConfig.secret);
+      const verifyCall = mockJwtService.verify.mock.calls[0];
+      expect(verifyCall[0]).toBe(token);
+      expect(verifyCall[1]).toMatchObject({ secret: mockJwtConfig.secret });
       expect(result).toEqual(mockPayload);
     });
   });

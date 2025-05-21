@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationService } from './notification.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ContentType, NotificationMethod } from '@prisma/client';
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import {
   CreateNotificationDto,
   UpdateUserNotificationSettingsDto,
@@ -430,14 +430,16 @@ describe('NotificationService', () => {
       await expect(service.markAsRead(1, 1)).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw NotFoundException when notification belongs to another user', async () => {
+    it('should throw ForbiddenException when notification belongs to another user', async () => {
       mockPrismaService.notification.findUnique.mockResolvedValue({
         id: 1,
         userId: 2, // Different user
         read: false,
       });
 
-      await expect(service.markAsRead(1, 1)).rejects.toThrow(NotFoundException);
+      await expect(service.markAsRead(1, 1)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
@@ -485,14 +487,14 @@ describe('NotificationService', () => {
       );
     });
 
-    it('should throw NotFoundException when notification belongs to another user', async () => {
+    it('should throw ForbiddenException when notification belongs to another user', async () => {
       mockPrismaService.notification.findUnique.mockResolvedValue({
         id: 1,
         userId: 2, // Different user
       });
 
       await expect(service.deleteUserNotification(1, 1)).rejects.toThrow(
-        NotFoundException,
+        ForbiddenException,
       );
     });
   });

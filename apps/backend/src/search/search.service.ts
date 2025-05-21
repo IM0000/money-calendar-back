@@ -14,22 +14,7 @@ export class SearchService {
     const { query, country, page = 1, limit = 10 } = searchDto;
     const skip = (page - 1) * limit;
 
-    // 검색 조건 Prisma WhereInput
-    const where: Prisma.CompanyWhereInput = {
-      ...(query
-        ? {
-            OR: [
-              { name: { contains: query, mode: Prisma.QueryMode.insensitive } },
-              {
-                ticker: { contains: query, mode: Prisma.QueryMode.insensitive },
-              },
-            ],
-          }
-        : {}),
-      ...(country ? { country } : {}),
-    };
-
-    // 2) 파라미터 배열과 WHERE 절 동적 생성
+    // 파라미터 배열과 WHERE 절 동적 생성
     const params: unknown[] = [];
     const conditions: string[] = [];
 
@@ -49,30 +34,48 @@ export class SearchService {
       ? `WHERE ${conditions.join(' AND ')}`
       : '';
 
-    // 3) LIMIT / OFFSET 은 항상 뒤에 붙이기
+    // LIMIT, OFFSET은 항상 맨 뒤에 추가
     params.push(limit, skip);
-    const limitPlaceholder = `$${params.length - 1}`; // 마지막에서 두 번째
-    const offsetPlaceholder = `$${params.length}`; // 마지막
+    const limitPlaceholder = `$${params.length - 1}`;
+    const offsetPlaceholder = `$${params.length}`;
 
-    // 4) 최종 SQL 문자열 조립
+    // ORDER BY 절: query가 있을 때만 CASE문, 없으면 name만 정렬
+    const orderByClause = query
+      ? `(CASE WHEN "ticker" ILIKE $1 THEN 0 ELSE 1 END), "name" ASC`
+      : `"name" ASC`;
+
+    // 최종 SQL 조립
     const sql = `
-    SELECT *
-      FROM "Company"
-      ${whereSql}
-      ORDER BY
-        (CASE WHEN "ticker" ILIKE $1 THEN 0 ELSE 1 END),
-        "name" ASC
-      LIMIT ${limitPlaceholder}
-      OFFSET ${offsetPlaceholder};
-  `;
+      SELECT *
+        FROM "Company"
+        ${whereSql}
+        ORDER BY ${orderByClause}
+        LIMIT ${limitPlaceholder}
+        OFFSET ${offsetPlaceholder};
+    `;
 
-    // 5) Raw query 실행 (문자열 + 파라미터 분리)
+    // Raw query 실행 (문자열 + 파라미터 분리)
     const items = await this.prisma.$queryRawUnsafe<Company[]>(sql, ...params);
 
-    // 6) 전체 건수 조회
+    // 전체 건수 조회
+
+    // 검색 조건 Prisma WhereInput
+    const where: Prisma.CompanyWhereInput = {
+      ...(query
+        ? {
+            OR: [
+              { name: { contains: query, mode: Prisma.QueryMode.insensitive } },
+              {
+                ticker: { contains: query, mode: Prisma.QueryMode.insensitive },
+              },
+            ],
+          }
+        : {}),
+      ...(country ? { country } : {}),
+    };
     const total = await this.prisma.company.count({ where });
 
-    // 4) favorites 매핑
+    // favorites 매핑
     const itemsWithFavorites = items.map((company) => ({
       ...company,
       isFavoriteEarnings: false,

@@ -1,0 +1,56 @@
+name: CD, Deploy Backend
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GHCR_PAT }}" \
+            | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Buildx build & push x86 image
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+
+          OWNER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+          REPO=$(echo  "$REPO"  | tr '[:upper:]' '[:lower:]')
+
+          IMAGE="ghcr.io/$OWNER/$REPO"
+          TAG=${{ github.sha }}
+          docker buildx build \
+            --platform linux/amd64 \
+            -f apps/backend/Dockerfile \
+            --tag $IMAGE:latest \
+            --tag $IMAGE:$TAG \
+            --push \
+            .
+
+      - name: Trigger CodeDeploy
+        run: |
+          aws deploy create-deployment \
+            --application-name moneycalendar \
+            --deployment-group-name moneycalendar-backend-group \
+            --revision revisionType=GitHub,repository=${{ github.repository }},commitId=${{ github.sha }}

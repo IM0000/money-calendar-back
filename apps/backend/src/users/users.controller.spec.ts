@@ -3,7 +3,7 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { NotificationService } from '../notification/notification.service';
 import { jwtConfig } from '../config/jwt.config';
-import { UpdatePasswordDto } from '../auth/dto/users.dto';
+import { UpdatePasswordDto } from '../users/dto/profile.dto';
 import {
   DeleteUserDto,
   UpdateProfileDto,

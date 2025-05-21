@@ -15,7 +15,7 @@ import {
 import { NotificationService } from './notification.service';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import { UpdateUserNotificationSettingsDto } from './dto/notification.dto';
-import { filter, map, tap } from 'rxjs/operators';
+import { filter, map } from 'rxjs/operators';
 import {
   ApiTags,
   ApiOperation,

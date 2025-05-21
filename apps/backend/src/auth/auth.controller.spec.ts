@@ -216,10 +216,7 @@ describe('AuthController', () => {
       );
 
       expect(result).toEqual({
-        message: '계정 연결을 위해 OAuth 인증 페이지로 이동하세요.',
-        redirectUrl: `/api/v1/auth/oauth/${
-          oauthConnectionDto.provider
-        }?state=${encodeURIComponent(stateToken)}`,
+        redirectUrl: `${mockFrontendConfig.baseUrl}/api/v1/auth/oauth/${oauthConnectionDto.provider}?state=state-token`,
       });
     });
   });
@@ -264,7 +261,7 @@ describe('AuthController', () => {
       expect(authService.loginWithOAuth).toHaveBeenCalledWith(existingUser);
 
       expect(res.redirect).toHaveBeenCalledWith(
-        `${mockFrontendConfig.baseUrl}/auth/success?token=${loginResult.accessToken}`,
+        `${mockFrontendConfig.baseUrl}/auth/success#token=${loginResult.accessToken}`,
       );
     });
 
@@ -349,7 +346,7 @@ describe('AuthController', () => {
       expect(authService.loginWithOAuth).toHaveBeenCalledWith(newUser);
 
       expect(res.redirect).toHaveBeenCalledWith(
-        `${mockFrontendConfig.baseUrl}/auth/success?token=${loginResult.accessToken}`,
+        `${mockFrontendConfig.baseUrl}/auth/success#token=${loginResult.accessToken}`,
       );
     });
   });

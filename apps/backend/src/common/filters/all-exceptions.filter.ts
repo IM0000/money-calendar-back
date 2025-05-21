@@ -35,6 +35,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let stack = null;
     let stackMessage = null;
 
+    // 프론트엔드 URL 설정
+    const frontendURL =
+      this.frontendConfiguration.baseUrl || 'http://localhost:5173';
+
     if (exception instanceof Error) {
       stackMessage = exception.message;
     }
@@ -76,6 +80,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
         `[${errorCode}] ${errorMessage} (${status})`,
         errorContext,
       );
+      // OAuth 콜백 관련 요청 처리 (특히 계정 연결 관련)
+      if (
+        url.includes('/oauth') &&
+        url.includes('/callback') &&
+        request.query.state
+      ) {
+        // OAuth 연결 과정에서 오류가 발생한 경우 마이페이지로 리디렉션
+        this.logger.log('OAuth 콜백 처리 중 오류 발생, 마이페이지로 리디렉션');
+        return response.redirect(
+          `${frontendURL}/mypage?errorCode=${errorCode}&errorMessage=${encodeURIComponent(
+            errorMessage,
+          )}`,
+        );
+      }
     } else {
       this.logger.error(
         `Unexpected error: ${
@@ -92,24 +110,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       if (exception instanceof Error) {
         errorMessage = exception.message;
       }
-    }
-    // 프론트엔드 URL 설정
-    const frontendURL =
-      this.frontendConfiguration.baseUrl || 'http://localhost:5173';
-
-    // OAuth 콜백 관련 요청 처리 (특히 계정 연결 관련)
-    if (
-      url.includes('/oauth') &&
-      url.includes('/callback') &&
-      request.query.state
-    ) {
-      // OAuth 연결 과정에서 오류가 발생한 경우 마이페이지로 리디렉션
-      this.logger.log('OAuth 콜백 처리 중 오류 발생, 마이페이지로 리디렉션');
-      return response.redirect(
-        `${frontendURL}/mypage?error=true&errorMessage=${encodeURIComponent(
-          stackMessage,
-        )}`,
-      );
     }
 
     // API 요청 등의 경우 JSON 응답

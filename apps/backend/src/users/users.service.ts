@@ -26,29 +26,6 @@ export class UsersService {
     return await this.prisma.user.findUnique({ where: { email } });
   }
 
-  async linkOAuthAccountToUser(
-    user: User,
-    provider: string,
-    providerId: string,
-  ): Promise<User> {
-    try {
-      return await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          oauthAccounts: {
-            create: { provider, providerId },
-          },
-        },
-        include: { oauthAccounts: true },
-      });
-    } catch {
-      throw new ConflictException({
-        errorCode: ErrorCodes.CONFLICT_001,
-        errorMessage: '이미 OAuth 계정이 연동되어 있습니다.',
-      });
-    }
-  }
-
   async findUserById(userId: number): Promise<User | null> {
     return await this.prisma.user.findUnique({ where: { id: userId } });
   }
@@ -141,6 +118,7 @@ export class UsersService {
     return await this.prisma.user.update({
       where: { id: userId },
       data: {
+        verified: true,
         oauthAccounts: {
           create: {
             provider: oauthUser.provider,

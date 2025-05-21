@@ -12,6 +12,7 @@ describe('EmailService', () => {
   let service: EmailService;
   let prismaService: PrismaService;
   let configService: ConfigService;
+  let emailProviderMock: any;
 
   const mockPrismaService = {
     user: {
@@ -41,9 +42,17 @@ describe('EmailService', () => {
     // nodemailer 모킹 설정
     (nodemailer.createTransport as jest.Mock).mockReturnValue(mockTransporter);
 
+    emailProviderMock = {
+      sendMail: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EmailService,
+        {
+          provide: 'EmailProvider',
+          useValue: emailProviderMock,
+        },
         {
           provide: PrismaService,
           useValue: mockPrismaService,
@@ -55,6 +64,14 @@ describe('EmailService', () => {
         {
           provide: emailConfig.KEY,
           useValue: mockEmailConfig,
+        },
+        {
+          provide: 'CONFIGURATION(frontend)',
+          useValue: { baseUrl: 'http://localhost:3000' },
+        },
+        {
+          provide: 'CONFIGURATION(frontendConfig)',
+          useValue: { baseUrl: 'http://localhost:3000' },
         },
       ],
     }).compile();
@@ -83,7 +100,7 @@ describe('EmailService', () => {
         code,
       );
 
-      expect(mockTransporter.sendMail).toHaveBeenCalledWith(
+      expect(emailProviderMock.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: emailAddress,
           subject: expect.any(String),
@@ -91,10 +108,7 @@ describe('EmailService', () => {
         }),
       );
 
-      expect(result).toEqual({
-        messageId: 'mock-message-id',
-        envelope: { from: 'test@example.com', to: [emailAddress] },
-      });
+      expect(result).toBeUndefined();
     });
 
     it('인증 코드 이메일 본문에 코드와 유효 기간 정보가 포함되어야 합니다', async () => {
@@ -107,13 +121,13 @@ describe('EmailService', () => {
 
       await service.sendMemberJoinVerification(emailAddress, code);
 
-      expect(mockTransporter.sendMail).toHaveBeenCalledWith(
+      expect(emailProviderMock.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           html: expect.stringContaining(code),
         }),
       );
 
-      expect(mockTransporter.sendMail).toHaveBeenCalledWith(
+      expect(emailProviderMock.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           html: expect.stringContaining('10분'),
         }),
@@ -128,7 +142,7 @@ describe('EmailService', () => {
 
     await service.sendNotificationEmail(dto);
 
-    expect(mockTransporter.sendMail).toHaveBeenCalledWith(
+    expect(emailProviderMock.sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: dto.email,
         subject: dto.subject,
