@@ -5,6 +5,10 @@ files:
     destination: /home/ec2-user/deploy
 
 hooks:
+  ApplicationStop:
+    - location: scripts/cleanup.sh
+      runas: ec2-user
+
   BeforeInstall:
     - location: scripts/stop_old.sh
       timeout: 300
