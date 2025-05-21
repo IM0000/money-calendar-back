@@ -33,7 +33,7 @@ jobs:
       - name: Buildx build & push x86 image
         run: |
           OWNER="${{ github.repository_owner }}"
-          REPO="${{ github.repository#*/ }}"
+          REPO="${{ github.event.repository.name }}"
 
           OWNER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
           REPO=$(echo  "$REPO"  | tr '[:upper:]' '[:lower:]')

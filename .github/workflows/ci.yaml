@@ -20,10 +20,11 @@ jobs:
 
       - name: Build x86 image (no push)
         run: |
-          OWNER="${{ github.repository_owner }}" 
-          REPO="${{ github.repository#*/ }}" 
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+
           OWNER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
-          REPO=$(echo "$REPO"  | tr '[:upper:]' '[:lower:]')
+          REPO=$(echo  "$REPO"  | tr '[:upper:]' '[:lower:]')
 
           IMAGE="ghcr.io/${OWNER}/${REPO}"
           TAG=${{ github.sha }}
