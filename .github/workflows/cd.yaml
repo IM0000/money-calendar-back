@@ -1,10 +1,13 @@
-name: CI/CD with CodeDeploy
+name: CD, Deploy Backend
+
 on:
   push:
     branches: [main]
+
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -24,7 +27,8 @@ jobs:
 
       - name: Login to GHCR
         run: |
-          echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          echo "${{ secrets.GHCR_PAT }}" \
+            | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Buildx build & push x86 image
         run: |
