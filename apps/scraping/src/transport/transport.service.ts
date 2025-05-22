@@ -1,15 +1,20 @@
+import { urlConfig } from './../config/url.config';
 import axios, { AxiosError } from 'axios';
 import { AuthService } from '../auth/auth.service';
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
 
 @Injectable()
 export class TransportService {
   private readonly TIMEOUT_MS = 10000;
-  private readonly ingestApiUrl = process.env.INGEST_API_URL;
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    @Inject(urlConfig.KEY)
+    private readonly urlCfg: ConfigType<typeof urlConfig>,
+    private readonly authService: AuthService,
+  ) {}
 
   async sendScrapedData(sourceName: string, items: any[]): Promise<void> {
-    const url = `${this.ingestApiUrl}/ingest/scraped-data`;
+    const url = `${this.urlCfg.ingestApiUrl}/ingest/scraped-data`;
     const token = this.authService.generateDataIngestionToken();
     const payload = { sourceName, data: items };
 
