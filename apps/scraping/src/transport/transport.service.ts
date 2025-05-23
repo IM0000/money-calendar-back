@@ -6,6 +6,7 @@ import { ConfigType } from '@nestjs/config';
 
 @Injectable()
 export class TransportService {
+  private readonly BATCH_SIZE = 400;
   private readonly TIMEOUT_MS = 10000;
   constructor(
     @Inject(urlConfig.KEY)
@@ -13,32 +14,42 @@ export class TransportService {
     private readonly authService: AuthService,
   ) {}
 
+  private chunkArray<T>(arr: T[], size: number): T[][] {
+    const result: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) {
+      result.push(arr.slice(i, i + size));
+    }
+    return result;
+  }
+
   async sendScrapedData(sourceName: string, items: any[]): Promise<void> {
     const url = `${this.urlCfg.ingestApiUrl}/ingest/scraped-data`;
     const token = this.authService.generateDataIngestionToken();
-    const payload = { sourceName, data: items };
 
-    try {
-      const response = await axios.post(url, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: this.TIMEOUT_MS,
-      });
+    const batches = this.chunkArray(items, this.BATCH_SIZE);
 
-      if (response.status < 200 || response.status >= 300) {
+    for (const [i, batch] of batches.entries()) {
+      try {
+        const payload = { sourceName, data: batch };
+        const res = await axios.post(url, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: this.TIMEOUT_MS,
+        });
+        if (res.status < 200 || res.status >= 300) {
+          throw new HttpException(
+            `Batch ${i} failed with status ${res.status}`,
+            HttpStatus.BAD_GATEWAY,
+          );
+        }
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          this.throwAxiosException(err);
+        }
         throw new HttpException(
-          `Ingest API responded with status ${response.status}`,
-          HttpStatus.BAD_GATEWAY,
+          `Unexpected error on batch ${i}: ${(err as Error).message}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        this.throwAxiosException(err);
-      }
-
-      throw new HttpException(
-        `Unexpected error in sendScrapedData: ${(err as Error).message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
     }
   }
 

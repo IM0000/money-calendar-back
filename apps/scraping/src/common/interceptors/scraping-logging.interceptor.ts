@@ -43,7 +43,6 @@ export class ScrapingLoggingInterceptor implements NestInterceptor {
             `[${requestId}] 스크래핑 요청 완료: ${method} ${url} - ${elapsedTime}ms`,
           );
 
-          // 스크래핑 결과 요약 로깅 (결과 구조에 따라 조정 필요)
           if (data) {
             if (Array.isArray(data)) {
               this.logger.log(
