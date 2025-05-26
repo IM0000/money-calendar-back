@@ -1,5 +1,5 @@
 import { validationSchema } from './config/validation/main.validation';
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -28,6 +28,7 @@ import { TerminusModule } from '@nestjs/terminus';
 import { awsConfig } from './config/aws.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { IngestModule } from './ingest/ingest.module';
+import * as cookieParser from 'cookie-parser';
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 console.log('NODE_ENV:', NODE_ENV);
@@ -85,4 +86,8 @@ console.log('NODE_ENV:', NODE_ENV);
     },
   ],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(cookieParser(process.env.COOKIE_SECRET)).forRoutes('*');
+  }
+}

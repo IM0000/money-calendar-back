@@ -14,7 +14,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { UserDto } from '../auth/dto/users.dto';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import {
   UpdateProfileDto,
@@ -57,13 +56,6 @@ export class UsersController {
       updatePasswordDto.password,
     );
     return { message: 'success' };
-  }
-
-  @ApiOperation({ summary: '이메일로 사용자 조회' })
-  @ApiResponseWrapper(UserDto)
-  @Post('/email')
-  async getUserByEmail(@Body('email') email: string): Promise<UserDto | null> {
-    return await this.usersService.findUserByEmail(email);
   }
 
   /**

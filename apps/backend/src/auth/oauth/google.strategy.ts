@@ -1,4 +1,3 @@
-import { ErrorCodes } from '../../common/enums/error-codes.enum';
 import {
   Inject,
   Injectable,
@@ -11,6 +10,10 @@ import { ConfigType } from '@nestjs/config';
 import { googleConfig } from '../../config/google.config';
 import { OAuthProviderEnum } from '../enum/oauth-provider.enum';
 import CustomOauthStrategy from './custom-oauth.strategy';
+import {
+  ERROR_CODE_MAP,
+  ERROR_MESSAGE_MAP,
+} from '../../common/constants/error.constant';
 
 @Injectable()
 export class GoogleStrategy extends CustomOauthStrategy(
@@ -44,8 +47,8 @@ export class GoogleStrategy extends CustomOauthStrategy(
     if (!id || !emails[0].value) {
       done(
         new UnauthorizedException({
-          errorCode: ErrorCodes.OAUTH_001,
-          errorMessage: 'Google OAuth failed',
+          errorCode: ERROR_CODE_MAP.OAUTH_001,
+          errorMessage: ERROR_MESSAGE_MAP.OAUTH_001,
         }),
       );
     }

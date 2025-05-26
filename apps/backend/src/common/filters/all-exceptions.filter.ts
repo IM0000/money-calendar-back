@@ -9,9 +9,9 @@ import {
   Inject,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ErrorCodes } from '../enums/error-codes.enum';
 import { frontendConfig } from '../../config/frontend.config';
 import { ConfigType } from '@nestjs/config';
+import { ERROR_CODE_MAP, ERROR_MESSAGE_MAP } from '../constants/error.constant';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -29,8 +29,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const { method, url, body, params, query } = request;
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let errorCode: string = ErrorCodes.SERVER_001;
-    let errorMessage = '내부 서버 오류';
+    let errorCode = ERROR_CODE_MAP.SERVER_001;
+    let errorMessage = ERROR_MESSAGE_MAP.SERVER_001;
     let data = null;
     let stack = null;
     let stackMessage = null;
@@ -73,7 +73,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         errorMessage = (exceptionResponse as any).errorMessage;
         data = (exceptionResponse as any).data || null;
       } else if (typeof exceptionResponse === 'string') {
-        errorMessage = exceptionResponse;
+        errorMessage = exceptionResponse as any;
       }
 
       this.logger.error(
@@ -108,7 +108,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
       // 에러 메시지가 Error 객체에서 온 경우 설정
       if (exception instanceof Error) {
-        errorMessage = exception.message;
+        errorMessage = exception.message as any;
       }
     }
 

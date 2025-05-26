@@ -12,7 +12,10 @@ import {
 } from './dto/notification.dto';
 import { Notification as NotificationEntity } from '@prisma/client';
 import { Observable, Subject } from 'rxjs';
-import { ErrorCodes } from '../common/enums/error-codes.enum';
+import {
+  ERROR_CODE_MAP,
+  ERROR_MESSAGE_MAP,
+} from '../common/constants/error.constant';
 
 @Injectable()
 export class NotificationService {
@@ -39,8 +42,8 @@ export class NotificationService {
         });
       default:
         throw new NotFoundException({
-          errorCode: ErrorCodes.RESOURCE_001,
-          errorMessage: '지원하지 않는 콘텐츠 타입입니다.',
+          errorCode: ERROR_CODE_MAP.RESOURCE_001,
+          errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
         });
     }
   }
@@ -107,8 +110,8 @@ export class NotificationService {
         });
       default:
         throw new NotFoundException({
-          errorCode: ErrorCodes.RESOURCE_001,
-          errorMessage: '지원하지 않는 콘텐츠 타입입니다.',
+          errorCode: ERROR_CODE_MAP.RESOURCE_001,
+          errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
         });
     }
   }
@@ -132,8 +135,8 @@ export class NotificationService {
         });
       default:
         throw new NotFoundException({
-          errorCode: ErrorCodes.RESOURCE_001,
-          errorMessage: '지원하지 않는 콘텐츠 타입입니다.',
+          errorCode: ERROR_CODE_MAP.RESOURCE_001,
+          errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
         });
     }
   }
@@ -215,14 +218,14 @@ export class NotificationService {
     });
     if (!noti) {
       throw new NotFoundException({
-        errorCode: ErrorCodes.RESOURCE_001,
-        errorMessage: '해당 알림을 찾을 수 없습니다.',
+        errorCode: ERROR_CODE_MAP.RESOURCE_001,
+        errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
       });
     }
     if (noti.userId !== userId) {
       throw new ForbiddenException({
-        errorCode: ErrorCodes.AUTHZ_001,
-        errorMessage: '해당 알림에 접근할 권한이 없습니다.',
+        errorCode: ERROR_CODE_MAP.AUTHZ_001,
+        errorMessage: ERROR_MESSAGE_MAP.AUTHZ_001,
       });
     }
     await this.prisma.notification.update({
@@ -249,14 +252,14 @@ export class NotificationService {
     });
     if (!noti) {
       throw new NotFoundException({
-        errorCode: ErrorCodes.RESOURCE_001,
-        errorMessage: '삭제할 알림을 찾을 수 없습니다.',
+        errorCode: ERROR_CODE_MAP.RESOURCE_001,
+        errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
       });
     }
     if (noti.userId !== userId) {
       throw new ForbiddenException({
-        errorCode: ErrorCodes.AUTHZ_001,
-        errorMessage: '해당 알림을 삭제할 권한이 없습니다.',
+        errorCode: ERROR_CODE_MAP.AUTHZ_001,
+        errorMessage: ERROR_MESSAGE_MAP.AUTHZ_001,
       });
     }
     await this.prisma.notification.delete({ where: { id: notificationId } });
@@ -296,8 +299,8 @@ export class NotificationService {
     });
     if (!noti) {
       throw new NotFoundException({
-        errorCode: ErrorCodes.RESOURCE_001,
-        errorMessage: '배당 알림이 없습니다.',
+        errorCode: ERROR_CODE_MAP.RESOURCE_001,
+        errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
       });
     }
     await this.prisma.notification.delete({ where: { id: noti.id } });

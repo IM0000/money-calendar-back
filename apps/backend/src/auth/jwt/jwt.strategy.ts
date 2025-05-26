@@ -1,10 +1,14 @@
 import { jwtConfig } from '../../config/jwt.config';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { ExtractJwt, JwtFromRequestFunction, Strategy } from 'passport-jwt';
 import { ConfigType } from '@nestjs/config';
 import { UsersService } from '../../users/users.service';
-import { ErrorCodes } from '../../common/enums/error-codes.enum';
+import { Request } from 'express';
+import {
+  ERROR_CODE_MAP,
+  ERROR_MESSAGE_MAP,
+} from '../../common/constants/error.constant';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -14,7 +18,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     private readonly usersService: UsersService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), // Authorization 헤더에서 토큰 추출
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (request: Request) => request.signedCookies?.Authentication as string,
+      ] as JwtFromRequestFunction[]), // (1) Authorization 헤더 or signed cookie 'Authentication' 에서 추출
       ignoreExpiration: false, // 만료된 토큰을 무시하지 않음
       secretOrKey: jwtConfiguration.secret, // 비밀 키 설정
     });
@@ -29,8 +36,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const user = await this.usersService.findUserById(payload.sub); // sub는 사용자 ID
     if (!user) {
       throw new UnauthorizedException({
-        errorCode: ErrorCodes.AUTHZ_001,
-        errorMessage: '유효하지 않은 토큰입니다.',
+        errorCode: ERROR_CODE_MAP.AUTH_001,
+        errorMessage: ERROR_MESSAGE_MAP.AUTH_001,
       });
     }
 

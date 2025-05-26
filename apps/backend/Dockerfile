@@ -29,6 +29,8 @@ RUN pnpm run build:backend
 # Prisma 관련 파일은 이미 생성되어 있으므로 --prod로 설치해도 문제 없음
 RUN pnpm prune --prod
 
+COPY entrypoint.sh ./entrypoint.sh
+
 ###############################################################################
 # 2) Runner 스테이지 (최종 이미지)
 ###############################################################################
@@ -39,6 +41,8 @@ WORKDIR /app
 RUN apk add --no-cache openssl libc6-compat && \
     addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 -G nodejs
+
+RUN corepack enable
 
 # 2-1) Node_modules와 Prisma 관련 파일 모두 복사 
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
@@ -58,4 +62,12 @@ ENV PRISMA_BINARY_PLATFORM="linux-musl"
 USER nodejs
 
 EXPOSE 3000
-CMD ["node", "dist/src/main.js"]
+
+# entrypoint 스크립트 복사
+COPY --from=builder --chown=nodejs:nodejs /app/entrypoint.sh ./entrypoint.sh
+
+# 실행 권한 부여
+RUN chmod +x ./entrypoint.sh
+
+# 컨테이너 시작 시 entrypoint.sh 실행
+ENTRYPOINT ["./entrypoint.sh"]

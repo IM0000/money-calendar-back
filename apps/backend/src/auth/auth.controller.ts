@@ -12,18 +12,14 @@ import {
   UseGuards,
   Req,
   Logger,
-  Inject,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/users.dto';
-import { OAuthConnectionDto, StatePayload, VerifyDto } from './dto/auth.dto';
+import { OAuthConnectionDto, VerifyDto } from './dto/auth.dto';
 import { LoginDto } from './dto/auth.dto';
 import { DynamicAuthGuard } from './oauth/dynamic-auth.guard';
 import { UserDto } from './dto/users.dto';
-import { ErrorCodes } from '../common/enums/error-codes.enum';
-import { ConfigType } from '@nestjs/config';
-import { frontendConfig } from '../config/frontend.config';
 import { JwtAuthGuard } from './jwt/jwt-auth.guard';
 import { RequestWithUser } from '../common/types/request-with-user';
 import {
@@ -35,14 +31,17 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { ApiResponseWrapper } from '../common/decorators/api-response.decorator';
+import { Request, Response } from 'express';
+import {
+  ERROR_CODE_MAP,
+  ERROR_MESSAGE_MAP,
+} from '../common/constants/error.constant';
 
 @ApiTags('인증')
 @Controller('api/v1/auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
   constructor(
-    @Inject(frontendConfig.KEY)
-    private readonly frontendConfiguration: ConfigType<typeof frontendConfig>,
     private readonly authService: AuthService,
     private readonly usersService: UsersService,
   ) {}
@@ -85,86 +84,32 @@ export class AuthController {
     @Res() res: any,
   ) {
     this.logger.log('callback query : ', query);
-    const frontendURL = this.frontendConfiguration.baseUrl;
-    // Passport를 통해 검증된 사용자 정보
+    const frontendURL = this.authService.getFrontendUrl();
     const oauthUser = req.user;
+    this.logger.log(
+      `OAuth callback: provider=${provider}, user=${JSON.stringify(oauthUser)}`,
+    );
 
     if (!oauthUser) {
       return res.redirect(
-        `${frontendURL}/auth/error?errorCode=${ErrorCodes.AUTH_002}&message=OAuth 인증에 실패했습니다.`,
+        `${frontendURL}/auth/error?errorCode=${ERROR_CODE_MAP.AUTH_002}` +
+          `&message=${ERROR_MESSAGE_MAP.AUTH_002}`,
       );
     }
 
-    // 연결 요청인지 확인 (마이페이지에서 연결 요청 시)
+    // (1) state 유무에 따른 처리 + 사용자 찾기/생성
     const state = req.query.state;
-    if (state && typeof state === 'string') {
-      // 이미 로그인된 사용자가 계정 연결을 요청한 경우
-      const stateToken = state;
-      // state token 검증
-      const statePayload: StatePayload =
-        this.authService.verifyJwtToken(stateToken);
-
-      await this.usersService.linkOAuthAccount(statePayload.userId, oauthUser);
-
-      return res.redirect(
-        `${frontendURL}/mypage?message=계정이 성공적으로 연결되었습니다.`,
-      );
-    }
-
-    // 일반 로그인 처리
-    // oauth 인증 정보로 회원검색
-    const userByOAuthId = await this.usersService.findUserByOAuthId(
-      oauthUser.provider,
-      oauthUser.providerId,
+    const { user, redirectPath } = await this.authService.handleOAuthLogin(
+      oauthUser,
+      state,
     );
 
-    // 연동된 회원정보는 없는데,
-    if (userByOAuthId === null) {
-      //oauth 이메일로 메일인증된 회원정보가 있으면 그 계정에 연동시킴
-      const userByOauthEmail = await this.usersService.findUserByEmail(
-        oauthUser.email,
-      );
-
-      this.logger.log('userByOauthEmail', userByOauthEmail);
-
-      if (userByOauthEmail && userByOauthEmail.email) {
-        // 연동
-        await this.usersService.linkOAuthAccount(
-          userByOauthEmail.id,
-          oauthUser,
-        );
-        // 로그인 처리
-        const loginResult = await this.authService.loginWithOAuth(
-          userByOauthEmail,
-        );
-        return res.redirect(
-          `${frontendURL}/auth/success#token=${loginResult.accessToken}`,
-        );
-      }
-
-      // oauth 메일로 이메일 인증된 계정이 없는 경우 회원가입 처리
-      const createdUser = await this.usersService.createUserFromOAuth(
-        oauthUser,
-      );
-
-      const loginResult = await this.authService.loginWithOAuth(createdUser);
-
-      return res.redirect(
-        `${frontendURL}/auth/success#token=${loginResult.accessToken}`,
-      );
-    }
-
-    // oauth 이메일로 (메일인증 & 연동)된 회원정보가 있으면 로그인 처리
-    if (userByOAuthId.email && userByOAuthId.verified) {
-      const loginResult = await this.authService.loginWithOAuth(userByOAuthId);
-      return res.redirect(
-        `${frontendURL}/auth/success#token=${loginResult.accessToken}`,
-      );
-    }
-
-    return res.redirect(
-      `${frontendURL}/auth/error?errorCode=${ErrorCodes.AUTH_002}&message=OAuth 인증에 실패했습니다.`,
+    const { accessToken, refreshToken } = await this.authService.loginWithOAuth(
+      user,
     );
+    this.authService.setAuthCookies(res, accessToken, refreshToken);
+
+    return res.redirect(`${frontendURL}${redirectPath ?? '/auth/success'}`);
   }
 
   /**
@@ -228,19 +173,24 @@ export class AuthController {
   @ApiResponseWrapper(Object)
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: LoginDto): Promise<any> {
-    return await this.authService.loginWithEmail(loginDto);
+  async login(@Body() loginDto: LoginDto, @Res() res: Response): Promise<any> {
+    const { accessToken, refreshToken, user } =
+      await this.authService.loginWithEmail(loginDto);
+
+    this.authService.setAuthCookies(res, accessToken, refreshToken);
+
+    return res.json({ user });
   }
 
   /**
    * 현재 로그인 상태 확인 (JWT 토큰 검증)
    */
   @ApiOperation({ summary: '로그인 상태 확인' })
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('Authentication')
   @ApiResponseWrapper(Object)
   @Get('status')
   @UseGuards(JwtAuthGuard)
-  getStatus(@Req() req): any {
+  getStatus(@Req() req: RequestWithUser) {
     return { isAuthenticated: true, user: req.user };
   }
 
@@ -264,7 +214,7 @@ export class AuthController {
       userId,
       provider,
     );
-    const frontendURL = this.frontendConfiguration.baseUrl;
+    const frontendURL = this.authService.getFrontendUrl();
 
     return {
       redirectUrl: `${frontendURL}/api/v1/auth/oauth/${provider}?state=${stateToken}`,
@@ -318,5 +268,36 @@ export class AuthController {
     const { email } = this.authService.verifyPasswordResetToken(token);
     await this.usersService.updateUserPassword(email, password);
     return { message: '비밀번호가 성공적으로 변경되었습니다.' };
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refreshTokens(@Req() req: Request, @Res() res: Response) {
+    this.logger.log('Refreshing tokens...');
+    const oldToken = req.signedCookies?.Refresh;
+    const { accessToken, refreshToken } = await this.authService.refreshTokens(
+      oldToken,
+    );
+
+    this.authService.setAuthCookies(res, accessToken, refreshToken);
+    res.json({ message: '토큰이 갱신되었습니다.' });
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async logout(@Req() req: RequestWithUser, @Res() res: Response) {
+    const user = req.user;
+    if (user) {
+      await this.usersService.removeRefreshTokenHash(user.id);
+    }
+    res
+      .clearCookie('Authentication', {
+        httpOnly: true,
+        signed: true,
+        path: '/',
+      })
+      .clearCookie('Refresh', { httpOnly: true, signed: true, path: '/' })
+      .json({ message: '로그아웃되었습니다.' });
   }
 }
