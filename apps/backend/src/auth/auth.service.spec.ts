@@ -12,6 +12,7 @@ import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { OAuthProviderEnum } from './enum/oauth-provider.enum';
 import { EmailService } from '../email/email.service';
+import { frontendConfig } from '../config/frontend.config';
 
 jest.mock('bcryptjs');
 // jest.mock('jsonwebtoken');
@@ -24,11 +25,16 @@ describe('AuthService', () => {
   const mockUsersService = {
     findUserByEmail: jest.fn(),
     storeVerificationToken: jest.fn(),
+    setCurrentRefreshTokenHash: jest.fn(),
   };
 
   const mockJwtConfig = {
     secret: 'test-secret-key',
     expiration: '1d',
+  };
+
+  const mockFrontendConfig = {
+    baseUrl: 'http://localhost:3000',
   };
 
   const mockJwtService = {
@@ -49,6 +55,10 @@ describe('AuthService', () => {
           useValue: mockJwtConfig,
         },
         {
+          provide: frontendConfig.KEY,
+          useValue: mockFrontendConfig,
+        },
+        {
           provide: 'JWT',
           useValue: mockJwtService,
         },
@@ -58,6 +68,10 @@ describe('AuthService', () => {
             sign: jest.fn(),
             verify: jest.fn(),
           },
+        },
+        {
+          provide: 'REFRESH_JWT',
+          useValue: mockJwtService,
         },
         {
           provide: EmailService,
@@ -198,10 +212,11 @@ describe('AuthService', () => {
       expect(signCall[0]).toMatchObject({
         sub: mockUser.id,
         email: mockUser.email,
-        nickname: mockUser.nickname,
         type: 'access',
       });
-      expect(signCall[1]).toMatchObject({ secret: mockJwtConfig.secret });
+      if (signCall[1]) {
+        expect(signCall[1]).toMatchObject({ secret: mockJwtConfig.secret });
+      }
       if (signCall[2]) {
         expect(signCall[2]).toMatchObject({
           expiresIn: mockJwtConfig.expiration,
@@ -210,6 +225,7 @@ describe('AuthService', () => {
       }
       expect(result).toEqual({
         accessToken: 'mock-jwt-token',
+        refreshToken: 'mock-jwt-token',
         user: { id: 1, email: 'test@example.com', nickname: 'tester' },
       });
     });
@@ -286,10 +302,11 @@ describe('AuthService', () => {
       expect(signCall[0]).toMatchObject({
         sub: mockUser.id,
         email: mockUser.email,
-        nickname: mockUser.nickname,
         type: 'access',
       });
-      expect(signCall[1]).toMatchObject({ secret: mockJwtConfig.secret });
+      if (signCall[1]) {
+        expect(signCall[1]).toMatchObject({ secret: mockJwtConfig.secret });
+      }
       if (signCall[2]) {
         expect(signCall[2]).toMatchObject({
           expiresIn: mockJwtConfig.expiration,
@@ -298,7 +315,7 @@ describe('AuthService', () => {
       }
       expect(result).toEqual({
         accessToken: 'mock-oauth-jwt-token',
-        user: { id: 1, email: 'test@example.com', nickname: 'tester' },
+        refreshToken: 'mock-oauth-jwt-token',
       });
     });
   });
@@ -354,7 +371,7 @@ describe('AuthService', () => {
       } catch (e) {
         expect(e).toBeInstanceOf(BadRequestException);
         expect(e.response.errorMessage).toContain(
-          '지원하지 않는 OAuth 제공자입니다',
+          '지원하지 않는 OAuth 인증기관입니다',
         );
       }
     });
@@ -373,6 +390,37 @@ describe('AuthService', () => {
       expect(verifyCall[0]).toBe(token);
       expect(verifyCall[1]).toMatchObject({ secret: mockJwtConfig.secret });
       expect(result).toEqual(mockPayload);
+    });
+  });
+
+  describe('setAuthCookies', () => {
+    it('should set Authentication and Refresh cookies with correct options', () => {
+      const res = { cookie: jest.fn().mockReturnThis() };
+      const accessToken = 'access-token';
+      const refreshToken = 'refresh-token';
+
+      service.setAuthCookies(res as any, accessToken, refreshToken);
+
+      expect(res.cookie).toHaveBeenCalledWith(
+        'Authentication',
+        accessToken,
+        expect.objectContaining({
+          httpOnly: true,
+          signed: true,
+          sameSite: 'lax',
+          maxAge: 1000 * 60 * 60,
+        }),
+      );
+      expect(res.cookie).toHaveBeenCalledWith(
+        'Refresh',
+        refreshToken,
+        expect.objectContaining({
+          httpOnly: true,
+          signed: true,
+          sameSite: 'lax',
+          maxAge: 1000 * 60 * 60 * 24 * 7,
+        }),
+      );
     });
   });
 });
