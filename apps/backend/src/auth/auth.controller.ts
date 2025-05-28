@@ -273,7 +273,6 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refreshTokens(@Req() req: Request, @Res() res: Response) {
-    this.logger.log('Refreshing tokens...');
     const oldToken = req.signedCookies?.Refresh;
     const { accessToken, refreshToken } = await this.authService.refreshTokens(
       oldToken,
