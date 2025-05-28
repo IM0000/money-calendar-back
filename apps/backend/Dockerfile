@@ -29,7 +29,7 @@ RUN pnpm run build:backend
 # Prisma 관련 파일은 이미 생성되어 있으므로 --prod로 설치해도 문제 없음
 RUN pnpm prune --prod
 
-COPY entrypoint.sh ./entrypoint.sh
+COPY apps/backend/entrypoint.sh ./entrypoint.sh
 
 ###############################################################################
 # 2) Runner 스테이지 (최종 이미지)
