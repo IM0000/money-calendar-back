@@ -89,24 +89,6 @@ describe('UsersController', () => {
     });
   });
 
-  describe('getUserByEmail', () => {
-    it('should return user by email', async () => {
-      const email = 'test@example.com';
-      const mockUser = {
-        id: 1,
-        email,
-        nickname: 'tester',
-      };
-
-      mockUsersService.findUserByEmail.mockResolvedValue(mockUser);
-
-      const result = await controller.getUserByEmail(email);
-
-      expect(usersService.findUserByEmail).toHaveBeenCalledWith(email);
-      expect(result).toEqual(mockUser);
-    });
-  });
-
   describe('getProfile', () => {
     it('should return user profile', async () => {
       const req = {

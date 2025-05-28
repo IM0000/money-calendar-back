@@ -5,12 +5,31 @@ on:
     branches: [main]
 
 jobs:
-  build-backend-image:
+  build-and-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.11.1]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run tests
+        run: pnpm test
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2

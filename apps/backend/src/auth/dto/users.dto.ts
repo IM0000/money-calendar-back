@@ -8,9 +8,6 @@ export class UserDto {
   @ApiProperty({ description: '사용자 이메일', example: 'user@example.com' })
   email: string;
 
-  @ApiProperty({ description: '비밀번호', nullable: true })
-  password: string | null;
-
   @ApiProperty({ description: '닉네임', nullable: true })
   nickname: string | null;
 

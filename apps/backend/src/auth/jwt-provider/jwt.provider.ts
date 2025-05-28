@@ -16,6 +16,15 @@ export const jwtProviders: Provider[] = [
     inject: [jwtConfig.KEY],
   },
   {
+    provide: 'REFRESH_JWT',
+    useFactory: (cfg: ConfigType<typeof jwtConfig>) =>
+      new JwtService({
+        secret: cfg.refreshSecret,
+        signOptions: { expiresIn: cfg.refreshExpiration },
+      }),
+    inject: [jwtConfig.KEY],
+  },
+  {
     provide: 'PASSWORD_RESET_JWT',
     useFactory: (cfg: ConfigType<typeof jwtConfig>) =>
       new JwtService({

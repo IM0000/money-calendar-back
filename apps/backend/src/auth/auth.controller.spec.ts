@@ -19,6 +19,10 @@ describe('AuthController', () => {
     generateVerificationToken: jest.fn(),
     generateOAuthStateToken: jest.fn(),
     verifyJwtToken: jest.fn(),
+    setAuthCookies: jest.fn(),
+    refreshTokens: jest.fn(),
+    getFrontendUrl: jest.fn(() => mockFrontendConfig.baseUrl),
+    handleOAuthLogin: jest.fn(),
   };
 
   const mockUsersService = {
@@ -29,6 +33,7 @@ describe('AuthController', () => {
     findUserByOAuthId: jest.fn(),
     findUserByEmail: jest.fn(),
     createUserFromOAuth: jest.fn(),
+    removeRefreshTokenHash: jest.fn(),
   };
 
   const mockFrontendConfig = {
@@ -109,7 +114,6 @@ describe('AuthController', () => {
 
       const user: UserDto = {
         id: 1,
-        password: '',
         email: 'test@example.com',
         nickname: 'tester',
         verified: true,
@@ -146,40 +150,45 @@ describe('AuthController', () => {
   });
 
   describe('login', () => {
-    it('should login user with email and password', async () => {
-      const loginDto: LoginDto = {
-        email: 'test@example.com',
-        password: 'password123',
-      };
-
+    it('should set cookies and return user info', async () => {
+      const loginDto = { email: 'test@example.com', password: 'password123' };
       const loginResult = {
         accessToken: 'jwt-token',
-        user: {
-          id: 1,
-          email: 'test@example.com',
-          nickname: 'tester',
-        },
+        refreshToken: 'refresh-token',
+        user: { id: 1, email: 'test@example.com', nickname: 'tester' },
       };
-
       mockAuthService.loginWithEmail.mockResolvedValue(loginResult);
+      mockAuthService.setAuthCookies = jest.fn();
 
-      const result = await controller.login(loginDto);
+      const res = { json: jest.fn() };
+      await controller.login(loginDto, res as any);
 
-      expect(authService.loginWithEmail).toHaveBeenCalledWith(loginDto);
-      expect(result).toEqual(loginResult);
+      expect(mockAuthService.setAuthCookies).toHaveBeenCalledWith(
+        res,
+        loginResult.accessToken,
+        loginResult.refreshToken,
+      );
+      expect(res.json).toHaveBeenCalledWith({ user: loginResult.user });
     });
   });
 
   describe('getStatus', () => {
     it('should return authenticated status and user', () => {
-      const req = {
-        user: {
-          id: 1,
-          email: 'test@example.com',
+      const req = Object.assign(
+        {
+          user: {
+            id: 1,
+            email: 'test@example.com',
+            nickname: 'tester',
+            verified: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
         },
-      };
+        {},
+      );
 
-      const result = controller.getStatus(req);
+      const result = controller.getStatus(req as any);
 
       expect(result).toEqual({
         isAuthenticated: true,
@@ -248,20 +257,20 @@ describe('AuthController', () => {
         user: existingUser,
       };
 
-      mockUsersService.findUserByOAuthId.mockResolvedValue(existingUser);
+      mockAuthService.handleOAuthLogin.mockResolvedValue({
+        user: existingUser,
+      });
       mockAuthService.loginWithOAuth.mockResolvedValue(loginResult);
 
       await controller.oauthCallback(provider, query, req, res);
 
-      expect(usersService.findUserByOAuthId).toHaveBeenCalledWith(
-        req.user.provider,
-        req.user.providerId,
+      expect(authService.handleOAuthLogin).toHaveBeenCalledWith(
+        req.user,
+        undefined,
       );
-
       expect(authService.loginWithOAuth).toHaveBeenCalledWith(existingUser);
-
       expect(res.redirect).toHaveBeenCalledWith(
-        `${mockFrontendConfig.baseUrl}/auth/success#token=${loginResult.accessToken}`,
+        `${mockFrontendConfig.baseUrl}/auth/success`,
       );
     });
 
@@ -287,17 +296,26 @@ describe('AuthController', () => {
         provider: 'google',
       };
 
-      mockAuthService.verifyJwtToken.mockReturnValue(statePayload);
-      mockUsersService.linkOAuthAccount.mockResolvedValue(undefined);
+      const loginResult = {
+        accessToken: 'oauth-jwt-token',
+        user: { id: 1, email: 'test@example.com', verified: true },
+      };
+
+      mockAuthService.handleOAuthLogin.mockResolvedValue({
+        user: { id: 1, email: 'test@example.com', verified: true },
+        redirectPath: '/mypage?message=계정이 성공적으로 연결되었습니다.',
+      });
+      mockAuthService.loginWithOAuth.mockResolvedValue(loginResult);
 
       await controller.oauthCallback(provider, {}, req, res);
 
-      expect(authService.verifyJwtToken).toHaveBeenCalledWith(stateToken);
-      expect(usersService.linkOAuthAccount).toHaveBeenCalledWith(
-        statePayload.userId,
+      expect(authService.handleOAuthLogin).toHaveBeenCalledWith(
         req.user,
+        stateToken,
       );
-
+      expect(authService.loginWithOAuth).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 1 }),
+      );
       expect(res.redirect).toHaveBeenCalledWith(
         `${mockFrontendConfig.baseUrl}/mypage?message=계정이 성공적으로 연결되었습니다.`,
       );
@@ -329,25 +347,68 @@ describe('AuthController', () => {
         user: newUser,
       };
 
-      mockUsersService.findUserByOAuthId.mockResolvedValue(null);
-      mockUsersService.findUserByEmail.mockResolvedValue(null);
-      mockUsersService.createUserFromOAuth.mockResolvedValue(newUser);
+      mockAuthService.handleOAuthLogin.mockResolvedValue({ user: newUser });
       mockAuthService.loginWithOAuth.mockResolvedValue(loginResult);
 
       await controller.oauthCallback(provider, query, req, res);
 
-      expect(usersService.findUserByOAuthId).toHaveBeenCalledWith(
-        req.user.provider,
-        req.user.providerId,
+      expect(authService.handleOAuthLogin).toHaveBeenCalledWith(
+        req.user,
+        undefined,
       );
-
-      expect(usersService.findUserByEmail).toHaveBeenCalledWith(req.user.email);
-      expect(usersService.createUserFromOAuth).toHaveBeenCalledWith(req.user);
       expect(authService.loginWithOAuth).toHaveBeenCalledWith(newUser);
-
       expect(res.redirect).toHaveBeenCalledWith(
-        `${mockFrontendConfig.baseUrl}/auth/success#token=${loginResult.accessToken}`,
+        `${mockFrontendConfig.baseUrl}/auth/success`,
       );
+    });
+  });
+
+  describe('refreshTokens', () => {
+    it('should set cookies and return message', async () => {
+      const req = { signedCookies: { Refresh: 'refresh-token' } };
+      const res = { json: jest.fn() };
+      const tokens = { accessToken: 'new-access', refreshToken: 'new-refresh' };
+      mockAuthService.refreshTokens = jest.fn().mockResolvedValue(tokens);
+      mockAuthService.setAuthCookies = jest.fn();
+
+      await controller.refreshTokens(req as any, res as any);
+
+      expect(mockAuthService.refreshTokens).toHaveBeenCalledWith(
+        'refresh-token',
+      );
+      expect(mockAuthService.setAuthCookies).toHaveBeenCalledWith(
+        res,
+        tokens.accessToken,
+        tokens.refreshToken,
+      );
+      expect(res.json).toHaveBeenCalledWith({
+        message: '토큰이 갱신되었습니다.',
+      });
+    });
+  });
+
+  describe('logout', () => {
+    it('should clear cookies and return message', async () => {
+      const req = { user: { id: 1 } };
+      const res = {
+        clearCookie: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      };
+      mockUsersService.removeRefreshTokenHash = jest
+        .fn()
+        .mockResolvedValue(undefined);
+
+      await controller.logout(req as any, res as any);
+
+      expect(res.clearCookie).toHaveBeenCalledWith(
+        'Authentication',
+        expect.any(Object),
+      );
+      expect(res.clearCookie).toHaveBeenCalledWith(
+        'Refresh',
+        expect.any(Object),
+      );
+      expect(res.json).toHaveBeenCalledWith({ message: '로그아웃되었습니다.' });
     });
   });
 });

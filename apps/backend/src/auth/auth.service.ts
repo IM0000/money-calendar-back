@@ -11,22 +11,37 @@ import { User } from '@prisma/client';
 import { ConfigType } from '@nestjs/config';
 import { jwtConfig } from '../config/jwt.config';
 import { v4 as uuidv4 } from 'uuid';
-import { ErrorCodes } from '../common/enums/error-codes.enum';
 import * as bcrypt from 'bcryptjs';
 import { OAuthProviderEnum } from './enum/oauth-provider.enum';
 import { JwtService } from '@nestjs/jwt';
+import { frontendConfig } from '../config/frontend.config';
+import { Response } from 'express';
+import {
+  ERROR_CODE_MAP,
+  ERROR_MESSAGE_MAP,
+} from '../common/constants/error.constant';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   constructor(
+    @Inject(frontendConfig.KEY)
+    private readonly frontendConfiguration: ConfigType<typeof frontendConfig>,
     @Inject(jwtConfig.KEY)
     private readonly jwtConfiguration: ConfigType<typeof jwtConfig>,
-    @Inject('JWT') private readonly jwt: JwtService,
-    @Inject('PASSWORD_RESET_JWT') private readonly passwordResetJwt: JwtService,
+    @Inject('JWT')
+    private readonly jwt: JwtService,
+    @Inject('PASSWORD_RESET_JWT')
+    private readonly passwordResetJwt: JwtService,
+    @Inject('REFRESH_JWT')
+    private readonly refreshJwt: JwtService,
     private readonly usersService: UsersService,
     private readonly emailService: EmailService,
   ) {}
+
+  getFrontendUrl(): string {
+    return this.frontendConfiguration.baseUrl;
+  }
 
   /**
    * 이메일과 비밀번호 검증
@@ -37,12 +52,10 @@ export class AuthService {
   async validateUser(email: string, password: string): Promise<boolean> {
     const user = await this.usersService.findUserByEmail(email);
 
-    // 사용자가 없거나 비밀번호가 설정되지 않은 경우
     if (!user || !user.password) {
       return false;
     }
 
-    // 비밀번호 비교
     const isPasswordValid = await bcrypt.compare(password, user.password);
     return isPasswordValid;
   }
@@ -52,52 +65,40 @@ export class AuthService {
    * @param loginDto 로그인 정보
    * @returns JWT 토큰과 사용자 정보
    */
-  async loginWithEmail(loginDto: LoginDto): Promise<any> {
+  async loginWithEmail(loginDto: LoginDto): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: Omit<User, 'password'>;
+  }> {
     const user = await this.usersService.findUserByEmail(loginDto.email);
-
     if (!user) {
       throw new ForbiddenException({
-        errorCode: ErrorCodes.RESOURCE_001,
-        errorMessage: '존재하지 않는 이메일입니다.',
+        errorCode: ERROR_CODE_MAP.RESOURCE_001,
+        errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
       });
     }
-
     if (!user.password) {
-      // 비밀번호 설정이 안된 경우
       throw new ForbiddenException({
-        errorCode: ErrorCodes.ACCOUNT_001,
-        errorMessage: '비밀번호 설정이 필요합니다.',
+        errorCode: ERROR_CODE_MAP.ACCOUNT_001,
+        errorMessage: ERROR_MESSAGE_MAP.ACCOUNT_001,
         data: user,
       });
     }
-
-    const isLogin = await this.validateUser(loginDto.email, loginDto.password);
-
-    if (!isLogin) {
+    const isValid = await this.validateUser(loginDto.email, loginDto.password);
+    if (!isValid) {
       throw new UnauthorizedException({
-        errorCode: ErrorCodes.AUTH_002,
-        errorMessage: '잘못된 이메일 또는 비밀번호입니다.',
+        errorCode: ERROR_CODE_MAP.AUTH_006,
+        errorMessage: ERROR_MESSAGE_MAP.AUTH_006,
       });
     }
-    const token = this.generateJwtAccessToken(user);
+
+    const { accessToken, refreshToken } = this.generateJwtToken(user);
+
+    await this.usersService.setCurrentRefreshTokenHash(user.id, refreshToken);
 
     const { password, ...userWithoutPassword } = user;
 
-    return { accessToken: token, user: userWithoutPassword };
-  }
-
-  /**
-   * OAuth 제공자를 통해 로그인 처리
-   * @param oauthUser OAuth 사용자 정보
-   * @returns JWT 토큰과 사용자 정보
-   */
-  async loginWithOAuth(user: User): Promise<any> {
-    // JWT 토큰 생성
-    const token = this.generateJwtAccessToken(user);
-
-    const { password, ...userWithoutPassword } = user;
-
-    return { accessToken: token, user: userWithoutPassword };
+    return { accessToken, refreshToken, user: userWithoutPassword };
   }
 
   /**
@@ -105,18 +106,23 @@ export class AuthService {
    * @param user 사용자 정보
    * @returns JWT 토큰
    */
-  private generateJwtAccessToken(user: User): string {
-    const payload = {
+  private generateJwtToken(user: User) {
+    const accessPayload = {
       type: 'access',
-      sub: user.id, // 토큰의 subject (주체)로 사용자 ID 설정
+      sub: user.id,
       email: user.email,
-      nickname: user.nickname,
     };
 
-    const secret = this.jwtConfiguration.secret;
-    const expiresIn = this.jwtConfiguration.expiration;
+    const refreshPayload = {
+      type: 'refresh',
+      sub: user.id,
+      email: user.email,
+    };
 
-    return this.jwt.sign(payload, { secret, expiresIn });
+    const accessToken = this.jwt.sign(accessPayload);
+    const refreshToken = this.refreshJwt.sign(refreshPayload);
+
+    return { accessToken, refreshToken };
   }
 
   /**
@@ -148,8 +154,8 @@ export class AuthService {
 
     if (!validProviders.includes(provider)) {
       throw new BadRequestException({
-        errorCode: ErrorCodes.OAUTH_001,
-        errorMessage: `지원하지 않는 OAuth 제공자입니다: ${provider}`,
+        errorCode: ERROR_CODE_MAP.OAUTH_002,
+        errorMessage: ERROR_MESSAGE_MAP.OAUTH_002,
       });
     }
 
@@ -176,8 +182,8 @@ export class AuthService {
       return this.jwt.verify(token, { secret });
     } catch (error) {
       throw new UnauthorizedException({
-        errorCode: ErrorCodes.AUTH_001,
-        errorMessage: '유효하지 않거나 만료된 토큰입니다.',
+        errorCode: ERROR_CODE_MAP.AUTH_002,
+        errorMessage: ERROR_MESSAGE_MAP.AUTH_002,
       });
     }
   }
@@ -213,8 +219,8 @@ export class AuthService {
       };
     } catch {
       throw new UnauthorizedException({
-        errorCode: ErrorCodes.AUTH_001,
-        errorMessage: '유효하지 않거나 만료된 토큰입니다.',
+        errorCode: ERROR_CODE_MAP.AUTH_002,
+        errorMessage: ERROR_MESSAGE_MAP.AUTH_002,
       });
     }
   }
@@ -226,5 +232,99 @@ export class AuthService {
   async sendPasswordResetEmail(email: string): Promise<void> {
     const token = this.generatePasswordResetToken(email);
     await this.emailService.sendPasswordResetEmail(email, token);
+  }
+
+  async handleOAuthLogin(
+    oauthUser: any,
+    state?: string,
+  ): Promise<{ user: User; redirectPath?: string }> {
+    if (state && typeof state === 'string') {
+      const { sub: userId } = this.jwt.verify(state);
+      await this.usersService.linkOAuthAccount(userId, oauthUser);
+      const user = await this.usersService.findUserById(userId);
+      return {
+        user,
+        redirectPath: '/mypage?message=계정이 성공적으로 연결되었습니다.',
+      };
+    }
+
+    const user = await this.usersService.findUserByOAuthId(
+      oauthUser.provider,
+      oauthUser.providerId,
+    );
+
+    if (user) {
+      // 이미 연동된 유저라면 바로 리턴
+      return { user };
+    }
+
+    const byEmail = await this.usersService.findUserByEmail(oauthUser.email);
+    if (byEmail && byEmail.verified) {
+      await this.usersService.linkOAuthAccount(byEmail.id, oauthUser);
+      return { user: byEmail };
+    }
+
+    const created = await this.usersService.createUserFromOAuth(oauthUser);
+    return { user: created };
+  }
+
+  async loginWithOAuth(
+    user: User,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const { accessToken, refreshToken } = this.generateJwtToken(user);
+
+    await this.usersService.setCurrentRefreshTokenHash(user.id, refreshToken);
+
+    return { accessToken, refreshToken };
+  }
+
+  setAuthCookies(
+    res: Response,
+    accessToken: string,
+    refreshToken: string,
+  ): void {
+    const isProd = process.env.NODE_ENV === 'production';
+    res
+      .cookie('Authentication', accessToken, {
+        httpOnly: true,
+        signed: true,
+        secure: isProd,
+        sameSite: 'lax',
+        maxAge: 1000 * 60 * 60, // 1시간
+      })
+      .cookie('Refresh', refreshToken, {
+        httpOnly: true,
+        signed: true,
+        secure: isProd,
+        sameSite: 'lax',
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7일
+      });
+  }
+
+  async refreshTokens(
+    oldToken: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    if (!oldToken) {
+      throw new UnauthorizedException({
+        errorCode: ERROR_CODE_MAP.AUTH_005,
+        errorMessage: ERROR_MESSAGE_MAP.AUTH_005,
+      });
+    }
+
+    const payload = this.refreshJwt.verify(oldToken);
+
+    await this.usersService.verifyRefreshToken(payload.sub, oldToken);
+
+    const { accessToken, refreshToken } = this.generateJwtToken({
+      id: payload.sub,
+      email: payload.email,
+    } as User);
+
+    await this.usersService.setCurrentRefreshTokenHash(
+      payload.sub,
+      refreshToken,
+    );
+
+    return { accessToken: accessToken, refreshToken: refreshToken };
   }
 }
