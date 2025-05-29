@@ -10,21 +10,13 @@ import { IngestJwtStrategy } from './ingest-jwt.strategy';
 import { IngestJwtAuthGuard } from './ingest-jwt-auth.guard';
 import { ingestJwtConfig } from '../../config/ingest-jwt.config';
 import { UsersModule } from '../../users/users.module';
+import { jwtProviders } from './jwt.provider';
 
 @Module({
   imports: [
     forwardRef(() => UsersModule),
     ConfigModule.forFeature(jwtConfig),
     ConfigModule.forFeature(ingestJwtConfig),
-
-    NestJwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: (cfg: ConfigType<typeof jwtConfig>) => ({
-        secret: cfg.secret,
-        signOptions: { expiresIn: cfg.expiration },
-      }),
-      inject: [jwtConfig.KEY],
-    }),
   ],
   providers: [
     JwtStrategy,
@@ -32,7 +24,13 @@ import { UsersModule } from '../../users/users.module';
     OptionalJwtAuthGuard,
     IngestJwtStrategy,
     IngestJwtAuthGuard,
+    ...jwtProviders,
   ],
-  exports: [JwtAuthGuard, OptionalJwtAuthGuard, IngestJwtAuthGuard],
+  exports: [
+    JwtAuthGuard,
+    OptionalJwtAuthGuard,
+    IngestJwtAuthGuard,
+    ...jwtProviders,
+  ],
 })
 export class JwtModule {}

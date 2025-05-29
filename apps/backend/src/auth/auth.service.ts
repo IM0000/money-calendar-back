@@ -27,8 +27,6 @@ export class AuthService {
   constructor(
     @Inject(frontendConfig.KEY)
     private readonly frontendConfiguration: ConfigType<typeof frontendConfig>,
-    @Inject(jwtConfig.KEY)
-    private readonly jwtConfiguration: ConfigType<typeof jwtConfig>,
     @Inject('JWT')
     private readonly jwt: JwtService,
     @Inject('PASSWORD_RESET_JWT')
@@ -162,14 +160,11 @@ export class AuthService {
     const statePayload = {
       type: 'access',
       oauthMethod: 'connect',
-      userId,
+      sub: userId,
       provider,
     };
 
-    const secret = this.jwtConfiguration.secret;
-
     const stateToken = this.jwt.sign(statePayload, {
-      secret,
       expiresIn: '5m',
     });
 
@@ -178,8 +173,7 @@ export class AuthService {
 
   verifyJwtToken(token: string): any {
     try {
-      const secret = this.jwtConfiguration.secret;
-      return this.jwt.verify(token, { secret });
+      return this.jwt.verify(token);
     } catch (error) {
       throw new UnauthorizedException({
         errorCode: ERROR_CODE_MAP.AUTH_002,
@@ -198,10 +192,8 @@ export class AuthService {
       type: 'passwordReset',
       email,
     };
-    const secret = this.jwtConfiguration.passwordResetSecret;
 
     return this.passwordResetJwt.sign(payload, {
-      secret,
       expiresIn: '1h',
     });
   }
@@ -213,8 +205,7 @@ export class AuthService {
    */
   verifyPasswordResetToken(token: string): { email: string } {
     try {
-      const secret = this.jwtConfiguration.secret;
-      return this.jwt.verify(token, { secret }) as {
+      return this.jwt.verify(token) as {
         email: string;
       };
     } catch {
@@ -242,9 +233,10 @@ export class AuthService {
       const { sub: userId } = this.jwt.verify(state);
       await this.usersService.linkOAuthAccount(userId, oauthUser);
       const user = await this.usersService.findUserById(userId);
+      const message = '계정이 성공적으로 연결되었습니다.';
       return {
         user,
-        redirectPath: '/mypage?message=계정이 성공적으로 연결되었습니다.',
+        redirectPath: `/mypage#message=${encodeURIComponent(message)}`,
       };
     }
 

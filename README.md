@@ -35,59 +35,6 @@ git clone https://github.com/your-username/backend-project.git
 cd backend-project
 ```
 
-**환경변수 설정**
-
-Backend 앱용 환경변수 (apps/backend/src/config/env/.development.env):
-
-```
-# 데이터베이스
-DATABASE_URL="postgresql://user:password@localhost:5433/mydb?schema=public"
-
-# 서버 설정
-SERVER_PORT=3000
-FRONTEND_URL=http://localhost:5173
-
-# JWT 설정
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRATION=3600s
-PASSWORD_RESET_JWT_SECRET=your_password_reset_secret
-
-# Google OAuth
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/oauth/google/callback
-
-# 이메일 설정
-EMAIL_SERVICE=Gmail
-EMAIL_AUTH_USER=your_email@gmail.com
-EMAIL_AUTH_PASSWORD=your_email_app_password
-EMAIL_BASE_URL=http://localhost:3000
-
-# Apple OAuth
-APPLE_CLIENT_ID=your_apple_client_id
-APPLE_TEAM_ID=your_apple_team_id
-APPLE_KEY_ID=your_apple_key_id
-APPLE_PRIVATE_KEY="your_private_key_content"
-APPLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/oauth/apple/callback
-
-# Kakao OAuth
-KAKAO_CLIENT_ID=your_kakao_client_id
-KAKAO_CALLBACK_URL=http://localhost:3000/api/v1/auth/oauth/kakao/callback
-
-# Discord OAuth
-DISCORD_CLIENT_ID=your_discord_client_id
-DISCORD_CLIENT_SECRET=your_discord_client_secret
-DISCORD_CALLBACK_URL=http://localhost:3000/api/v1/auth/oauth/discord/callback
-```
-
-Scraping 앱용 환경변수 (apps/scraping/src/env/.development.env):
-
-```
-# 데이터베이스
-DATABASE_URL="postgresql://user:password@localhost:5433/mydb?schema=public"
-SERVER_PORT=3001
-```
-
 **의존성 설치 & 마이그레이션**
 
 ```bash

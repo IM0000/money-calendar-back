@@ -83,7 +83,6 @@ export class AuthController {
     @Req() req: any,
     @Res() res: any,
   ) {
-    this.logger.log('callback query : ', query);
     const frontendURL = this.authService.getFrontendUrl();
     const oauthUser = req.user;
     this.logger.log(
@@ -92,7 +91,7 @@ export class AuthController {
 
     if (!oauthUser) {
       return res.redirect(
-        `${frontendURL}/auth/error?errorCode=${ERROR_CODE_MAP.AUTH_002}` +
+        `${frontendURL}/auth/error#errorCode=${ERROR_CODE_MAP.AUTH_002}` +
           `&message=${ERROR_MESSAGE_MAP.AUTH_002}`,
       );
     }
