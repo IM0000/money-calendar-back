@@ -5,4 +5,6 @@ export const jwtValidationSchema = {
   PASSWORD_RESET_JWT_SECRET: Joi.string().required(),
   JWT_EXPIRATION: Joi.string().default('3600s'),
   INGEST_JWT_SECRET: Joi.string().required(),
+  REFRESH_JWT_SECRET: Joi.string().required(),
+  REFRESH_JWT_EXPIRATION: Joi.string().default('7d'),
 };
