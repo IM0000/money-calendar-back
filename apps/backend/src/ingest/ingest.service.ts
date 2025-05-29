@@ -29,8 +29,8 @@ export class IngestService {
       case SourceName.Earnings:
         await this.prisma.$transaction(async (tx) => {
           await this.saveEarningsData(data as EarningsDto[], tx);
-          await this.updateEarningsPreviousValues(tx);
         });
+        await this.updateEarningsPreviousValues(this.prisma);
         break;
 
       case SourceName.Dividend:
@@ -132,13 +132,15 @@ export class IngestService {
     }
   }
 
-  private async updateEarningsPreviousValues(tx: Prisma.TransactionClient) {
-    const records = await tx.earnings.findMany({
+  private async updateEarningsPreviousValues(
+    client: PrismaService | Prisma.TransactionClient,
+  ) {
+    const records = await client.earnings.findMany({
       where: { previousEPS: '', previousRevenue: '' },
       orderBy: { releaseDate: 'asc' },
     });
     for (const record of records) {
-      const prev = await tx.earnings.findFirst({
+      const prev = await client.earnings.findFirst({
         where: {
           companyId: record.companyId,
           releaseDate: { lt: record.releaseDate },
@@ -146,7 +148,7 @@ export class IngestService {
         orderBy: { releaseDate: 'desc' },
       });
       if (prev) {
-        await tx.earnings.update({
+        await client.earnings.update({
           where: { id: record.id },
           data: {
             previousEPS: prev.actualEPS,
