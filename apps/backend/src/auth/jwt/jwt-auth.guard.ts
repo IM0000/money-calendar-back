@@ -16,8 +16,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   async canActivate(context: ExecutionContext) {
     const req = context.switchToHttp().getRequest();
     const token = req.signedCookies?.Authentication;
+    const refreshToken = req.signedCookies?.Refresh;
 
-    if (!token) {
+    if (!token && !refreshToken) {
       throw new UnauthorizedException({
         errorCode: ERROR_CODE_MAP.AUTH_003,
         errorMessage: ERROR_MESSAGE_MAP.AUTH_003,
