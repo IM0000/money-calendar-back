@@ -15,7 +15,6 @@ import { EmailModule } from '../email/email.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from './jwt/jwt.module';
-import { JwtProviderModule } from './jwt-provider/jwt-provider.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
@@ -24,7 +23,6 @@ import { UsersModule } from '../users/users.module';
     EmailModule,
     PrismaModule,
     JwtModule,
-    JwtProviderModule,
     PassportModule.register({}),
     ConfigModule.forFeature(googleConfig),
     ConfigModule.forFeature(appleConfig),
@@ -40,6 +38,6 @@ import { UsersModule } from '../users/users.module';
     KakaoStrategy,
     DiscordStrategy,
   ],
-  exports: [JwtModule, JwtProviderModule, PassportModule, AuthService],
+  exports: [JwtModule, PassportModule, AuthService],
 })
 export class AuthModule {}
