@@ -46,34 +46,32 @@ export class IngestService {
   }
 
   private async saveCompanyData(companies: CompanyDto[]) {
-    for (const data of companies) {
-      const existing = await this.prisma.company.findFirst({
-        where: { ticker: data.ticker, country: data.country },
-      });
-      if (existing) {
-        await this.prisma.company.update({
-          where: { id: existing.id },
-          data: {
-            name: data.name,
-            marketValue: data.marketValue,
-            updatedAt: new Date(),
+    const tasks = companies.map((data) =>
+      this.prisma.company.upsert({
+        where: {
+          ticker_country: {
+            ticker: data.ticker,
+            country: data.country,
           },
-        });
-      } else {
-        await this.prisma.company.create({ data });
-      }
-    }
+        },
+        create: {
+          ticker: data.ticker,
+          country: data.country,
+          name: data.name,
+          marketValue: data.marketValue,
+        },
+        update: {
+          name: data.name,
+          marketValue: data.marketValue,
+          updatedAt: new Date(),
+        },
+      }),
+    );
+    await Promise.all(tasks);
   }
 
   private async saveEconomicIndicatorData(indicators: EconomicIndicatorDto[]) {
-    for (const data of indicators) {
-      const existing = await this.prisma.economicIndicator.findFirst({
-        where: {
-          name: data.name,
-          country: data.country,
-          releaseDate: data.releaseDate,
-        },
-      });
+    const tasks = indicators.map((data) => {
       const payload = {
         country: data.country,
         releaseDate: data.releaseDate,
@@ -83,16 +81,19 @@ export class IngestService {
         forecast: data.forecast,
         previous: data.previous ?? '',
       };
-      console.log(payload);
-      if (existing) {
-        await this.prisma.economicIndicator.update({
-          where: { id: existing.id },
-          data: payload,
-        });
-      } else {
-        await this.prisma.economicIndicator.create({ data: payload });
-      }
-    }
+      return this.prisma.economicIndicator.upsert({
+        where: {
+          releaseDate_name_country: {
+            name: data.name,
+            country: data.country,
+            releaseDate: data.releaseDate,
+          },
+        },
+        create: payload,
+        update: payload,
+      });
+    });
+    await Promise.all(tasks);
   }
 
   private async saveEarningsData(
@@ -105,9 +106,6 @@ export class IngestService {
       });
       if (!company) continue;
 
-      const existing = await tx.earnings.findFirst({
-        where: { companyId: company.id, releaseDate: data.releaseDate },
-      });
       const payload = {
         country: data.country,
         releaseDate: data.releaseDate,
@@ -121,11 +119,16 @@ export class IngestService {
         company: { connect: { id: company.id } },
       };
 
-      if (existing) {
-        await tx.earnings.update({ where: { id: existing.id }, data: payload });
-      } else {
-        await tx.earnings.create({ data: payload });
-      }
+      await tx.earnings.upsert({
+        where: {
+          releaseDate_companyId: {
+            companyId: company.id,
+            releaseDate: data.releaseDate,
+          },
+        },
+        create: payload,
+        update: payload,
+      });
     }
   }
 
@@ -164,9 +167,6 @@ export class IngestService {
       });
       if (!company) continue;
 
-      const existing = await tx.dividend.findFirst({
-        where: { companyId: company.id, exDividendDate: data.exDividendDate },
-      });
       const payload = {
         country: data.country,
         exDividendDate: data.exDividendDate,
@@ -176,11 +176,17 @@ export class IngestService {
         dividendYield: data.dividendYield,
         company: { connect: { id: company.id } },
       };
-      if (existing) {
-        await tx.dividend.update({ where: { id: existing.id }, data: payload });
-      } else {
-        await tx.dividend.create({ data: payload });
-      }
+
+      await tx.dividend.upsert({
+        where: {
+          exDividendDate_companyId: {
+            companyId: company.id,
+            exDividendDate: data.exDividendDate,
+          },
+        },
+        create: payload,
+        update: payload,
+      });
     }
   }
 
