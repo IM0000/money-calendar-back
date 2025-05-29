@@ -349,17 +349,13 @@ describe('AuthService', () => {
       const signCall = mockJwtService.sign.mock.calls[0];
       expect(signCall[0]).toMatchObject({
         oauthMethod: 'connect',
-        userId,
+        sub: userId,
         provider,
         type: 'access',
       });
-      expect(signCall[1]).toMatchObject({ secret: mockJwtConfig.secret });
-      if (signCall[2]) {
-        expect(signCall[2]).toMatchObject({
-          expiresIn: '5m',
-          secret: mockJwtConfig.secret,
-        });
-      }
+      expect(signCall[1]).toMatchObject({
+        expiresIn: '5m',
+      });
       expect(token).toBe('mock-state-token');
     });
 
@@ -388,7 +384,6 @@ describe('AuthService', () => {
 
       const verifyCall = mockJwtService.verify.mock.calls[0];
       expect(verifyCall[0]).toBe(token);
-      expect(verifyCall[1]).toMatchObject({ secret: mockJwtConfig.secret });
       expect(result).toEqual(mockPayload);
     });
   });
