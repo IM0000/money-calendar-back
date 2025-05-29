@@ -7,7 +7,7 @@ import { ConfigType } from '@nestjs/config';
 @Injectable()
 export class TransportService {
   private readonly BATCH_SIZE = 400;
-  private readonly TIMEOUT_MS = 10000;
+  private readonly TIMEOUT_MS = 60000;
   constructor(
     @Inject(urlConfig.KEY)
     private readonly urlCfg: ConfigType<typeof urlConfig>,
