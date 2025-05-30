@@ -13,7 +13,7 @@ import { PersistenceModule } from './persistence/persistence.module';
 import { TransportModule } from './transport/transport.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { ingestJwtConfig } from './config/ingest-jwt.config';
+import { jwtConfig } from './config/jwt.config';
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 console.log('NODE_ENV:', NODE_ENV);
@@ -30,7 +30,7 @@ console.log('NODE_ENV:', NODE_ENV);
               `.${process.env.NODE_ENV}.env`,
             )
           : undefined,
-      load: [ingestJwtConfig],
+      load: [jwtConfig],
       validationSchema,
     }),
     ScrapingModule,

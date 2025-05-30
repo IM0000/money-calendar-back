@@ -2,19 +2,19 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ConfigModule, ConfigType } from '@nestjs/config';
-import { ingestJwtConfig } from '../config/ingest-jwt.config';
+import { jwtConfig } from '../config/jwt.config';
 import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
-    ConfigModule.forFeature(ingestJwtConfig),
+    ConfigModule.forFeature(jwtConfig),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (cfg: ConfigType<typeof ingestJwtConfig>) => ({
+      useFactory: (cfg: ConfigType<typeof jwtConfig>) => ({
         secret: cfg.secret,
         signOptions: { expiresIn: cfg.expiration },
       }),
-      inject: [ingestJwtConfig.KEY],
+      inject: [jwtConfig.KEY],
     }),
   ],
   providers: [AuthService],
