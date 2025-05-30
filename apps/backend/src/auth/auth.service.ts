@@ -27,12 +27,9 @@ export class AuthService {
   constructor(
     @Inject(frontendConfig.KEY)
     private readonly frontendConfiguration: ConfigType<typeof frontendConfig>,
-    @Inject('JWT')
+    @Inject(jwtConfig.KEY)
+    private readonly jwtCfg: ConfigType<typeof jwtConfig>,
     private readonly jwt: JwtService,
-    @Inject('PASSWORD_RESET_JWT')
-    private readonly passwordResetJwt: JwtService,
-    @Inject('REFRESH_JWT')
-    private readonly refreshJwt: JwtService,
     private readonly usersService: UsersService,
     private readonly emailService: EmailService,
   ) {}
@@ -118,7 +115,10 @@ export class AuthService {
     };
 
     const accessToken = this.jwt.sign(accessPayload);
-    const refreshToken = this.refreshJwt.sign(refreshPayload);
+    const refreshToken = this.jwt.sign(refreshPayload, {
+      secret: this.jwtCfg.refreshSecret,
+      expiresIn: '7d',
+    });
 
     return { accessToken, refreshToken };
   }
@@ -193,7 +193,8 @@ export class AuthService {
       email,
     };
 
-    return this.passwordResetJwt.sign(payload, {
+    return this.jwt.sign(payload, {
+      secret: this.jwtCfg.passwordResetSecret,
       expiresIn: '1h',
     });
   }
@@ -203,11 +204,21 @@ export class AuthService {
    * @param token JWT 토큰
    * @returns 페이로드에서 추출한 이메일
    */
-  verifyPasswordResetToken(token: string): { email: string } {
+  verifyPasswordResetToken(token: string): { type: string; email: string } {
     try {
-      return this.jwt.verify(token) as {
+      const payload = this.jwt.verify(token) as {
+        type: string;
         email: string;
       };
+
+      if (payload.type !== 'passwordReset') {
+        throw new UnauthorizedException({
+          errorCode: ERROR_CODE_MAP.AUTH_002,
+          errorMessage: ERROR_MESSAGE_MAP.AUTH_002,
+        });
+      }
+
+      return payload;
     } catch {
       throw new UnauthorizedException({
         errorCode: ERROR_CODE_MAP.AUTH_002,
@@ -303,7 +314,17 @@ export class AuthService {
       });
     }
 
-    const payload = this.refreshJwt.verify(oldToken);
+    let payload;
+    try {
+      payload = this.jwt.verify(oldToken, {
+        secret: this.jwtCfg.refreshSecret,
+      }) as { type: string; sub: number; email: string };
+    } catch (error) {
+      throw new UnauthorizedException({
+        errorCode: ERROR_CODE_MAP.AUTH_002,
+        errorMessage: ERROR_MESSAGE_MAP.AUTH_002,
+      });
+    }
 
     await this.usersService.verifyRefreshToken(payload.sub, oldToken);
 

@@ -29,7 +29,6 @@ import { awsConfig } from './config/aws.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { IngestModule } from './ingest/ingest.module';
 import * as cookieParser from 'cookie-parser';
-import { ingestJwtConfig } from './config/ingest-jwt.config';
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 console.log('NODE_ENV:', NODE_ENV);
@@ -53,7 +52,6 @@ console.log('NODE_ENV:', NODE_ENV);
         frontendConfig,
         emailConfig,
         jwtConfig,
-        ingestJwtConfig,
         googleConfig,
         kakaoConfig,
         appleConfig,

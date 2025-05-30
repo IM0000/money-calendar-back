@@ -6,7 +6,7 @@ import { GoogleStrategy } from './oauth/google.strategy';
 import { KakaoStrategy } from './oauth/kakao.strategy';
 import { DiscordStrategy } from './oauth/discord.strategy';
 import { DynamicAuthGuard } from './oauth/dynamic-auth.guard';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigType } from '@nestjs/config';
 import { googleConfig } from '../config/google.config';
 import { appleConfig } from '../config/apple.config';
 import { kakaoConfig } from '../config/kakao.config';

@@ -1,19 +1,23 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigType } from '@nestjs/config';
-import { ingestJwtConfig } from '../../config/ingest-jwt.config';
+import {
+  ERROR_CODE_MAP,
+  ERROR_MESSAGE_MAP,
+} from '../../common/constants/error.constant';
+import { jwtConfig } from '../../config/jwt.config';
 
 @Injectable()
 export class IngestJwtStrategy extends PassportStrategy(Strategy, 'ingestJwt') {
   constructor(
-    @Inject(ingestJwtConfig.KEY)
-    private ingestJwtConfiguration: ConfigType<typeof ingestJwtConfig>,
+    @Inject(jwtConfig.KEY)
+    private jwtConfiguration: ConfigType<typeof jwtConfig>,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), // Authorization 헤더에서 토큰 추출
       ignoreExpiration: false, // 만료된 토큰을 무시하지 않음
-      secretOrKey: ingestJwtConfiguration.secret, // 비밀 키 설정
+      secretOrKey: jwtConfiguration.secret, // 비밀 키 설정
     });
   }
 
@@ -23,6 +27,12 @@ export class IngestJwtStrategy extends PassportStrategy(Strategy, 'ingestJwt') {
    * @returns 사용자 정보
    */
   async validate(payload: any) {
-    return payload; // Request에 사용자 정보 저장
+    if (payload.type !== 'ingest') {
+      throw new UnauthorizedException({
+        errorCode: ERROR_CODE_MAP.AUTH_002,
+        errorMessage: ERROR_MESSAGE_MAP.AUTH_002,
+      });
+    }
+    return payload;
   }
 }

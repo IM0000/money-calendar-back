@@ -17,6 +17,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     private jwtConfiguration: ConfigType<typeof jwtConfig>,
     private readonly usersService: UsersService,
   ) {
+    console.log('JwtStrategy', jwtConfiguration.expiration);
+    console.log('JwtStrategy process', process.env.JWT_EXPIRATION);
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         ExtractJwt.fromAuthHeaderAsBearerToken(),
