@@ -226,6 +226,7 @@ export class ScrapingService {
                 .trim();
               importance = ImportanceLevelMap[importance];
               const eventName = $(element).find('.event a').text().trim();
+              const baseName = eventName.replace(/\s*\([^)]+\)\s*$/, ''); // 마지막 "(5월)" 패턴 제거
 
               const sanitizeText = (text) =>
                 text.trim() === '&nbsp;' ? '' : text.trim();
@@ -243,6 +244,7 @@ export class ScrapingService {
                 country,
                 releaseDate: dateObj.getTime(),
                 name: eventName,
+                baseName,
                 importance,
                 actual,
                 forecast,
