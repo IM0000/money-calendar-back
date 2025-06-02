@@ -1,27 +1,28 @@
-import { ContentType, NotificationMethod } from '@prisma/client';
+import { ContentType } from '@prisma/client';
+
+// 새로운 스키마에 맞게 enum 정의
+export enum NotificationChannel {
+  EMAIL = 'EMAIL',
+  SLACK = 'SLACK',
+}
+
+export enum NotificationStatus {
+  PENDING = 'PENDING',
+  SENT = 'SENT',
+  FAILED = 'FAILED',
+}
+
 import {
-  IsNumber,
-  IsEnum,
-  IsString,
-  IsOptional,
   IsBoolean,
   IsEmail,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  ValidateIf,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-
-export class CreateNotificationDto {
-  @ApiProperty({ description: '알림 콘텐츠 타입', enum: ContentType })
-  @IsEnum(ContentType)
-  contentType: ContentType;
-
-  @ApiProperty({ description: '콘텐츠 ID' })
-  @IsNumber()
-  contentId: number;
-
-  @ApiProperty({ description: '사용자 ID' })
-  @IsNumber()
-  userId: number;
-}
 
 export class UpdateUserNotificationSettingsDto {
   @ApiProperty({ description: '이메일 알림 활성화 여부', required: false })
@@ -29,19 +30,26 @@ export class UpdateUserNotificationSettingsDto {
   @IsOptional()
   emailEnabled?: boolean;
 
-  @ApiProperty({ description: '푸시 알림 활성화 여부', required: false })
+  @ApiProperty({ description: 'Slack 알림 활성화 여부', required: false })
   @IsBoolean()
   @IsOptional()
-  pushEnabled?: boolean;
+  slackEnabled?: boolean;
 
   @ApiProperty({
-    description: '선호하는 알림 방식',
+    description: 'Slack Webhook URL (slackEnabled가 true일 때 필수)',
     required: false,
-    example: 'EMAIL',
   })
-  @IsString()
+  @IsUrl()
   @IsOptional()
-  preferredMethod?: string;
+  webhookUrl?: string;
+
+  @ValidateIf((o) => o.slackEnabled === true && !o.webhookUrl)
+  @IsNotEmpty({
+    message: 'Slack 알림을 활성화할 때는 webhookUrl이 필요합니다.',
+  })
+  validateWebhookUrl() {
+    return this.webhookUrl;
+  }
 }
 
 export class SendNotificationEmailDto {

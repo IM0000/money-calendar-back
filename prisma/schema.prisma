@@ -19,10 +19,12 @@ model User {
   favoriteEarnings       FavoriteEarnings[]
   favoriteDividends      FavoriteDividends[]
   favoriteIndicators     FavoriteIndicator[]
-  notifications          Notification[]
   notificationSettings   UserNotificationSettings?
-  indicatorNotifications IndicatorNotification[]
-  earningsNotifications  EarningsNotification[]
+  notifications          Notification[]
+
+  subscriptionEarnings   SubscriptionEarnings[]
+  subscriptionIndicator  SubscriptionIndicator[]
+
   createdAt              DateTime                            @default(now())
   updatedAt              DateTime                            @updatedAt
 }
@@ -31,20 +33,20 @@ model UserNotificationSettings {
   id              Int      @id @default(autoincrement())
   userId          Int      @unique
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  emailEnabled    Boolean  @default(true)
-  pushEnabled     Boolean  @default(true)
-  preferredMethod String   @default("BOTH") // "EMAIL", "PUSH", "BOTH"
+  emailEnabled    Boolean  @default(false)
+  slackEnabled    Boolean  @default(false)
+  slackWebhookUrl String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
 
 model OAuthAccount {
   id           Int       @id @default(autoincrement())
-  provider     String // 'google', 'kakao', 'apple', 'discord', 등
-  providerId   String // OAuth 제공자가 제공하는 고유 ID
+  provider     String    // 'google', 'kakao', 'apple', 'discord', 등
+  providerId   String    // OAuth 제공자가 제공하는 고유 ID
   oauthEmail   String?
-  accessToken  String? // OAuth 관련 access token (OauthInfo 필드)
-  refreshToken String? // refresh token
+  accessToken  String?   // OAuth 관련 access token (OauthInfo 필드)
+  refreshToken String?   // refresh token
   tokenExpiry  DateTime? // token 만료일
   userId       Int
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -77,6 +79,7 @@ model Company {
   marketValue String     @default("")
   earnings    Earnings[]
   dividends   Dividend[]
+  subscriptionEarnings SubscriptionEarnings[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -103,7 +106,8 @@ model Earnings {
   companyId       Int
   company         Company                            @relation(fields: [companyId], references: [id])
   favorites       FavoriteEarnings[]
-  notifications   EarningsNotification[]
+  subscriptionEarnings SubscriptionEarnings[]
+  // No direct relation to Notification - will be accessed through contentType/contentId
   createdAt       DateTime                           @default(now())
   updatedAt       DateTime                           @updatedAt
 
@@ -132,14 +136,16 @@ model EconomicIndicator {
   country       String // 국가
   releaseDate   BigInt // 발표 날짜 (밀리초 단위)
   name          String // 지표 이름
+  baseName      String // 날짜제거된 지표 이름
   importance    Int // 중요도 (예: 1~5 스케일)
   actual        String // 실제 값
   forecast      String // 예측 값
   previous      String // 이전 값
+  favorites     FavoriteIndicator[]
+  subscriptionIndicator SubscriptionIndicator[]
+
   createdAt     DateTime                            @default(now())
   updatedAt     DateTime                            @updatedAt
-  favorites     FavoriteIndicator[]
-  notifications IndicatorNotification[]
 
   @@unique([releaseDate, name, country])
 }
@@ -170,11 +176,6 @@ model FavoriteIndicator {
 
   @@id([userId, indicatorId])
 }
-enum NotificationMethod {
-  EMAIL
-  PUSH
-  BOTH
-}
 
 enum ContentType {
   EARNINGS
@@ -182,41 +183,79 @@ enum ContentType {
   ECONOMIC_INDICATOR
 }
 
-model Notification {
-  id           Int         @id @default(autoincrement())
-  userId       Int         // 알림을 받을 사용자의 id
-  contentId    Int         // 알림 대상 콘텐츠의 id (예: Earnings, Dividend, EconomicIndicator의 id)
-  contentType  ContentType // 콘텐츠의 유형을 나타내는 필드
-  read         Boolean     @default(false)
-  method       NotificationMethod?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+model SubscriptionEarnings {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  companyId     Int?     // Company 전체 구독을 위해 추가
+  earningsId    Int?     // 개별 실적 ID 구독용
+  subscribedAt  DateTime @default(now())
+  isActive      Boolean  @default(true)
 
-  @@index([userId, read, contentType])
-  @@index([contentType, contentId])
-}
-// 알림 관리용 모델 추가
-model IndicatorNotification {
-  id          Int               @id @default(autoincrement())
-  userId      Int
-  indicatorId Int
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  indicator   EconomicIndicator @relation(fields: [indicatorId], references: [id])
-
-  @@unique([userId, indicatorId])
-}
-
-model EarningsNotification {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  earningsId Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  earnings   Earnings @relation(fields: [earningsId], references: [id])
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company       Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  earnings      Earnings? @relation(fields: [earningsId], references: [id], onDelete: Cascade)
 
   @@unique([userId, earningsId])
+  @@unique([userId, companyId])
+  @@index([earningsId, isActive])
+  @@index([companyId, isActive])
+}
+
+model SubscriptionIndicator {
+  id            Int                  @id @default(autoincrement())
+  userId        Int
+  baseName      String?              // ex: 'CPI', 'PPI' 등
+  country       String?              // ex: 'US', null이면 국가 무관
+  indicatorId   Int?                 // 개별 지표 ID 구독용
+  subscribedAt  DateTime             @default(now())
+  isActive      Boolean              @default(true)
+
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  indicator     EconomicIndicator?   @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, indicatorId])
+  @@unique([userId, baseName, country])
+  @@index([indicatorId, isActive])
+  @@index([baseName, country, isActive])
+}
+
+enum NotificationChannel {
+  EMAIL
+  SLACK
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Notification {
+  id            Int       @id @default(autoincrement())
+  userId        Int
+  contentType   ContentType
+  contentId     Int
+  isRead        Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationDelivery NotificationDelivery[]
+  
+  @@index([userId, isRead])
+  @@index([contentType, contentId])
+}
+
+model NotificationDelivery {
+  id                Int       @id @default(autoincrement())
+  notificationId    Int
+  channelKey        NotificationChannel
+  status            NotificationStatus
+  errorMessage      String?
+  deliveredAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  notification      Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId])
+  @@index([status])
 }

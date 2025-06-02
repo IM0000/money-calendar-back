@@ -183,37 +183,6 @@ export class NotificationController {
     );
   }
 
-  // 배당 알림 엔드포인트
-  @ApiOperation({ summary: '배당 알림 추가' })
-  @ApiParam({ name: 'id', description: '배당 ID' })
-  @ApiResponseWrapper(Object)
-  @Post('dividends/:id')
-  async addDividendNotification(
-    @Req() req: RequestWithUser,
-    @Param('id') id: string,
-  ) {
-    const userId = req.user.id;
-    return await this.notificationService.addDividendNotification(
-      userId,
-      parseInt(id),
-    );
-  }
-
-  @ApiOperation({ summary: '배당 알림 제거' })
-  @ApiParam({ name: 'id', description: '배당 ID' })
-  @ApiResponseWrapper(Object)
-  @Delete('dividends/:id')
-  async removeDividendNotification(
-    @Req() req: RequestWithUser,
-    @Param('id') id: string,
-  ) {
-    const userId = req.user.id;
-    return await this.notificationService.removeDividendNotification(
-      userId,
-      parseInt(id),
-    );
-  }
-
   // 경제지표 알림 엔드포인트
   @ApiOperation({ summary: '경제지표 알림 추가' })
   @ApiParam({ name: 'id', description: '경제지표 ID' })
