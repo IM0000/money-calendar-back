@@ -38,17 +38,13 @@ export class UpdateUserNotificationSettingsDto {
     description: 'Slack Webhook URL (slackEnabled가 true일 때 필수)',
     required: false,
   })
-  @IsUrl()
-  @IsOptional()
-  slackWebhookUrl?: string;
-
-  @ValidateIf((o) => o.slackEnabled === true && !o.slackWebhookUrl)
+  @ValidateIf((o) => o.slackEnabled === true)
   @IsNotEmpty({
     message: 'Slack 알림을 활성화할 때는 slackWebhookUrl이 필요합니다.',
   })
-  validateSlackWebhookUrl() {
-    return this.slackWebhookUrl;
-  }
+  @IsUrl()
+  @IsOptional()
+  slackWebhookUrl?: string;
 }
 
 export class SendNotificationEmailDto {

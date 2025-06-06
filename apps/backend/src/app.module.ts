@@ -2,7 +2,7 @@ import { validationSchema } from './config/validation/main.validation';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UsersModule } from './users/users.module';
+import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { EmailModule } from './email/email.module';
 import { ConfigModule } from '@nestjs/config';
@@ -18,9 +18,9 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ResponseInterceptor } from './common/interceptor/response.interceptor';
 import { frontendConfig } from './config/frontend.config';
 import { CalendarModule } from './calendar/calendar.module';
-import { FavoritesModule } from './favorites/favorites.module';
+import { FavoriteModule } from './favorite/favorite.module';
 import { SearchModule } from './search/search.module';
-import { CompaniesModule } from './companies/companies.module';
+import { CompanyModule } from './company/company.module';
 import { NotificationModule } from './notification/notification.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { HealthModule } from './health/health.module';
@@ -59,14 +59,14 @@ console.log('NODE_ENV:', NODE_ENV);
       ],
       validationSchema,
     }),
-    UsersModule,
+    UserModule,
     AuthModule,
     EmailModule,
     CalendarModule,
-    FavoritesModule,
+    FavoriteModule,
     NotificationModule,
     SearchModule,
-    CompaniesModule,
+    CompanyModule,
     HealthModule,
     TerminusModule,
     HealthModule,

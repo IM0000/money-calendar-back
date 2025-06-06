@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service';
+import { UserService } from '../user/user.service';
 import { frontendConfig } from '../config/frontend.config';
 import { RegisterDto, UserDto } from './dto/users.dto';
 import { VerifyDto, LoginDto, OAuthConnectionDto } from './dto/auth.dto';
@@ -11,7 +11,7 @@ import { OAuthProviderEnum } from './enum/oauth-provider.enum';
 describe('AuthController', () => {
   let controller: AuthController;
   let authService: AuthService;
-  let usersService: UsersService;
+  let usersService: UserService;
 
   const mockAuthService = {
     loginWithEmail: jest.fn(),
@@ -49,7 +49,7 @@ describe('AuthController', () => {
           useValue: mockAuthService,
         },
         {
-          provide: UsersService,
+          provide: UserService,
           useValue: mockUsersService,
         },
         {
@@ -72,7 +72,7 @@ describe('AuthController', () => {
 
     controller = module.get<AuthController>(AuthController);
     authService = module.get<AuthService>(AuthService);
-    usersService = module.get<UsersService>(UsersService);
+    usersService = module.get<UserService>(UserService);
 
     jest.clearAllMocks();
   });

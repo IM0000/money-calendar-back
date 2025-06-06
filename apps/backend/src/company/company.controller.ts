@@ -7,7 +7,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { CompaniesService } from './companies.service';
+import { CompanyService } from './company.service';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import {
   ApiTags,
@@ -22,8 +22,8 @@ import { ApiResponseWrapper } from '../common/decorators/api-response.decorator'
 @ApiBearerAuth('JWT-auth')
 @Controller('api/v1/companies')
 @UseGuards(JwtAuthGuard)
-export class CompaniesController {
-  constructor(private readonly companiesService: CompaniesService) {}
+export class CompanyController {
+  constructor(private readonly companiesService: CompanyService) {}
 
   @ApiOperation({ summary: '회사 실적 정보 조회' })
   @ApiParam({ name: 'id', description: '회사 ID' })

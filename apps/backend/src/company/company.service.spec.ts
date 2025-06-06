@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CompaniesService } from './companies.service';
+import { CompanyService } from './company.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ContentType } from '@prisma/client';
 
-describe('CompaniesService', () => {
-  let service: CompaniesService;
+describe('CompanyService', () => {
+  let service: CompanyService;
   let prismaService: PrismaService;
 
   // PrismaService 목킹
@@ -37,7 +37,7 @@ describe('CompaniesService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        CompaniesService,
+        CompanyService,
         {
           provide: PrismaService,
           useValue: mockPrismaService,
@@ -45,7 +45,7 @@ describe('CompaniesService', () => {
       ],
     }).compile();
 
-    service = module.get<CompaniesService>(CompaniesService);
+    service = module.get<CompanyService>(CompanyService);
     prismaService = module.get<PrismaService>(PrismaService);
 
     // 각 테스트 전에 mock 함수들 초기화

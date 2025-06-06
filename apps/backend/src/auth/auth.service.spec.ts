@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service';
+import { UserService } from '../user/user.service';
 import { jwtConfig } from '../config/jwt.config';
 import {
   ForbiddenException,
@@ -53,7 +53,7 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         {
-          provide: UsersService,
+          provide: UserService,
           useValue: mockUsersService,
         },
         {

@@ -13,7 +13,7 @@ import {
   Patch,
   Logger,
 } from '@nestjs/common';
-import { UsersService } from './users.service';
+import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import {
   UpdateProfileDto,
@@ -38,10 +38,10 @@ interface RequestWithUser extends Request {
 
 @ApiTags('유저')
 @Controller('api/v1/users')
-export class UsersController {
-  private readonly logger = new Logger(UsersController.name);
+export class UserController {
+  private readonly logger = new Logger(UserController.name);
   constructor(
-    private readonly usersService: UsersService,
+    private readonly usersService: UserService,
     private readonly notificationService: NotificationService,
   ) {}
 

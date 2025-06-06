@@ -19,7 +19,7 @@ import {
 } from '../common/constants/error.constant';
 
 @Injectable()
-export class UsersService {
+export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,

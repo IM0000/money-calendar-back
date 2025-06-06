@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { FavoritesController } from './favorites.controller';
-import { FavoritesService } from './favorites.service';
+import { FavoriteController } from './favorite.controller';
+import { FavoriteService } from './favorite.service';
 import { Request } from 'express';
 
 // RequestWithUser 인터페이스 정의
@@ -11,9 +11,9 @@ interface RequestWithUser extends Request {
   };
 }
 
-describe('FavoritesController', () => {
-  let controller: FavoritesController;
-  let favoritesService: FavoritesService;
+describe('FavoriteController', () => {
+  let controller: FavoriteController;
+  let favoritesService: FavoriteService;
 
   // FavoritesService 모킹
   const mockFavoritesService = {
@@ -29,17 +29,17 @@ describe('FavoritesController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [FavoritesController],
+      controllers: [FavoriteController],
       providers: [
         {
-          provide: FavoritesService,
+          provide: FavoriteService,
           useValue: mockFavoritesService,
         },
       ],
     }).compile();
 
-    controller = module.get<FavoritesController>(FavoritesController);
-    favoritesService = module.get<FavoritesService>(FavoritesService);
+    controller = module.get<FavoriteController>(FavoriteController);
+    favoritesService = module.get<FavoriteService>(FavoriteService);
 
     // 각 테스트 전에 모든 모의 함수 초기화
     jest.clearAllMocks();

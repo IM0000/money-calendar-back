@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import { Request } from 'express';
-import { FavoritesService } from './favorites.service';
+import { FavoriteService } from './favorite.service';
 import {
   ApiTags,
   ApiOperation,
@@ -32,8 +32,8 @@ interface RequestWithUser extends Request {
 @ApiBearerAuth('JWT-auth')
 @Controller('api/v1/favorites')
 @UseGuards(JwtAuthGuard)
-export class FavoritesController {
-  constructor(private readonly favoritesService: FavoritesService) {}
+export class FavoriteController {
+  constructor(private readonly favoritesService: FavoriteService) {}
 
   @ApiOperation({ summary: '모든 즐겨찾기 항목 조회' })
   @ApiResponseWrapper(Object, true)

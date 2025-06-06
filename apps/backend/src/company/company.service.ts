@@ -1,12 +1,12 @@
 import {
   convertDividendBigInt,
   convertEarningsBigInt,
-} from './../utils/convert-bigint';
+} from '../utils/convert-bigint';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
-export class CompaniesService {
+export class CompanyService {
   constructor(private prisma: PrismaService) {}
 
   async getCompanyEarnings(

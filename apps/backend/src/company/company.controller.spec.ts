@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CompaniesController } from './companies.controller';
-import { CompaniesService } from './companies.service';
+import { CompanyController } from './company.controller';
+import { CompanyService } from './company.service';
 
 describe('CompaniesController', () => {
-  let controller: CompaniesController;
-  let companiesService: CompaniesService;
+  let controller: CompanyController;
+  let companiesService: CompanyService;
 
   // CompaniesService 모킹
   const mockCompaniesService = {
@@ -31,17 +31,17 @@ describe('CompaniesController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [CompaniesController],
+      controllers: [CompanyController],
       providers: [
         {
-          provide: CompaniesService,
+          provide: CompanyService,
           useValue: mockCompaniesService,
         },
       ],
     }).compile();
 
-    controller = module.get<CompaniesController>(CompaniesController);
-    companiesService = module.get<CompaniesService>(CompaniesService);
+    controller = module.get<CompanyController>(CompanyController);
+    companiesService = module.get<CompanyService>(CompanyService);
 
     // 각 테스트 전에 mock 함수들 초기화
     jest.clearAllMocks();

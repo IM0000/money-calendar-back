@@ -14,7 +14,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service';
+import { UserService } from '../user/user.service';
 import { RegisterDto } from './dto/users.dto';
 import { OAuthConnectionDto, VerifyDto } from './dto/auth.dto';
 import { LoginDto } from './dto/auth.dto';
@@ -43,7 +43,7 @@ export class AuthController {
   private readonly logger = new Logger(AuthController.name);
   constructor(
     private readonly authService: AuthService,
-    private readonly usersService: UsersService,
+    private readonly usersService: UserService,
   ) {}
 
   /**

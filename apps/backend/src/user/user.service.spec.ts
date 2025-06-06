@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersService } from './users.service';
+import { UserService } from './user.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import {
@@ -11,8 +11,8 @@ import * as bcrypt from 'bcryptjs';
 
 jest.mock('bcryptjs');
 
-describe('UsersService', () => {
-  let service: UsersService;
+describe('UserService', () => {
+  let service: UserService;
   let prismaService: PrismaService;
   let emailService: EmailService;
 
@@ -50,7 +50,7 @@ describe('UsersService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        UsersService,
+        UserService,
         {
           provide: PrismaService,
           useValue: mockPrismaService,
@@ -62,7 +62,7 @@ describe('UsersService', () => {
       ],
     }).compile();
 
-    service = module.get<UsersService>(UsersService);
+    service = module.get<UserService>(UserService);
     prismaService = module.get<PrismaService>(PrismaService);
     emailService = module.get<EmailService>(EmailService);
 

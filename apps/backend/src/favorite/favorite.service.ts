@@ -11,7 +11,7 @@ import {
 } from '../utils/convert-bigint';
 
 @Injectable()
-export class FavoritesService {
+export class FavoriteService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getAllFavorites(userId: number) {

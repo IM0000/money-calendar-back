@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { FavoritesService } from './favorites.service';
+import { FavoriteService } from './favorite.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
-describe('FavoritesService', () => {
-  let service: FavoritesService;
+describe('FavoriteService', () => {
+  let service: FavoriteService;
   let prismaService: PrismaService;
 
   // PrismaService 목킹
@@ -50,7 +50,7 @@ describe('FavoritesService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        FavoritesService,
+        FavoriteService,
         {
           provide: PrismaService,
           useValue: mockPrismaService,
@@ -58,7 +58,7 @@ describe('FavoritesService', () => {
       ],
     }).compile();
 
-    service = module.get<FavoritesService>(FavoritesService);
+    service = module.get<FavoriteService>(FavoriteService);
     prismaService = module.get<PrismaService>(PrismaService);
 
     // 각 테스트 전에 모든 모의 함수 초기화
