@@ -33,7 +33,7 @@ export class NotificationListener {
     before: T,
     after: T,
   ) {
-    const subs = await this.notificationService.findContentSubscriptions(
+    const subs = await this.notificationService.getContentSubscribers(
       type,
       contentId,
     );

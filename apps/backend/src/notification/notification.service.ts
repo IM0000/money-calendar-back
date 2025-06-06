@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import {
   ForbiddenException,
   Injectable,
@@ -32,7 +33,7 @@ export class NotificationService {
   /**
    * 구독 테이블에서 해당 콘텐츠 구독자를 조회
    */
-  async findContentSubscriptions(type: ContentType, contentId: number) {
+  async getContentSubscribers(type: ContentType, contentId: number) {
     switch (type) {
       case ContentType.ECONOMIC_INDICATOR:
         return this.prisma.subscriptionIndicator.findMany({
@@ -217,8 +218,8 @@ export class NotificationService {
       }
     }
 
-    // 5. 슬랙 전송
-    if (settings.slackEnabled && settings.slackWebhookUrl) {
+    // 5. 알림 전송
+    if (settings && settings.emailEnabled) {
       try {
         let title = '';
         let content = '';
@@ -297,20 +298,22 @@ export class NotificationService {
     userId: number,
     dto: UpdateUserNotificationSettingsDto,
   ) {
-    const { emailEnabled, slackEnabled, webhookUrl } = dto;
+    const { emailEnabled, slackEnabled, slackWebhookUrl } = dto;
 
     return this.prisma.userNotificationSettings.upsert({
       where: { userId },
       update: {
         ...(emailEnabled !== undefined && { emailEnabled }),
         ...(slackEnabled !== undefined && { slackEnabled }),
-        ...(webhookUrl !== undefined && { slackWebhookUrl: webhookUrl }),
+        ...(slackWebhookUrl !== undefined && {
+          slackWebhookUrl,
+        }),
       },
       create: {
         userId,
         emailEnabled: emailEnabled ?? false,
         slackEnabled: slackEnabled ?? false,
-        slackWebhookUrl: webhookUrl,
+        slackWebhookUrl,
       },
     });
   }
@@ -394,7 +397,7 @@ export class NotificationService {
   /**
    * 특정 국가의 특정 경제지표 유형 모두 구독
    */
-  async subscribeIndicatorType(
+  async subscribeBaseNameIndicator(
     userId: number,
     baseName: string,
     country: string,
@@ -439,26 +442,21 @@ export class NotificationService {
   async unsubscribeContent(
     userId: number,
     type: ContentType,
-    contentId: number,
+    subscriptionId: number,
   ) {
+    console.log(userId, type, subscriptionId);
     switch (type) {
       case ContentType.ECONOMIC_INDICATOR:
         return this.prisma.subscriptionIndicator.update({
           where: {
-            userId_indicatorId: {
-              userId,
-              indicatorId: contentId,
-            },
+            id: subscriptionId,
           },
           data: { isActive: false },
         });
       case ContentType.EARNINGS:
         return this.prisma.subscriptionEarnings.update({
           where: {
-            userId_earningsId: {
-              userId,
-              earningsId: contentId,
-            },
+            id: subscriptionId,
           },
           data: { isActive: false },
         });
@@ -533,7 +531,6 @@ export class NotificationService {
       };
     });
 
-    // 5) 메타 계산
     const totalPages = Math.ceil(totalCount / limit);
 
     return {
@@ -654,6 +651,366 @@ export class NotificationService {
     return {
       message: '모든 알림이 삭제되었습니다.',
       count: result.count,
+    };
+  }
+
+  /**
+   * 특정 기업의 모든 실적 구독 해제
+   */
+  async unsubscribeCompanyEarnings(userId: number, companyId: number) {
+    // 사용자 존재 여부 확인
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException({
+        errorCode: ERROR_CODE_MAP.RESOURCE_001,
+        errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
+      });
+    }
+
+    // 기업 존재 여부 확인
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    if (!company) {
+      throw new NotFoundException({
+        errorCode: ERROR_CODE_MAP.RESOURCE_001,
+        errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
+      });
+    }
+
+    // 1. 해당 기업 구독 해제
+    await this.prisma.subscriptionEarnings.updateMany({
+      where: {
+        userId,
+        companyId,
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+
+    // 2. 해당 기업의 모든 실적 구독 해제
+    const result = await this.prisma.subscriptionEarnings.updateMany({
+      where: {
+        userId,
+        earnings: {
+          companyId,
+        },
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+
+    return {
+      message: `${company.name} 기업의 모든 알림이 해제되었습니다.`,
+      count: result.count + 1, // 기업 구독 + 실적 구독 개수
+    };
+  }
+
+  /**
+   * 특정 국가의 특정 경제지표 유형 모두 구독 해제
+   */
+  async unsubscribeBaseNameIndicator(
+    userId: number,
+    baseName: string,
+    country: string,
+  ) {
+    // 사용자 존재 여부 확인
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException({
+        errorCode: ERROR_CODE_MAP.RESOURCE_001,
+        errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
+      });
+    }
+
+    // 1. 해당 경제지표 유형 구독 해제
+    await this.prisma.subscriptionIndicator.updateMany({
+      where: {
+        userId,
+        baseName,
+        country,
+        indicatorId: null,
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+
+    // 2. 해당 경제지표 유형에 해당하는 모든 개별 경제지표 구독 해제
+    const result = await this.prisma.subscriptionIndicator.updateMany({
+      where: {
+        userId,
+        indicator: {
+          baseName,
+          country,
+        },
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+
+    return {
+      message: `${country} 국가의 ${baseName} 경제지표 유형에 대한 모든 알림이 해제되었습니다.`,
+      count: result.count + 1, // 경제지표 유형 구독 + 개별 경제지표 구독 개수
+    };
+  }
+
+  /**
+   * 사용자가 구독한 모든 SubscriptionEarnings와 SubscriptionIndicator 조회
+   */
+  async getUserSubscriptions(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException({
+        errorCode: ERROR_CODE_MAP.RESOURCE_001,
+        errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
+      });
+    }
+
+    // 사용자의 모든 구독 정보를 병렬로 조회
+    const [subscriptionEarnings, subscriptionIndicators] = await Promise.all([
+      // 1) 실적 구독 정보 조회
+      this.prisma.$queryRaw<
+        Array<{
+          id: number;
+          subscribedAt: Date;
+          companyId: number | null;
+          earningsId: number | null;
+
+          company_id: number | null;
+          ticker: string | null;
+          name: string | null;
+          country: string | null;
+
+          earnings_id: number | null;
+          earnings_country: string | null;
+          releaseDate: bigint | null;
+          releaseTiming: string | null;
+          actualEPS: string | null;
+          forecastEPS: string | null;
+          previousEPS: string | null;
+          actualRevenue: string | null;
+          forecastRevenue: string | null;
+          previousRevenue: string | null;
+
+          c1_id: number | null;
+          c1_ticker: string | null;
+          c1_name: string | null;
+          c1_country: string | null;
+        }>
+      >`
+        SELECT
+          se.id                 AS id,
+          se."subscribedAt"     AS "subscribedAt",
+          se."companyId"        AS "companyId",
+          se."earningsId"       AS "earningsId",
+
+          c2.id                 AS c2_id,
+          c2.ticker             AS c2_ticker,
+          c2.name               AS c2_name,
+          c2.country            AS c2_country,
+
+          e.id                   AS earnings_id,
+          e.country              AS earnings_country,
+          e."releaseDate"        AS "releaseDate",
+          e."releaseTiming"      AS "releaseTiming",
+          e."actualEPS"          AS "actualEPS",
+          e."forecastEPS"        AS "forecastEPS",
+          e."previousEPS"        AS "previousEPS",
+          e."actualRevenue"      AS "actualRevenue",
+          e."forecastRevenue"    AS "forecastRevenue",
+          e."previousRevenue"    AS "previousRevenue",
+
+          c1.id                 AS c1_id,
+          c1.ticker             AS c1_ticker,
+          c1.name               AS c1_name,
+          c1.country            AS c1_country
+        FROM "SubscriptionEarnings" se
+        LEFT JOIN "Company"       c2 
+          ON se."companyId" = c2.id
+        LEFT JOIN "Earnings"      e 
+          ON se."earningsId" = e.id
+        LEFT JOIN "Company"  c1
+          ON e."companyId"   = c1.id
+        WHERE se."userId"   = ${userId}
+          AND se."isActive" = true
+        `,
+
+      // 2) 경제지표 구독 정보 조회
+      this.prisma.$queryRaw<
+        Array<{
+          id: number;
+          subscribedAt: Date;
+          indicatorId: number | null;
+          baseName: string | null;
+
+          ei_id: number | null;
+          ei_name: string | null;
+          ei_baseName: string | null;
+          country: string | null;
+          releaseDate: bigint | null;
+          importance: number | null;
+          actual: string | null;
+          forecast: string | null;
+          previous: string | null;
+        }>
+      >`
+        SELECT
+          si.id                    AS id,
+          si."subscribedAt"        AS "subscribedAt",
+          si."indicatorId"         AS "indicatorId",
+          si."baseName"            AS "baseName",
+
+          ei.id                    AS ei_id,
+          ei.name                  AS ei_name,
+          ei."baseName"            AS ei_baseName,
+          ei.country               AS country,
+          ei."releaseDate"         AS "releaseDate",
+          ei.importance            AS importance,
+          ei.actual                AS actual,
+          ei.forecast              AS forecast,
+          ei.previous              AS previous
+        FROM "SubscriptionIndicator" si
+        LEFT JOIN "EconomicIndicator" ei 
+          ON si."indicatorId" = ei.id
+        WHERE si."userId"   = ${userId}
+          AND si."isActive" = true
+        `,
+    ]);
+
+    // ② 실적 구독 정보 처리
+    const earningsArray = subscriptionEarnings as any[];
+
+    // (a) 기업 전체 실적 구독만 추출
+    const companySubscriptions = earningsArray
+      .filter((sub) => sub.companyId !== null && sub.earningsId === null)
+      .map((sub) => ({
+        id: sub.id,
+        type: 'company',
+        subscribedAt: sub.subscribedAt,
+        company: {
+          id: sub.c2_id!,
+          ticker: sub.c2_ticker!,
+          name: sub.c2_name!,
+          country: sub.c2_country!,
+        },
+        earnings: {
+          id: sub.earnings_id,
+          country: sub.earnings_country,
+          releaseDate: sub.releaseDate ? Number(sub.releaseDate) : null,
+          releaseTiming: sub.releaseTiming,
+          actualEPS: sub.actualEPS,
+          forecastEPS: sub.forecastEPS,
+          previousEPS: sub.previousEPS,
+          actualRevenue: sub.actualRevenue,
+          forecastRevenue: sub.forecastRevenue,
+          previousRevenue: sub.previousRevenue,
+        },
+      }));
+
+    // (b) 개별 실적 구독만 추출
+    const earningsSubscriptions = earningsArray
+      .filter((sub) => sub.earningsId !== null)
+      .map((sub) => ({
+        id: sub.id,
+        type: 'earnings',
+        subscribedAt: sub.subscribedAt,
+        company: {
+          id: sub.c1_id!,
+          name: sub.c1_name!,
+          ticker: sub.c1_ticker!,
+          country: sub.c1_country!,
+        },
+        earnings: {
+          id: sub.earnings_id!,
+          country: sub.earnings_country!,
+          releaseDate: Number(sub.releaseDate!),
+          releaseTiming: sub.releaseTiming,
+          actualEPS: sub.actualEPS,
+          forecastEPS: sub.forecastEPS,
+          previousEPS: sub.previousEPS,
+          actualRevenue: sub.actualRevenue,
+          forecastRevenue: sub.forecastRevenue,
+          previousRevenue: sub.previousRevenue,
+        },
+      }));
+
+    // ③ 경제지표 구독 정보 처리
+    const indicatorsArray = subscriptionIndicators as any[];
+
+    // (a) 이름 기반 전체 구독 (baseName만 있고 indicatorId는 null)
+    const baseNameSubscriptions = indicatorsArray
+      .filter((sub) => sub.baseName && sub.indicatorId === null)
+      .map((sub) => ({
+        id: sub.id,
+        type: 'baseNameIndicator',
+        subscribedAt: sub.subscribedAt,
+        indicator: {
+          id: sub.ei_id,
+          name: sub.ei_name!,
+          baseName: sub.ei_baseName!,
+          country: sub.country!,
+          releaseDate: Number(sub.releaseDate!),
+          importance: sub.importance!,
+          actual: sub.actual!,
+          forecast: sub.forecast!,
+          previous: sub.previous!,
+        },
+      }));
+
+    // (b) 개별 경제지표 구독 (indicatorId가 있을 때)
+    const indicatorSubscriptions = indicatorsArray
+      .filter((sub) => sub.indicatorId !== null)
+      .map((sub) => ({
+        id: sub.id,
+        type: 'indicator',
+        subscribedAt: sub.subscribedAt,
+        indicator: {
+          id: sub.ei_id!,
+          name: sub.ei_name!,
+          baseName: sub.ei_baseName!,
+          country: sub.country!,
+          releaseDate: Number(sub.releaseDate!),
+          importance: sub.importance!,
+          actual: sub.actual!,
+          forecast: sub.forecast!,
+          previous: sub.previous!,
+        },
+      }));
+
+    return {
+      earnings: {
+        companies: companySubscriptions,
+        individual: earningsSubscriptions,
+        total: companySubscriptions.length + earningsSubscriptions.length,
+      },
+      indicators: {
+        baseNames: baseNameSubscriptions,
+        individual: indicatorSubscriptions,
+        total: baseNameSubscriptions.length + indicatorSubscriptions.length,
+      },
+      totalCount:
+        companySubscriptions.length +
+        earningsSubscriptions.length +
+        baseNameSubscriptions.length +
+        indicatorSubscriptions.length,
     };
   }
 }

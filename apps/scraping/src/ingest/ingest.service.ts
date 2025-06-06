@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { ScrapingService } from '../scraping/scraping.service';
 import { TransportService } from '../transport/transport.service';
 import { ScrapeDto } from '../scraping/dto/scrape.dto';
+import { PersistenceService } from '../persistence/persistence.service';
 
 @Injectable()
 export class IngestService {
   constructor(
     private readonly scrapingService: ScrapingService,
     private readonly transportService: TransportService,
+    private readonly persistenceService: PersistenceService,
   ) {}
 
   /**
@@ -16,21 +18,25 @@ export class IngestService {
    */
   async scrapeAndIngestEconomicIndicator(dto: ScrapeDto) {
     const data = await this.scrapingService.scrapeEconomicIndicator(dto);
-    await this.transportService.sendScrapedData('economic-indicator', data);
+    // await this.transportService.sendScrapedData('economic-indicator', data);
+    await this.persistenceService.saveEconomicIndicatorData(data);
   }
 
   async scrapeAndIngestDividend(dto: ScrapeDto) {
     const data = await this.scrapingService.scrapeDividend(dto);
-    await this.transportService.sendScrapedData('dividend', data);
+    // await this.transportService.sendScrapedData('dividend', data);
+    await this.persistenceService.saveDividendData(data);
   }
 
   async scrapeAndIngestEarnings(dto: ScrapeDto) {
     const data = await this.scrapingService.scrapeEarnings(dto);
-    await this.transportService.sendScrapedData('earnings', data);
+    // await this.transportService.sendScrapedData('earnings', data);
+    await this.persistenceService.saveEarningsData(data);
   }
 
   async scrapeAndIngestCompany() {
     const data = await this.scrapingService.scrapeUSACompany();
-    await this.transportService.sendScrapedData('company', data);
+    // await this.transportService.sendScrapedData('company', data);
+    await this.persistenceService.saveCompanyData(data);
   }
 }

@@ -33,10 +33,11 @@ export class CalendarService {
               },
             }
           : false,
-        notifications: userId
+        subscriptionEarnings: userId
           ? {
               where: {
                 userId,
+                isActive: true,
               },
             }
           : false,
@@ -68,7 +69,7 @@ export class CalendarService {
       createdAt: e.createdAt.toISOString(),
       updatedAt: e.updatedAt.toISOString(),
       isFavorite: userId ? e.favorites.length > 0 : false,
-      hasNotification: userId ? e.notifications?.length > 0 : false,
+      hasNotification: userId ? e.subscriptionEarnings.length > 0 : false,
     }));
   }
 
@@ -154,10 +155,11 @@ export class CalendarService {
               },
             }
           : false,
-        notifications: userId
+        subscriptionIndicator: userId
           ? {
               where: {
                 userId,
+                isActive: true,
               },
             }
           : false,
@@ -167,21 +169,48 @@ export class CalendarService {
       },
     });
 
-    // 결과 가공: 프론트엔드 EconomicIndicatorEvent 타입에 맞게 필드 이름 재지정 + 관심 정보 추가
-    return economicIndicators.map((e) => ({
-      id: e.id,
-      country: e.country, // 경제지표 이벤트의 나라 (EconomicIndicator 모델의 country)
-      releaseDate: Number(e.releaseDate),
-      name: e.name,
-      importance: e.importance,
-      actual: e.actual,
-      forecast: e.forecast,
-      previous: e.previous,
-      createdAt: e.createdAt.toISOString(),
-      updatedAt: e.updatedAt.toISOString(),
-      isFavorite: userId ? e.favorites.length > 0 : false,
-      hasNotification: userId ? e.notifications?.length > 0 : false,
-    }));
+    // 경제지표 구독 정보 가공
+    const formattedIndicators = await Promise.all(
+      economicIndicators.map(async (e) => {
+        // 개별 지표 구독 여부 확인
+        const hasIndividualSubscription = e.subscriptionIndicator?.length > 0;
+
+        // baseName/country 기반 구독 여부 확인
+        let hasBaseNameSubscription = false;
+        if (userId && e.baseName) {
+          const baseNameSubscription =
+            await this.prisma.subscriptionIndicator.findFirst({
+              where: {
+                userId,
+                baseName: e.baseName,
+                country: e.country,
+                isActive: true,
+              },
+            });
+          hasBaseNameSubscription = !!baseNameSubscription;
+        }
+
+        return {
+          id: e.id,
+          country: e.country,
+          releaseDate: Number(e.releaseDate),
+          name: e.name,
+          baseName: e.baseName,
+          importance: e.importance,
+          actual: e.actual,
+          forecast: e.forecast,
+          previous: e.previous,
+          createdAt: e.createdAt.toISOString(),
+          updatedAt: e.updatedAt.toISOString(),
+          isFavorite: userId ? e.favorites.length > 0 : false,
+          hasNotification: userId
+            ? hasIndividualSubscription || hasBaseNameSubscription
+            : false,
+        };
+      }),
+    );
+
+    return formattedIndicators;
   }
 
   /**
@@ -219,6 +248,7 @@ export class CalendarService {
   ) {
     const skip = (page - 1) * limit;
 
+    // 개별 실적 구독 정보 및 기본 데이터 조회
     const [earnings, total] = await Promise.all([
       this.prisma.earnings.findMany({
         where: {
@@ -233,10 +263,11 @@ export class CalendarService {
                 },
               }
             : false,
-          notifications: userId
+          subscriptionEarnings: userId
             ? {
                 where: {
                   userId,
+                  isActive: true,
                 },
               }
             : false,
@@ -253,6 +284,17 @@ export class CalendarService {
         },
       }),
     ]);
+
+    // 회사 전체 구독 여부 확인
+    const companySubscription = userId
+      ? await this.prisma.subscriptionEarnings.findFirst({
+          where: {
+            userId,
+            companyId,
+            isActive: true,
+          },
+        })
+      : null;
 
     // 결과 가공: 관심 정보 추가
     const formattedEarnings = earnings.map((e) => ({
@@ -276,7 +318,9 @@ export class CalendarService {
       createdAt: e.createdAt.toISOString(),
       updatedAt: e.updatedAt.toISOString(),
       isFavorite: userId ? e.favorites.length > 0 : false,
-      hasNotification: userId ? e.notifications?.length > 0 : false,
+      hasNotification: userId
+        ? e.subscriptionEarnings?.length > 0 || !!companySubscription
+        : false,
     }));
 
     return {

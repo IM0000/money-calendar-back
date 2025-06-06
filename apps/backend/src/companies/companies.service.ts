@@ -4,7 +4,6 @@ import {
 } from './../utils/convert-bigint';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ContentType } from '@prisma/client';
 
 @Injectable()
 export class CompaniesService {
@@ -31,8 +30,9 @@ export class CompaniesService {
     ]);
 
     // 사용자 즐겨찾기 정보 조회
-    let userFavorites = [];
-    let userNotifications = [];
+    let userFavorites: Array<{ earningsId: number }> = [];
+    let userNotifications: Array<{ earningsId: number }> = [];
+    let hasCompanySubscription = false;
 
     if (userId) {
       userFavorites = await this.prisma.favoriteEarnings.findMany({
@@ -47,35 +47,47 @@ export class CompaniesService {
         },
       });
 
-      // 알림 설정 정보도 조회
-      userNotifications = await this.prisma.notification.findMany({
+      // 구독 정보 조회 (개별 실적 구독)
+      userNotifications = await this.prisma.subscriptionEarnings.findMany({
         where: {
           userId,
-          contentType: ContentType.EARNINGS,
-          contentId: {
+          earningsId: {
             in: earningsItems.map((item) => item.id),
           },
-          read: false,
+          isActive: true,
         },
         select: {
-          contentId: true,
+          earningsId: true,
         },
       });
+
+      // 회사 전체 구독 여부 확인
+      const companySubscription =
+        await this.prisma.subscriptionEarnings.findFirst({
+          where: {
+            userId,
+            companyId,
+            isActive: true,
+          },
+        });
+
+      hasCompanySubscription = !!companySubscription;
     }
 
-    // 즐겨찾기와 알림 정보 추가
+    // 즐겨찾기와 구독 정보 추가
     const favoriteEarningsIds = new Set(
       userFavorites.map((fav) => fav.earningsId),
     );
-    const notificationEarningsIds = new Set(
-      userNotifications.map((notif) => notif.contentId),
+    const subscriptionEarningsIds = new Set(
+      userNotifications.map((notif) => notif.earningsId),
     );
 
     const items = convertEarningsBigInt(
       earningsItems.map((item) => ({
         ...item,
         isFavorite: favoriteEarningsIds.has(item.id),
-        hasNotification: notificationEarningsIds.has(item.id),
+        hasNotification:
+          subscriptionEarningsIds.has(item.id) || hasCompanySubscription,
       })),
     );
 
@@ -113,8 +125,8 @@ export class CompaniesService {
     ]);
 
     // 사용자 즐겨찾기 정보 조회
-    let userFavorites = [];
-    let userNotifications = [];
+    let userFavorites: Array<{ dividendId: number }> = [];
+    // 배당금에 대한 구독 정보는 현재 스키마에서 지원하지 않음
 
     if (userId) {
       userFavorites = await this.prisma.favoriteDividends.findMany({
@@ -129,35 +141,21 @@ export class CompaniesService {
         },
       });
 
-      // 알림 설정 정보도 조회 (NotificationSetting 테이블이 있다고 가정)
-      userNotifications = await this.prisma.notification.findMany({
-        where: {
-          userId,
-          contentType: ContentType.DIVIDEND,
-          contentId: {
-            in: dividendItems.map((item) => item.id),
-          },
-          read: false,
-        },
-        select: {
-          contentId: true,
-        },
-      });
+      // 배당금에 대한 구독 정보는 현재 스키마에서 지원하지 않음
+      // 필요한 경우 SubscriptionDividend 모델을 추가해야 함
     }
 
-    // 즐겨찾기와 알림 정보 추가
+    // 즐겨찾기 정보 추가 (구독 정보는 현재 지원하지 않음)
     const favoriteDividendIds = new Set(
       userFavorites.map((fav) => fav.dividendId),
     );
-    const notificationDividendIds = new Set(
-      userNotifications.map((notif) => notif.contentId),
-    );
+    // 배당금에 대한 구독은 현재 스키마에서 지원하지 않음
 
     const items = convertDividendBigInt(
       dividendItems.map((item) => ({
         ...item,
         isFavorite: favoriteDividendIds.has(item.id),
-        hasNotification: notificationDividendIds.has(item.id),
+        hasNotification: false, // 배당금에 대한 구독은 현재 스키마에서 지원하지 않음
       })),
     );
 

@@ -136,7 +136,7 @@ model EconomicIndicator {
   country       String // 국가
   releaseDate   BigInt // 발표 날짜 (밀리초 단위)
   name          String // 지표 이름
-  baseName      String // 날짜제거된 지표 이름
+  baseName      String? // 날짜제거된 지표 이름
   importance    Int // 중요도 (예: 1~5 스케일)
   actual        String // 실제 값
   forecast      String // 예측 값

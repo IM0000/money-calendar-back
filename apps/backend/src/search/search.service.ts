@@ -111,26 +111,73 @@ export class SearchService {
     }));
 
     if (userId) {
+      // 즐겨찾기 정보 조회
       const favoriteIndicators = await this.prisma.favoriteIndicator.findMany({
         where: { userId },
       });
 
-      const indicatorNotifications =
-        await this.prisma.indicatorNotification.findMany({
-          where: { userId },
+      // 구독 정보 조회 (개별 지표 구독)
+      const indicatorSubscriptions =
+        await this.prisma.subscriptionIndicator.findMany({
+          where: {
+            userId,
+            indicatorId: {
+              in: processedItems.map((item) => item.id),
+            },
+            isActive: true,
+          },
         });
 
+      // baseName과 country 기반 구독 정보 조회
+      const baseNameCountrySubscriptions =
+        await this.prisma.subscriptionIndicator.findMany({
+          where: {
+            userId,
+            baseName: {
+              in: [
+                ...new Set(processedItems.map((item) => item.baseName)),
+              ].filter(Boolean),
+            },
+            country: {
+              in: [
+                ...new Set(processedItems.map((item) => item.country)),
+              ].filter(Boolean),
+            },
+            isActive: true,
+          },
+        });
+
+      // 즐겨찾기 ID 세트 생성
       const favoriteIndicatorIds = new Set(
         favoriteIndicators.map((f) => f.indicatorId),
       );
 
-      const notificationIds = new Set(
-        indicatorNotifications.map((s) => s.indicatorId),
+      // 구독 ID 세트 생성 (개별 지표)
+      const subscriptionIds = new Set(
+        indicatorSubscriptions.map((s) => s.indicatorId),
       );
 
+      // baseName과 country 조합 세트 생성
+      const baseNameCountryCombinations = new Set(
+        baseNameCountrySubscriptions.map((s) => `${s.baseName}:${s.country}`),
+      );
+
+      // 각 지표에 즐겨찾기 및 구독 정보 추가
       processedItems.forEach((indicator) => {
         indicator.isFavorite = favoriteIndicatorIds.has(indicator.id);
-        indicator.hasNotification = notificationIds.has(indicator.id);
+
+        // 개별 지표 구독 또는 baseName+country 조합 구독 여부 확인
+        const hasDirectSubscription = subscriptionIds.has(indicator.id);
+        const hasBaseNameCountrySubscription =
+          indicator.baseName &&
+          indicator.country &&
+          baseNameCountryCombinations.has(
+            `${indicator.baseName}:${indicator.country}`,
+          );
+
+        // 둘 중 하나라도 구독 중이면 hasNotification = true
+        indicator.hasNotification =
+          hasDirectSubscription || hasBaseNameCountrySubscription;
       });
     }
 
