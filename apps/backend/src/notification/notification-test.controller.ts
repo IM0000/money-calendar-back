@@ -1,54 +1,73 @@
-import { Controller, Post, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Post, Param, UseGuards } from '@nestjs/common';
 import { NotificationTestService } from './notification-test.service';
+import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { ApiResponseWrapper } from '../common/decorators/api-response.decorator';
 
 @ApiTags('알림 테스트')
-@Controller('api/v1/notifications')
+@Controller('/api/v1/notifications')
+@UseGuards(JwtAuthGuard)
 export class NotificationTestController {
-  constructor(private readonly testService: NotificationTestService) {}
+  constructor(
+    private readonly notificationTestService: NotificationTestService,
+  ) {}
 
-  @ApiOperation({
-    summary: '경제지표 알림 테스트',
-    description: '경제지표 실제 발표값 갱신을 시뮬레이션하여 알림 테스트',
-  })
+  @ApiOperation({ summary: '경제지표 테스트 값 설정' })
   @ApiParam({ name: 'id', description: '경제지표 ID' })
   @ApiResponseWrapper(Object)
   @Post('test-indicator/:id')
-  testIndicator(@Param('id', ParseIntPipe) id: number) {
-    return this.testService.testIndicatorActual(id);
+  async testIndicatorActual(@Param('id') id: string) {
+    return await this.notificationTestService.testIndicatorActual(parseInt(id));
   }
 
-  @ApiOperation({
-    summary: '경제지표 원상복구',
-    description: '테스트를 위해 변경된 경제지표 값을 원상복구',
-  })
+  @ApiOperation({ summary: '경제지표 원상복구' })
   @ApiParam({ name: 'id', description: '경제지표 ID' })
   @ApiResponseWrapper(Object)
   @Post('restore-indicator/:id')
-  restoreIndicator(@Param('id', ParseIntPipe) id: number) {
-    return this.testService.restoreIndicatorActual(id);
+  async restoreIndicatorActual(@Param('id') id: string) {
+    return await this.notificationTestService.restoreIndicatorActual(
+      parseInt(id),
+    );
   }
 
-  @ApiOperation({
-    summary: '실적 알림 테스트',
-    description: '기업 실적 발표를 시뮬레이션하여 알림 테스트',
-  })
+  @ApiOperation({ summary: '실적 테스트 값 설정' })
   @ApiParam({ name: 'id', description: '실적 ID' })
   @ApiResponseWrapper(Object)
   @Post('test-earnings/:id')
-  testEarnings(@Param('id', ParseIntPipe) id: number) {
-    return this.testService.testEarningsActual(id);
+  async testEarningsActual(@Param('id') id: string) {
+    return await this.notificationTestService.testEarningsActual(parseInt(id));
   }
 
-  @ApiOperation({
-    summary: '실적 원상복구',
-    description: '테스트를 위해 변경된 실적 값을 원상복구',
-  })
+  @ApiOperation({ summary: '실적 원상복구' })
   @ApiParam({ name: 'id', description: '실적 ID' })
   @ApiResponseWrapper(Object)
   @Post('restore-earnings/:id')
-  restoreEarnings(@Param('id', ParseIntPipe) id: number) {
-    return this.testService.restoreEarningsActual(id);
+  async restoreEarningsActual(@Param('id') id: string) {
+    return await this.notificationTestService.restoreEarningsActual(
+      parseInt(id),
+    );
+  }
+
+  @ApiOperation({ summary: '배당 데이터 테스트 값 설정' })
+  @ApiParam({ name: 'id', description: '배당 ID' })
+  @ApiResponseWrapper(Object)
+  @Post('test-dividend/:id')
+  async testDividendData(@Param('id') id: string) {
+    return await this.notificationTestService.testDividendData(parseInt(id));
+  }
+
+  @ApiOperation({ summary: '배당 데이터 원상복구' })
+  @ApiParam({ name: 'id', description: '배당 ID' })
+  @ApiResponseWrapper(Object)
+  @Post('restore-dividend/:id')
+  async restoreDividendData(@Param('id') id: string) {
+    return await this.notificationTestService.restoreDividendData(parseInt(id));
+  }
+
+  @ApiOperation({ summary: '배당 지급일 알림 테스트' })
+  @ApiResponseWrapper(Object)
+  @Post('test-dividend-payment')
+  async testDividendPayment() {
+    return await this.notificationTestService.testDividendPayment();
   }
 }

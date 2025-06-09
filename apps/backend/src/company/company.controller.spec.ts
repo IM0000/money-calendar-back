@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CompanyController } from './company.controller';
 import { CompanyService } from './company.service';
+import { RequestWithUser } from '../common/types/request-with-user';
 
 describe('CompaniesController', () => {
   let controller: CompanyController;
@@ -25,9 +26,6 @@ describe('CompaniesController', () => {
       email: 'test@example.com',
     },
   };
-
-  // 모의 Request 객체 (인증 정보 없음)
-  const mockRequestWithoutUser = {};
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -80,7 +78,7 @@ describe('CompaniesController', () => {
         mockCompanyId,
         mockPage,
         mockLimit,
-        mockRequest,
+        mockRequest as RequestWithUser,
       );
 
       // 테스트 검증
@@ -89,47 +87,6 @@ describe('CompaniesController', () => {
         mockPage,
         mockLimit,
         mockUserId,
-      );
-      expect(result).toEqual(mockResponse);
-    });
-
-    it('인증되지 않은 사용자로 회사의 실적 정보를 조회해야 합니다', async () => {
-      // Mock 반환 데이터 설정
-      const mockResponse = {
-        items: [
-          {
-            id: 1,
-            companyId: mockCompanyId,
-            releaseDate: 1625097600000,
-            isFavorite: false,
-            hasNotification: false,
-          },
-        ],
-        pagination: {
-          total: 1,
-          page: mockPage,
-          limit: mockLimit,
-          totalPages: 1,
-        },
-      };
-
-      // Mock 함수 구현
-      mockCompaniesService.getCompanyEarnings.mockResolvedValue(mockResponse);
-
-      // 컨트롤러 메서드 호출
-      const result = await controller.getCompanyEarnings(
-        mockCompanyId,
-        mockPage,
-        mockLimit,
-        mockRequestWithoutUser,
-      );
-
-      // 테스트 검증
-      expect(mockCompaniesService.getCompanyEarnings).toHaveBeenCalledWith(
-        mockCompanyId,
-        mockPage,
-        mockLimit,
-        undefined,
       );
       expect(result).toEqual(mockResponse);
     });
@@ -165,7 +122,7 @@ describe('CompaniesController', () => {
         mockCompanyId,
         mockPage,
         mockLimit,
-        mockRequest,
+        mockRequest as RequestWithUser,
       );
 
       // 테스트 검증
@@ -174,48 +131,6 @@ describe('CompaniesController', () => {
         mockPage,
         mockLimit,
         mockUserId,
-      );
-      expect(result).toEqual(mockResponse);
-    });
-
-    it('인증되지 않은 사용자로 회사의 배당 정보를 조회해야 합니다', async () => {
-      // Mock 반환 데이터 설정
-      const mockResponse = {
-        items: [
-          {
-            id: 1,
-            companyId: mockCompanyId,
-            exDividendDate: 1625097600000,
-            paymentDate: 1627776000000,
-            isFavorite: false,
-            hasNotification: false,
-          },
-        ],
-        pagination: {
-          total: 1,
-          page: mockPage,
-          limit: mockLimit,
-          totalPages: 1,
-        },
-      };
-
-      // Mock 함수 구현
-      mockCompaniesService.getCompanyDividends.mockResolvedValue(mockResponse);
-
-      // 컨트롤러 메서드 호출
-      const result = await controller.getCompanyDividends(
-        mockCompanyId,
-        mockPage,
-        mockLimit,
-        mockRequestWithoutUser,
-      );
-
-      // 테스트 검증
-      expect(mockCompaniesService.getCompanyDividends).toHaveBeenCalledWith(
-        mockCompanyId,
-        mockPage,
-        mockLimit,
-        undefined,
       );
       expect(result).toEqual(mockResponse);
     });

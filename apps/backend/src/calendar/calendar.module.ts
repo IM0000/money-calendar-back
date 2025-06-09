@@ -3,9 +3,10 @@ import { CalendarController } from './calendar.controller';
 import { CalendarService } from './calendar.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
+import { FavoriteModule } from '../favorite/favorite.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule],
+  imports: [PrismaModule, AuthModule, FavoriteModule],
   controllers: [CalendarController],
   providers: [CalendarService],
 })

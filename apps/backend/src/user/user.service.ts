@@ -361,6 +361,8 @@ export class UserService {
       });
     }
 
+    await this.prisma.user.delete({ where: { id: userId } });
+
     return { message: '계정이 성공적으로 삭제되었습니다.' };
   }
 

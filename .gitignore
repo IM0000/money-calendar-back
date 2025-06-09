@@ -42,3 +42,5 @@ lerna-debug.log*
 
 # dp dump
 .sql
+
+가이드.md

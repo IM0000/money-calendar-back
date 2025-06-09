@@ -35,7 +35,7 @@ model UserNotificationSettings {
   emailEnabled      Boolean   @default(false)
   slackEnabled      Boolean   @default(false)
   slackWebhookUrl   String?
-  allEnabled        Boolean   @default(true)   // 모든 알림 허용/차단 (기존에 없었다면 추가)
+  allEnabled        Boolean   @default(true)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }

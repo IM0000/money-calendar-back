@@ -29,65 +29,31 @@ export class CompanyService {
       }),
     ]);
 
-    // 사용자 즐겨찾기 정보 조회
-    let userFavorites: Array<{ earningsId: number }> = [];
-    let userNotifications: Array<{ earningsId: number }> = [];
+    let isFavoriteCompany = false;
     let hasCompanySubscription = false;
 
     if (userId) {
-      userFavorites = await this.prisma.favoriteEarnings.findMany({
+      const favoriteCompany = await this.prisma.favoriteCompany.findUnique({
         where: {
-          userId,
-          earningsId: {
-            in: earningsItems.map((item) => item.id),
-          },
-        },
-        select: {
-          earningsId: true,
+          userId_companyId: { userId, companyId },
         },
       });
+      isFavoriteCompany = favoriteCompany?.isActive ?? false;
 
-      // 구독 정보 조회 (개별 실적 구독)
-      userNotifications = await this.prisma.subscriptionEarnings.findMany({
-        where: {
-          userId,
-          earningsId: {
-            in: earningsItems.map((item) => item.id),
-          },
-          isActive: true,
-        },
-        select: {
-          earningsId: true,
-        },
-      });
-
-      // 회사 전체 구독 여부 확인
       const companySubscription =
-        await this.prisma.subscriptionEarnings.findFirst({
+        await this.prisma.subscriptionCompany.findUnique({
           where: {
-            userId,
-            companyId,
-            isActive: true,
+            userId_companyId: { userId, companyId },
           },
         });
-
-      hasCompanySubscription = !!companySubscription;
+      hasCompanySubscription = companySubscription?.isActive ?? false;
     }
-
-    // 즐겨찾기와 구독 정보 추가
-    const favoriteEarningsIds = new Set(
-      userFavorites.map((fav) => fav.earningsId),
-    );
-    const subscriptionEarningsIds = new Set(
-      userNotifications.map((notif) => notif.earningsId),
-    );
 
     const items = convertEarningsBigInt(
       earningsItems.map((item) => ({
         ...item,
-        isFavorite: favoriteEarningsIds.has(item.id),
-        hasNotification:
-          subscriptionEarningsIds.has(item.id) || hasCompanySubscription,
+        isFavorite: isFavoriteCompany,
+        hasNotification: hasCompanySubscription,
       })),
     );
 
@@ -124,38 +90,31 @@ export class CompanyService {
       }),
     ]);
 
-    // 사용자 즐겨찾기 정보 조회
-    let userFavorites: Array<{ dividendId: number }> = [];
-    // 배당금에 대한 구독 정보는 현재 스키마에서 지원하지 않음
+    let isFavoriteCompany = false;
+    let hasCompanySubscription = false;
 
     if (userId) {
-      userFavorites = await this.prisma.favoriteDividends.findMany({
+      const favoriteCompany = await this.prisma.favoriteCompany.findUnique({
         where: {
-          userId,
-          dividendId: {
-            in: dividendItems.map((item) => item.id),
-          },
-        },
-        select: {
-          dividendId: true,
+          userId_companyId: { userId, companyId },
         },
       });
+      isFavoriteCompany = favoriteCompany?.isActive ?? false;
 
-      // 배당금에 대한 구독 정보는 현재 스키마에서 지원하지 않음
-      // 필요한 경우 SubscriptionDividend 모델을 추가해야 함
+      const companySubscription =
+        await this.prisma.subscriptionCompany.findUnique({
+          where: {
+            userId_companyId: { userId, companyId },
+          },
+        });
+      hasCompanySubscription = companySubscription?.isActive ?? false;
     }
-
-    // 즐겨찾기 정보 추가 (구독 정보는 현재 지원하지 않음)
-    const favoriteDividendIds = new Set(
-      userFavorites.map((fav) => fav.dividendId),
-    );
-    // 배당금에 대한 구독은 현재 스키마에서 지원하지 않음
 
     const items = convertDividendBigInt(
       dividendItems.map((item) => ({
         ...item,
-        isFavorite: favoriteDividendIds.has(item.id),
-        hasNotification: false, // 배당금에 대한 구독은 현재 스키마에서 지원하지 않음
+        isFavorite: isFavoriteCompany,
+        hasNotification: hasCompanySubscription,
       })),
     );
 

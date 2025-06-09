@@ -5,11 +5,6 @@ export const CountryCodeMap = {
   // 다른 국가 코드들..
 };
 
-export const Country3to2Map = {
-  USA: 'US',
-  KOR: 'KR',
-};
-
 export const CountryNameToCodeMap = {
   미국: 'USA',
   한국: 'KOR',

@@ -51,7 +51,34 @@ export class PrismaService
       }),
     );
 
-    const extended = this.$extends(indicatorExt).$extends(earningsExt);
+    const dividendExt = Prisma.defineExtension((client) =>
+      client.$extends({
+        name: 'dividendExt',
+        query: {
+          dividend: {
+            async update({ args, query }) {
+              const before = await client.dividend.findUnique({
+                where: args.where,
+                include: { company: true },
+              });
+              const after = await query(args);
+              // 배당금이나 배당수익률이 변경된 경우
+              if (
+                before?.dividendAmount !== after.dividendAmount ||
+                before?.dividendYield !== after.dividendYield
+              ) {
+                eventEmitter.emit('dividend.dataChanged', { before, after });
+              }
+              return after;
+            },
+          },
+        },
+      }),
+    );
+
+    const extended = this.$extends(indicatorExt)
+      .$extends(earningsExt)
+      .$extends(dividendExt);
 
     Object.assign(this, extended);
   }

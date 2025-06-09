@@ -42,28 +42,26 @@ export class SearchService {
 
     const itemsWithFavorites = items.map((company) => ({
       ...company,
-      isFavoriteEarnings: false,
-      isFavoriteDividend: false,
+      isFavorite: false,
     }));
 
     if (userId) {
-      const [favE, favD] = await Promise.all([
-        this.prisma.favoriteEarnings.findMany({
-          where: { userId },
-          include: { earnings: true },
-        }),
-        this.prisma.favoriteDividends.findMany({
-          where: { userId },
-          include: { dividend: true },
-        }),
-      ]);
+      // 회사 단위 즐겨찾기 정보 조회
+      const favoriteCompanies = await this.prisma.favoriteCompany.findMany({
+        where: {
+          userId,
+          companyId: { in: items.map((c) => c.id) },
+          isActive: true,
+        },
+        select: { companyId: true },
+      });
 
-      const earningsIds = new Set(favE.map((f) => f.earnings.companyId));
-      const dividendIds = new Set(favD.map((f) => f.dividend.companyId));
+      const favoriteCompanyIds = new Set(
+        favoriteCompanies.map((f) => f.companyId),
+      );
 
       itemsWithFavorites.forEach((c) => {
-        c.isFavoriteEarnings = earningsIds.has(c.id);
-        c.isFavoriteDividend = dividendIds.has(c.id);
+        c.isFavorite = favoriteCompanyIds.has(c.id);
       });
     }
 
@@ -111,73 +109,46 @@ export class SearchService {
     }));
 
     if (userId) {
-      // 즐겨찾기 정보 조회
-      const favoriteIndicators = await this.prisma.favoriteIndicator.findMany({
-        where: { userId },
-      });
-
-      // 구독 정보 조회 (개별 지표 구독)
-      const indicatorSubscriptions =
-        await this.prisma.subscriptionIndicator.findMany({
+      // 지표 그룹 단위 즐겨찾기 정보 조회
+      const favoriteIndicatorGroups =
+        await this.prisma.favoriteIndicatorGroup.findMany({
           where: {
             userId,
-            indicatorId: {
-              in: processedItems.map((item) => item.id),
-            },
             isActive: true,
           },
+          select: { baseName: true, country: true },
         });
 
-      // baseName과 country 기반 구독 정보 조회
-      const baseNameCountrySubscriptions =
-        await this.prisma.subscriptionIndicator.findMany({
+      // 지표 그룹 단위 구독 정보 조회
+      const subscriptionIndicatorGroups =
+        await this.prisma.subscriptionIndicatorGroup.findMany({
           where: {
             userId,
-            baseName: {
-              in: [
-                ...new Set(processedItems.map((item) => item.baseName)),
-              ].filter(Boolean),
-            },
-            country: {
-              in: [
-                ...new Set(processedItems.map((item) => item.country)),
-              ].filter(Boolean),
-            },
             isActive: true,
           },
+          select: { baseName: true, country: true },
         });
 
-      // 즐겨찾기 ID 세트 생성
-      const favoriteIndicatorIds = new Set(
-        favoriteIndicators.map((f) => f.indicatorId),
+      // baseName과 country 조합 세트 생성 (즐겨찾기)
+      const favoriteBaseNameCountryCombinations = new Set(
+        favoriteIndicatorGroups.map((f) => `${f.baseName}:${f.country}`),
       );
 
-      // 구독 ID 세트 생성 (개별 지표)
-      const subscriptionIds = new Set(
-        indicatorSubscriptions.map((s) => s.indicatorId),
-      );
-
-      // baseName과 country 조합 세트 생성
-      const baseNameCountryCombinations = new Set(
-        baseNameCountrySubscriptions.map((s) => `${s.baseName}:${s.country}`),
+      // baseName과 country 조합 세트 생성 (구독)
+      const subscriptionBaseNameCountryCombinations = new Set(
+        subscriptionIndicatorGroups.map((s) => `${s.baseName}:${s.country}`),
       );
 
       // 각 지표에 즐겨찾기 및 구독 정보 추가
       processedItems.forEach((indicator) => {
-        indicator.isFavorite = favoriteIndicatorIds.has(indicator.id);
+        // baseName+country 조합으로 즐겨찾기 여부 확인
+        const favoriteKey = `${indicator.baseName}:${indicator.country}`;
+        indicator.isFavorite =
+          favoriteBaseNameCountryCombinations.has(favoriteKey);
 
-        // 개별 지표 구독 또는 baseName+country 조합 구독 여부 확인
-        const hasDirectSubscription = subscriptionIds.has(indicator.id);
-        const hasBaseNameCountrySubscription =
-          indicator.baseName &&
-          indicator.country &&
-          baseNameCountryCombinations.has(
-            `${indicator.baseName}:${indicator.country}`,
-          );
-
-        // 둘 중 하나라도 구독 중이면 hasNotification = true
+        // baseName+country 조합으로 구독 여부 확인
         indicator.hasNotification =
-          hasDirectSubscription || hasBaseNameCountrySubscription;
+          subscriptionBaseNameCountryCombinations.has(favoriteKey);
       });
     }
 

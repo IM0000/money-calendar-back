@@ -1,30 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { FavoriteController } from './favorite.controller';
 import { FavoriteService } from './favorite.service';
-import { Request } from 'express';
-
-// RequestWithUser 인터페이스 정의
-interface RequestWithUser extends Request {
-  user: {
-    id: number;
-    email: string;
-  };
-}
+import { COUNTRY_CODE_MAP } from '../common/constants/country-code.constant';
+import { RequestWithUser } from '../common/types/request-with-user';
 
 describe('FavoriteController', () => {
   let controller: FavoriteController;
   let favoritesService: FavoriteService;
 
-  // FavoritesService 모킹
+  // 회사/지표 그룹 단위 함수만 남긴 목킹
   const mockFavoritesService = {
     getAllFavorites: jest.fn(),
-    getFavoriteCalendarEvents: jest.fn(),
-    addFavoriteEarnings: jest.fn(),
-    removeFavoriteEarnings: jest.fn(),
-    addFavoriteDividends: jest.fn(),
-    removeFavoriteDividends: jest.fn(),
-    addFavoriteIndicator: jest.fn(),
-    removeFavoriteIndicator: jest.fn(),
+    addFavoriteCompany: jest.fn(),
+    removeFavoriteCompany: jest.fn(),
+    addFavoriteIndicatorGroup: jest.fn(),
+    removeFavoriteIndicatorGroup: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -40,214 +30,101 @@ describe('FavoriteController', () => {
 
     controller = module.get<FavoriteController>(FavoriteController);
     favoritesService = module.get<FavoriteService>(FavoriteService);
-
-    // 각 테스트 전에 모든 모의 함수 초기화
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it('FavoriteController가 정의되어야 한다', () => {
     expect(controller).toBeDefined();
   });
 
   describe('getAllFavorites', () => {
-    it('사용자의 모든 즐겨찾기를 반환해야 합니다', async () => {
-      // Mock Request 객체
+    it('회사/지표 그룹 즐겨찾기 통합 조회', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       } as RequestWithUser;
-
       const mockFavorites = {
-        earnings: [{ id: 1, company: { name: 'Apple' } }],
-        dividends: [{ id: 1, company: { name: 'Microsoft' } }],
-        economicIndicators: [{ id: 1, country: 'US' }],
+        companies: [{ id: 1, company: { name: 'Apple' } }],
+        indicatorGroups: [{ baseName: 'CPI', country: COUNTRY_CODE_MAP.USA }],
       };
-
       mockFavoritesService.getAllFavorites.mockResolvedValue(mockFavorites);
-
       const result = await controller.getAllFavorites(req);
-
       expect(mockFavoritesService.getAllFavorites).toHaveBeenCalledWith(1);
       expect(result).toEqual(mockFavorites);
     });
   });
 
-  describe('getFavoriteCalendarEvents', () => {
-    it('사용자의 즐겨찾기 캘린더 이벤트를 반환해야 합니다', async () => {
-      // Mock Request 객체
+  describe('addFavoriteCompany', () => {
+    it('회사 즐겨찾기 추가', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       } as RequestWithUser;
-
-      const startDate = '2024-01-01';
-      const endDate = '2024-01-01';
-
-      const mockEvents = {
-        earnings: [{ id: 1, company: { name: 'Apple' } }],
-        dividends: [{ id: 1, company: { name: 'Microsoft' } }],
-        economicIndicators: [{ id: 1, country: 'US' }],
-      };
-
-      mockFavoritesService.getFavoriteCalendarEvents.mockResolvedValue(
-        mockEvents,
+      const companyId = 10;
+      const mockResponse = { id: 1 };
+      mockFavoritesService.addFavoriteCompany.mockResolvedValue(mockResponse);
+      const result = await controller.addFavoriteCompany(req, {
+        companyId,
+      });
+      expect(mockFavoritesService.addFavoriteCompany).toHaveBeenCalledWith(
+        1,
+        companyId,
       );
+      expect(result).toEqual(mockResponse);
+    });
+  });
 
-      const result = await controller.getFavoriteCalendarEvents(
-        req,
-        startDate,
-        endDate,
+  describe('removeFavoriteCompany', () => {
+    it('회사 즐겨찾기 해제', async () => {
+      const req = {
+        user: { id: 1, email: 'test@example.com' },
+      } as RequestWithUser;
+      const companyId = 10;
+      const mockResponse = { id: 1 };
+      mockFavoritesService.removeFavoriteCompany.mockResolvedValue(
+        mockResponse,
       );
+      const result = await controller.removeFavoriteCompany(req, {
+        companyId,
+      });
+      expect(mockFavoritesService.removeFavoriteCompany).toHaveBeenCalledWith(
+        1,
+        companyId,
+      );
+      expect(result).toEqual(mockResponse);
+    });
+  });
 
+  describe('addFavoriteIndicatorGroup', () => {
+    it('지표 그룹 즐겨찾기 추가', async () => {
+      const req = {
+        user: { id: 1, email: 'test@example.com' },
+      } as RequestWithUser;
+      const body = { baseName: 'CPI', country: COUNTRY_CODE_MAP.USA };
+      const mockResponse = { id: 2 };
+      mockFavoritesService.addFavoriteIndicatorGroup.mockResolvedValue(
+        mockResponse,
+      );
+      const result = await controller.addFavoriteIndicatorGroup(req, body);
       expect(
-        mockFavoritesService.getFavoriteCalendarEvents,
-      ).toHaveBeenCalledWith(
-        1,
-        new Date(startDate).getTime(),
-        new Date(endDate).getTime(),
-      );
-      expect(result).toEqual(mockEvents);
-    });
-  });
-
-  describe('addFavoriteEarnings', () => {
-    it('즐겨찾기에 실적 정보를 추가해야 합니다', async () => {
-      // Mock Request 객체
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      } as RequestWithUser;
-
-      const earningsId = 1;
-      const mockResponse = { message: '즐겨찾기에 성공적으로 추가되었습니다.' };
-
-      mockFavoritesService.addFavoriteEarnings.mockResolvedValue(mockResponse);
-
-      const result = await controller.addFavoriteEarnings(req, earningsId);
-
-      expect(mockFavoritesService.addFavoriteEarnings).toHaveBeenCalledWith(
-        1,
-        earningsId,
-      );
+        mockFavoritesService.addFavoriteIndicatorGroup,
+      ).toHaveBeenCalledWith(1, 'CPI', 'USA');
       expect(result).toEqual(mockResponse);
     });
   });
 
-  describe('removeFavoriteEarnings', () => {
-    it('즐겨찾기에서 실적 정보를 제거해야 합니다', async () => {
-      // Mock Request 객체
+  describe('removeFavoriteIndicatorGroup', () => {
+    it('지표 그룹 즐겨찾기 해제', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       } as RequestWithUser;
-
-      const earningsId = 1;
-      const mockResponse = {
-        message: '즐겨찾기에서 성공적으로 제거되었습니다.',
-      };
-
-      mockFavoritesService.removeFavoriteEarnings.mockResolvedValue(
+      const body = { baseName: 'CPI', country: COUNTRY_CODE_MAP.USA };
+      const mockResponse = { id: 2 };
+      mockFavoritesService.removeFavoriteIndicatorGroup.mockResolvedValue(
         mockResponse,
       );
-
-      const result = await controller.removeFavoriteEarnings(req, earningsId);
-
-      expect(mockFavoritesService.removeFavoriteEarnings).toHaveBeenCalledWith(
-        1,
-        earningsId,
-      );
-      expect(result).toEqual(mockResponse);
-    });
-  });
-
-  describe('addFavoriteDividends', () => {
-    it('즐겨찾기에 배당 정보를 추가해야 합니다', async () => {
-      // Mock Request 객체
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      } as RequestWithUser;
-
-      const dividendId = 1;
-      const mockResponse = { message: '즐겨찾기에 성공적으로 추가되었습니다.' };
-
-      mockFavoritesService.addFavoriteDividends.mockResolvedValue(mockResponse);
-
-      const result = await controller.addFavoriteDividends(req, dividendId);
-
-      expect(mockFavoritesService.addFavoriteDividends).toHaveBeenCalledWith(
-        1,
-        dividendId,
-      );
-      expect(result).toEqual(mockResponse);
-    });
-  });
-
-  describe('removeFavoriteDividends', () => {
-    it('즐겨찾기에서 배당 정보를 제거해야 합니다', async () => {
-      // Mock Request 객체
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      } as RequestWithUser;
-
-      const dividendId = 1;
-      const mockResponse = {
-        message: '즐겨찾기에서 성공적으로 제거되었습니다.',
-      };
-
-      mockFavoritesService.removeFavoriteDividends.mockResolvedValue(
-        mockResponse,
-      );
-
-      const result = await controller.removeFavoriteDividends(req, dividendId);
-
-      expect(mockFavoritesService.removeFavoriteDividends).toHaveBeenCalledWith(
-        1,
-        dividendId,
-      );
-      expect(result).toEqual(mockResponse);
-    });
-  });
-
-  describe('addFavoriteIndicator', () => {
-    it('즐겨찾기에 경제지표를 추가해야 합니다', async () => {
-      // Mock Request 객체
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      } as RequestWithUser;
-
-      const indicatorId = 1;
-      const mockResponse = { message: '즐겨찾기에 성공적으로 추가되었습니다.' };
-
-      mockFavoritesService.addFavoriteIndicator.mockResolvedValue(mockResponse);
-
-      const result = await controller.addFavoriteIndicator(req, indicatorId);
-
-      expect(mockFavoritesService.addFavoriteIndicator).toHaveBeenCalledWith(
-        1,
-        indicatorId,
-      );
-      expect(result).toEqual(mockResponse);
-    });
-  });
-
-  describe('removeFavoriteIndicator', () => {
-    it('즐겨찾기에서 경제지표를 제거해야 합니다', async () => {
-      // Mock Request 객체
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      } as RequestWithUser;
-
-      const indicatorId = 1;
-      const mockResponse = {
-        message: '즐겨찾기에서 성공적으로 제거되었습니다.',
-      };
-
-      mockFavoritesService.removeFavoriteIndicator.mockResolvedValue(
-        mockResponse,
-      );
-
-      const result = await controller.removeFavoriteIndicator(req, indicatorId);
-
-      expect(mockFavoritesService.removeFavoriteIndicator).toHaveBeenCalledWith(
-        1,
-        indicatorId,
-      );
+      const result = await controller.removeFavoriteIndicatorGroup(req, body);
+      expect(
+        mockFavoritesService.removeFavoriteIndicatorGroup,
+      ).toHaveBeenCalledWith(1, 'CPI', 'USA');
       expect(result).toEqual(mockResponse);
     });
   });

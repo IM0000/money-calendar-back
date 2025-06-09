@@ -1,12 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationService } from './notification.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ContentType, NotificationMethod } from '@prisma/client';
+import { EmailService } from '../email/email.service';
+import { SlackService } from '../slack/slack.service';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import {
-  CreateNotificationDto,
-  UpdateUserNotificationSettingsDto,
-} from './dto/notification.dto';
+import { UpdateUserNotificationSettingsDto } from './dto/notification.dto';
+import { ContentType } from '@prisma/client';
 
 describe('NotificationService', () => {
   let service: NotificationService;
@@ -21,32 +20,36 @@ describe('NotificationService', () => {
       update: jest.fn(),
       updateMany: jest.fn(),
       delete: jest.fn(),
+      deleteMany: jest.fn(),
     },
     userNotificationSettings: {
       findUnique: jest.fn(),
       upsert: jest.fn(),
-    },
-    earningsNotification: {
-      upsert: jest.fn(),
-      delete: jest.fn(),
-      findMany: jest.fn(),
-    },
-    indicatorNotification: {
-      upsert: jest.fn(),
-      delete: jest.fn(),
-      findMany: jest.fn(),
-    },
-    dividendNotification: {
-      upsert: jest.fn(),
-      delete: jest.fn(),
+      create: jest.fn(),
     },
     economicIndicator: {
       findMany: jest.fn(),
+      findUnique: jest.fn(),
     },
     earnings: {
       findMany: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    subscriptionCompany: {
+      findFirst: jest.fn(),
+    },
+    subscriptionIndicatorGroup: {
+      findFirst: jest.fn(),
     },
     $transaction: jest.fn((callback) => callback(mockPrismaService)),
+  };
+
+  const mockEmailService = {
+    sendNotificationEmail: jest.fn(),
+  };
+
+  const mockSlackService = {
+    sendSlackNotification: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -56,6 +59,14 @@ describe('NotificationService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: EmailService,
+          useValue: mockEmailService,
+        },
+        {
+          provide: SlackService,
+          useValue: mockSlackService,
         },
       ],
     }).compile();
@@ -68,81 +79,13 @@ describe('NotificationService', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it('서비스가 정의되어 있어야 한다', () => {
     expect(service).toBeDefined();
   });
 
-  describe('findContentSubscriptions', () => {
-    it('should find economic indicator subscriptions', async () => {
-      const mockIndicatorSubs = [
-        {
-          userId: 1,
-          indicatorId: 1,
-          user: {
-            id: 1,
-            notificationSettings: {
-              emailEnabled: true,
-            },
-          },
-        },
-      ];
-      mockPrismaService.indicatorNotification.findMany.mockResolvedValue(
-        mockIndicatorSubs,
-      );
-
-      const result = await service.findContentSubscriptions(
-        ContentType.ECONOMIC_INDICATOR,
-        1,
-      );
-
-      expect(prismaService.indicatorNotification.findMany).toHaveBeenCalledWith(
-        {
-          where: { indicatorId: 1 },
-          include: { user: { include: { notificationSettings: true } } },
-        },
-      );
-      expect(result).toEqual(mockIndicatorSubs);
-    });
-
-    it('should find earnings subscriptions', async () => {
-      const mockEarningsSubs = [
-        {
-          userId: 1,
-          earningsId: 1,
-          user: {
-            id: 1,
-            notificationSettings: {
-              emailEnabled: true,
-            },
-          },
-        },
-      ];
-      mockPrismaService.earningsNotification.findMany.mockResolvedValue(
-        mockEarningsSubs,
-      );
-
-      const result = await service.findContentSubscriptions(
-        ContentType.EARNINGS,
-        1,
-      );
-
-      expect(prismaService.earningsNotification.findMany).toHaveBeenCalledWith({
-        where: { earningsId: 1 },
-        include: { user: { include: { notificationSettings: true } } },
-      });
-      expect(result).toEqual(mockEarningsSubs);
-    });
-
-    it('should throw NotFoundException for unsupported content type', async () => {
-      await expect(
-        service.findContentSubscriptions('UNSUPPORTED' as ContentType, 1),
-      ).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('createNotification', () => {
-    it('should create a notification', async () => {
-      const dto: CreateNotificationDto = {
+  describe('알림 생성', () => {
+    it('알림을 정상적으로 생성한다', async () => {
+      const dto = {
         contentType: ContentType.EARNINGS,
         contentId: 1,
         userId: 1,
@@ -150,28 +93,80 @@ describe('NotificationService', () => {
       const mockNotification = {
         id: 1,
         ...dto,
-        read: false,
+        isRead: false,
         createdAt: new Date(),
       };
+      const mockEarnings = {
+        id: 1,
+        companyId: 1,
+        company: { name: 'Test Company', ticker: 'TEST' },
+      };
+      const mockSubscription = {
+        id: 1,
+        userId: 1,
+        companyId: 1,
+        isActive: true,
+      };
+      const mockSettings = {
+        id: 1,
+        userId: 1,
+        emailEnabled: false,
+        slackEnabled: false,
+        slackWebhookUrl: null,
+      };
+
       mockPrismaService.notification.create.mockResolvedValue(mockNotification);
+      mockPrismaService.earnings.findUnique.mockResolvedValue(mockEarnings);
+      mockPrismaService.subscriptionCompany.findFirst.mockResolvedValue(
+        mockSubscription,
+      );
+      mockPrismaService.userNotificationSettings.findUnique.mockResolvedValue(
+        mockSettings,
+      );
 
       const result = await service.createNotification(dto);
 
+      expect(prismaService.earnings.findUnique).toHaveBeenCalledWith({
+        where: { id: 1 },
+        include: { company: true },
+      });
+      expect(prismaService.subscriptionCompany.findFirst).toHaveBeenCalledWith({
+        where: {
+          userId: 1,
+          companyId: 1,
+          isActive: true,
+        },
+        include: {
+          user: {
+            include: {
+              notificationSettings: true,
+            },
+          },
+        },
+      });
+      expect(
+        prismaService.userNotificationSettings.findUnique,
+      ).toHaveBeenCalledWith({
+        where: { userId: 1 },
+      });
       expect(prismaService.notification.create).toHaveBeenCalledWith({
-        data: dto,
+        data: {
+          ...dto,
+          isRead: false,
+        },
       });
       expect(result).toEqual(mockNotification);
     });
   });
 
-  describe('getUserNotificationSettings', () => {
-    it('should return user notification settings if they exist', async () => {
+  describe('알림 설정 조회', () => {
+    it('설정이 있으면 해당 설정을 반환한다', async () => {
       const mockSettings = {
         id: 1,
         userId: 1,
         emailEnabled: true,
-        pushEnabled: false,
-        preferredMethod: 'EMAIL',
+        slackEnabled: false,
+        slackWebhookUrl: null,
       };
       mockPrismaService.userNotificationSettings.findUnique.mockResolvedValue(
         mockSettings,
@@ -187,27 +182,32 @@ describe('NotificationService', () => {
       expect(result).toEqual(mockSettings);
     });
 
-    it('should return default settings if user has no settings', async () => {
+    it('설정이 없으면 기본값을 생성하여 반환한다', async () => {
       mockPrismaService.userNotificationSettings.findUnique.mockResolvedValue(
         null,
       );
+      const mockCreated = {
+        id: 2,
+        userId: 1,
+        emailEnabled: false,
+        slackEnabled: false,
+        slackWebhookUrl: null,
+      };
+      mockPrismaService.userNotificationSettings.create.mockResolvedValue(
+        mockCreated,
+      );
 
       const result = await service.getUserNotificationSettings(1);
-
-      expect(result).toEqual({
-        emailEnabled: true,
-        pushEnabled: true,
-        preferredMethod: 'BOTH',
-      });
+      expect(result).toEqual(mockCreated);
     });
   });
 
-  describe('updateUserNotificationSettings', () => {
-    it('should update user notification settings', async () => {
+  describe('알림 설정 업데이트', () => {
+    it('알림 설정을 업데이트한다', async () => {
       const dto: UpdateUserNotificationSettingsDto = {
         emailEnabled: false,
-        pushEnabled: true,
-        preferredMethod: 'PUSH',
+        slackEnabled: true,
+        slackWebhookUrl: 'https://slack.com/webhook',
       };
       const mockSettings = {
         id: 1,
@@ -224,130 +224,53 @@ describe('NotificationService', () => {
         prismaService.userNotificationSettings.upsert,
       ).toHaveBeenCalledWith({
         where: { userId: 1 },
-        update: dto,
-        create: { userId: 1, ...dto },
+        update: {
+          emailEnabled: false,
+          slackEnabled: true,
+          slackWebhookUrl: 'https://slack.com/webhook',
+        },
+        create: {
+          userId: 1,
+          emailEnabled: false,
+          slackEnabled: true,
+          slackWebhookUrl: 'https://slack.com/webhook',
+        },
       });
       expect(result).toEqual(mockSettings);
     });
   });
 
-  describe('subscribeContent', () => {
-    it('should subscribe to economic indicator', async () => {
-      const mockSub = { userId: 1, indicatorId: 1 };
-      mockPrismaService.indicatorNotification.upsert.mockResolvedValue(mockSub);
-
-      const result = await service.subscribeContent(
-        1,
-        ContentType.ECONOMIC_INDICATOR,
-        1,
-      );
-
-      expect(prismaService.indicatorNotification.upsert).toHaveBeenCalledWith({
-        where: { userId_indicatorId: { userId: 1, indicatorId: 1 } },
-        update: {},
-        create: { userId: 1, indicatorId: 1 },
-      });
-      expect(result).toEqual(mockSub);
-    });
-
-    it('should subscribe to earnings', async () => {
-      const mockSub = { userId: 1, earningsId: 1 };
-      mockPrismaService.earningsNotification.upsert.mockResolvedValue(mockSub);
-
-      const result = await service.subscribeContent(1, ContentType.EARNINGS, 1);
-
-      expect(prismaService.earningsNotification.upsert).toHaveBeenCalledWith({
-        where: { userId_earningsId: { userId: 1, earningsId: 1 } },
-        update: {},
-        create: { userId: 1, earningsId: 1 },
-      });
-      expect(result).toEqual(mockSub);
-    });
-
-    it('should throw NotFoundException for unsupported content type', async () => {
-      await expect(
-        service.subscribeContent(1, 'UNSUPPORTED' as ContentType, 1),
-      ).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('unsubscribeContent', () => {
-    it('should unsubscribe from economic indicator', async () => {
-      const mockSub = { userId: 1, indicatorId: 1 };
-      mockPrismaService.indicatorNotification.delete.mockResolvedValue(mockSub);
-
-      const result = await service.unsubscribeContent(
-        1,
-        ContentType.ECONOMIC_INDICATOR,
-        1,
-      );
-
-      expect(prismaService.indicatorNotification.delete).toHaveBeenCalledWith({
-        where: { userId_indicatorId: { userId: 1, indicatorId: 1 } },
-      });
-      expect(result).toEqual(mockSub);
-    });
-
-    it('should unsubscribe from earnings', async () => {
-      const mockSub = { userId: 1, earningsId: 1 };
-      mockPrismaService.earningsNotification.delete.mockResolvedValue(mockSub);
-
-      const result = await service.unsubscribeContent(
-        1,
-        ContentType.EARNINGS,
-        1,
-      );
-
-      expect(prismaService.earningsNotification.delete).toHaveBeenCalledWith({
-        where: { userId_earningsId: { userId: 1, earningsId: 1 } },
-      });
-      expect(result).toEqual(mockSub);
-    });
-
-    it('should throw NotFoundException for unsupported content type', async () => {
-      await expect(
-        service.unsubscribeContent(1, 'UNSUPPORTED' as ContentType, 1),
-      ).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('getUserNotifications', () => {
-    it('should get user notifications with details', async () => {
+  describe('알림 목록 조회', () => {
+    it('알림 목록과 총 개수를 반환한다', async () => {
       const mockNotifications = [
         {
           id: 1,
           userId: 1,
           contentType: ContentType.ECONOMIC_INDICATOR,
           contentId: 1,
-          read: false,
+          isRead: false,
+          createdAt: new Date(),
         },
         {
           id: 2,
           userId: 1,
           contentType: ContentType.EARNINGS,
           contentId: 2,
-          read: true,
+          isRead: true,
+          createdAt: new Date(),
         },
       ];
       const mockTotal = 2;
-      const mockIndicators = [
-        {
-          id: 1,
-          name: 'GDP',
-          actual: '2.5%',
-          forecast: '2.2%',
-          releaseDate: 1620000000,
-        },
-      ];
       const mockEarnings = [
         {
           id: 2,
-          actualEPS: 2.5,
-          forecastEPS: 2.2,
-          actualRevenue: 100000,
-          forecastRevenue: 95000,
-          releaseDate: 1620000000,
-          company: { name: 'Apple' },
+          company: { name: 'Test Company', ticker: 'TEST' },
+        },
+      ];
+      const mockIndicators = [
+        {
+          id: 1,
+          name: 'Test Indicator',
         },
       ];
 
@@ -355,10 +278,10 @@ describe('NotificationService', () => {
         mockNotifications,
       );
       mockPrismaService.notification.count.mockResolvedValue(mockTotal);
+      mockPrismaService.earnings.findMany.mockResolvedValue(mockEarnings);
       mockPrismaService.economicIndicator.findMany.mockResolvedValue(
         mockIndicators,
       );
-      mockPrismaService.earnings.findMany.mockResolvedValue(mockEarnings);
 
       const result = await service.getUserNotifications(1, 1, 100);
 
@@ -371,45 +294,35 @@ describe('NotificationService', () => {
       expect(prismaService.notification.count).toHaveBeenCalledWith({
         where: { userId: 1 },
       });
-      expect(prismaService.economicIndicator.findMany).toHaveBeenCalledWith({
-        where: { id: { in: [1] } },
-      });
-      expect(prismaService.earnings.findMany).toHaveBeenCalledWith({
-        where: { id: { in: [2] } },
-        include: { company: true },
-      });
-
-      expect(result.total).toEqual(mockTotal);
       expect(result.notifications).toHaveLength(2);
-      expect(result.notifications[0]).toHaveProperty('eventName', 'GDP');
-      expect(result.notifications[1]).toHaveProperty('eventName', 'Apple');
+      expect(result.pagination.total).toEqual(mockTotal);
     });
   });
 
-  describe('getUnreadNotificationsCount', () => {
-    it('should get unread notifications count', async () => {
+  describe('읽지 않은 알림 개수 조회', () => {
+    it('읽지 않은 알림 개수를 반환한다', async () => {
       mockPrismaService.notification.count.mockResolvedValue(5);
 
       const result = await service.getUnreadNotificationsCount(1);
 
       expect(prismaService.notification.count).toHaveBeenCalledWith({
-        where: { userId: 1, read: false },
+        where: { userId: 1, isRead: false },
       });
       expect(result).toEqual({ count: 5 });
     });
   });
 
-  describe('markAsRead', () => {
-    it('should mark notification as read when it exists and belongs to user', async () => {
+  describe('알림 읽음 처리', () => {
+    it('알림이 존재하고 본인 소유일 때 읽음 처리한다', async () => {
       mockPrismaService.notification.findUnique.mockResolvedValue({
         id: 1,
         userId: 1,
-        read: false,
+        isRead: false,
       });
       mockPrismaService.notification.update.mockResolvedValue({
         id: 1,
         userId: 1,
-        read: true,
+        isRead: true,
       });
 
       const result = await service.markAsRead(1, 1);
@@ -419,22 +332,22 @@ describe('NotificationService', () => {
       });
       expect(prismaService.notification.update).toHaveBeenCalledWith({
         where: { id: 1 },
-        data: { read: true },
+        data: { isRead: true },
       });
       expect(result.message).toContain('읽음으로 변경');
     });
 
-    it('should throw NotFoundException when notification does not exist', async () => {
+    it('알림이 존재하지 않으면 NotFoundException 발생', async () => {
       mockPrismaService.notification.findUnique.mockResolvedValue(null);
 
       await expect(service.markAsRead(1, 1)).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw ForbiddenException when notification belongs to another user', async () => {
+    it('알림이 본인 소유가 아니면 ForbiddenException 발생', async () => {
       mockPrismaService.notification.findUnique.mockResolvedValue({
         id: 1,
-        userId: 2, // Different user
-        read: false,
+        userId: 2,
+        isRead: false,
       });
 
       await expect(service.markAsRead(1, 1)).rejects.toThrow(
@@ -443,22 +356,22 @@ describe('NotificationService', () => {
     });
   });
 
-  describe('markAllAsRead', () => {
-    it('should mark all user notifications as read', async () => {
+  describe('모든 알림 읽음 처리', () => {
+    it('모든 알림을 읽음 처리한다', async () => {
       mockPrismaService.notification.updateMany.mockResolvedValue({ count: 5 });
 
       const result = await service.markAllAsRead(1);
 
       expect(prismaService.notification.updateMany).toHaveBeenCalledWith({
-        where: { userId: 1, read: false },
-        data: { read: true },
+        where: { userId: 1, isRead: false },
+        data: { isRead: true },
       });
       expect(result.message).toContain('모든 알림을 읽음으로 표시했습니다.');
     });
   });
 
-  describe('deleteUserNotification', () => {
-    it('should delete notification when it exists and belongs to user', async () => {
+  describe('알림 삭제', () => {
+    it('알림이 존재하고 본인 소유일 때 삭제한다', async () => {
       mockPrismaService.notification.findUnique.mockResolvedValue({
         id: 1,
         userId: 1,
@@ -468,7 +381,7 @@ describe('NotificationService', () => {
         userId: 1,
       });
 
-      const result = await service.deleteUserNotification(1, 1);
+      const result = await service.deleteNotification(1, 1);
 
       expect(prismaService.notification.findUnique).toHaveBeenCalledWith({
         where: { id: 1 },
@@ -479,87 +392,37 @@ describe('NotificationService', () => {
       expect(result.message).toContain('알림이 삭제');
     });
 
-    it('should throw NotFoundException when notification does not exist', async () => {
+    it('알림이 존재하지 않으면 NotFoundException 발생', async () => {
       mockPrismaService.notification.findUnique.mockResolvedValue(null);
 
-      await expect(service.deleteUserNotification(1, 1)).rejects.toThrow(
+      await expect(service.deleteNotification(1, 1)).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('should throw ForbiddenException when notification belongs to another user', async () => {
+    it('알림이 본인 소유가 아니면 ForbiddenException 발생', async () => {
       mockPrismaService.notification.findUnique.mockResolvedValue({
         id: 1,
-        userId: 2, // Different user
+        userId: 2,
       });
 
-      await expect(service.deleteUserNotification(1, 1)).rejects.toThrow(
+      await expect(service.deleteNotification(1, 1)).rejects.toThrow(
         ForbiddenException,
       );
     });
   });
 
-  describe('addEarningsNotification', () => {
-    it('should add earnings notification subscription', async () => {
-      const mockSub = { userId: 1, earningsId: 1 };
-      service.subscribeContent = jest.fn().mockResolvedValue(mockSub);
+  describe('모든 알림 삭제', () => {
+    it('모든 알림을 삭제한다', async () => {
+      mockPrismaService.notification.deleteMany.mockResolvedValue({ count: 3 });
 
-      const result = await service.addEarningsNotification(1, 1);
+      const result = await service.deleteAllUserNotifications(1);
 
-      expect(service.subscribeContent).toHaveBeenCalledWith(
-        1,
-        ContentType.EARNINGS,
-        1,
-      );
-      expect(result).toEqual(mockSub);
-    });
-  });
-
-  describe('removeEarningsNotification', () => {
-    it('should remove earnings notification subscription', async () => {
-      const mockSub = { userId: 1, earningsId: 1 };
-      service.unsubscribeContent = jest.fn().mockResolvedValue(mockSub);
-
-      const result = await service.removeEarningsNotification(1, 1);
-
-      expect(service.unsubscribeContent).toHaveBeenCalledWith(
-        1,
-        ContentType.EARNINGS,
-        1,
-      );
-      expect(result).toEqual(mockSub);
-    });
-  });
-
-  describe('addEconomicIndicatorNotification', () => {
-    it('should add economic indicator notification subscription', async () => {
-      const mockSub = { userId: 1, indicatorId: 1 };
-      service.subscribeContent = jest.fn().mockResolvedValue(mockSub);
-
-      const result = await service.addEconomicIndicatorNotification(1, 1);
-
-      expect(service.subscribeContent).toHaveBeenCalledWith(
-        1,
-        ContentType.ECONOMIC_INDICATOR,
-        1,
-      );
-      expect(result).toEqual(mockSub);
-    });
-  });
-
-  describe('removeEconomicIndicatorNotification', () => {
-    it('should remove economic indicator notification subscription', async () => {
-      const mockSub = { userId: 1, indicatorId: 1 };
-      service.unsubscribeContent = jest.fn().mockResolvedValue(mockSub);
-
-      const result = await service.removeEconomicIndicatorNotification(1, 1);
-
-      expect(service.unsubscribeContent).toHaveBeenCalledWith(
-        1,
-        ContentType.ECONOMIC_INDICATOR,
-        1,
-      );
-      expect(result).toEqual(mockSub);
+      expect(prismaService.notification.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 1 },
+      });
+      expect(result.message).toContain('모든 알림이 삭제');
+      expect(result.count).toBe(3);
     });
   });
 });

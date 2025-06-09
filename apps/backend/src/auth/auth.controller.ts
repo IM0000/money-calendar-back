@@ -25,7 +25,6 @@ import { RequestWithUser } from '../common/types/request-with-user';
 import {
   ApiTags,
   ApiOperation,
-  ApiBearerAuth,
   ApiQuery,
   ApiParam,
   ApiBody,
@@ -185,7 +184,6 @@ export class AuthController {
    * 현재 로그인 상태 확인 (JWT 토큰 검증)
    */
   @ApiOperation({ summary: '로그인 상태 확인' })
-  @ApiBearerAuth('Authentication')
   @ApiResponseWrapper(Object)
   @Get('status')
   @UseGuards(JwtAuthGuard)
@@ -197,7 +195,6 @@ export class AuthController {
    * OAuth 계정 연결
    */
   @ApiOperation({ summary: 'OAuth 계정 연결' })
-  @ApiBearerAuth('JWT-auth')
   @ApiResponseWrapper(Object)
   @Post('oauth/connect')
   @UseGuards(JwtAuthGuard)
