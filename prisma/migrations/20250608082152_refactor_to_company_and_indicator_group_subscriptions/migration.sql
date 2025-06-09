@@ -146,3 +146,13 @@ ALTER TABLE "SubscriptionCompany" ADD CONSTRAINT "SubscriptionCompany_companyId_
 
 -- AddForeignKey
 ALTER TABLE "SubscriptionIndicatorGroup" ADD CONSTRAINT "SubscriptionIndicatorGroup_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Update baseName field to remove patterns like (5월), (1분기), (2분기), etc.
+UPDATE "EconomicIndicator"
+SET "baseName" = TRIM(
+    REGEXP_REPLACE(
+        name,
+        '\s*\([^)]+\)\s*$',
+        ''
+    )
+);
