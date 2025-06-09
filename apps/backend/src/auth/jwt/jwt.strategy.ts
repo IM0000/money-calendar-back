@@ -3,7 +3,7 @@ import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, JwtFromRequestFunction, Strategy } from 'passport-jwt';
 import { ConfigType } from '@nestjs/config';
-import { UsersService } from '../../users/users.service';
+import { UserService } from '../../user/user.service';
 import { Request } from 'express';
 import {
   ERROR_CODE_MAP,
@@ -15,7 +15,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     @Inject(jwtConfig.KEY)
     private jwtConfiguration: ConfigType<typeof jwtConfig>,
-    private readonly usersService: UsersService,
+    private readonly usersService: UserService,
   ) {
     console.log('JwtStrategy', jwtConfiguration.expiration);
     console.log('JwtStrategy process', process.env.JWT_EXPIRATION);

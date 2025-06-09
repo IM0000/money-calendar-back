@@ -42,28 +42,43 @@ export class SearchService {
 
     const itemsWithFavorites = items.map((company) => ({
       ...company,
-      isFavoriteEarnings: false,
-      isFavoriteDividend: false,
+      isFavorite: false,
+      hasSubscription: false,
     }));
 
     if (userId) {
-      const [favE, favD] = await Promise.all([
-        this.prisma.favoriteEarnings.findMany({
-          where: { userId },
-          include: { earnings: true },
-        }),
-        this.prisma.favoriteDividends.findMany({
-          where: { userId },
-          include: { dividend: true },
-        }),
-      ]);
+      // 회사 단위 즐겨찾기 정보 조회
+      const favoriteCompanies = await this.prisma.favoriteCompany.findMany({
+        where: {
+          userId,
+          companyId: { in: items.map((c) => c.id) },
+          isActive: true,
+        },
+        select: { companyId: true },
+      });
 
-      const earningsIds = new Set(favE.map((f) => f.earnings.companyId));
-      const dividendIds = new Set(favD.map((f) => f.dividend.companyId));
+      // 회사 단위 구독 정보 조회
+      const subscriptionCompanies =
+        await this.prisma.subscriptionCompany.findMany({
+          where: {
+            userId,
+            companyId: { in: items.map((c) => c.id) },
+            isActive: true,
+          },
+          select: { companyId: true },
+        });
+
+      const favoriteCompanyIds = new Set(
+        favoriteCompanies.map((f) => f.companyId),
+      );
+
+      const subscriptionCompanyIds = new Set(
+        subscriptionCompanies.map((s) => s.companyId),
+      );
 
       itemsWithFavorites.forEach((c) => {
-        c.isFavoriteEarnings = earningsIds.has(c.id);
-        c.isFavoriteDividend = dividendIds.has(c.id);
+        c.isFavorite = favoriteCompanyIds.has(c.id);
+        c.hasSubscription = subscriptionCompanyIds.has(c.id);
       });
     }
 
@@ -111,26 +126,46 @@ export class SearchService {
     }));
 
     if (userId) {
-      const favoriteIndicators = await this.prisma.favoriteIndicator.findMany({
-        where: { userId },
-      });
-
-      const indicatorNotifications =
-        await this.prisma.indicatorNotification.findMany({
-          where: { userId },
+      // 지표 그룹 단위 즐겨찾기 정보 조회
+      const favoriteIndicatorGroups =
+        await this.prisma.favoriteIndicatorGroup.findMany({
+          where: {
+            userId,
+            isActive: true,
+          },
+          select: { baseName: true, country: true },
         });
 
-      const favoriteIndicatorIds = new Set(
-        favoriteIndicators.map((f) => f.indicatorId),
+      // 지표 그룹 단위 구독 정보 조회
+      const subscriptionIndicatorGroups =
+        await this.prisma.subscriptionIndicatorGroup.findMany({
+          where: {
+            userId,
+            isActive: true,
+          },
+          select: { baseName: true, country: true },
+        });
+
+      // baseName과 country 조합 세트 생성 (즐겨찾기)
+      const favoriteBaseNameCountryCombinations = new Set(
+        favoriteIndicatorGroups.map((f) => `${f.baseName}:${f.country}`),
       );
 
-      const notificationIds = new Set(
-        indicatorNotifications.map((s) => s.indicatorId),
+      // baseName과 country 조합 세트 생성 (구독)
+      const subscriptionBaseNameCountryCombinations = new Set(
+        subscriptionIndicatorGroups.map((s) => `${s.baseName}:${s.country}`),
       );
 
+      // 각 지표에 즐겨찾기 및 구독 정보 추가
       processedItems.forEach((indicator) => {
-        indicator.isFavorite = favoriteIndicatorIds.has(indicator.id);
-        indicator.hasNotification = notificationIds.has(indicator.id);
+        // baseName+country 조합으로 즐겨찾기 여부 확인
+        const favoriteKey = `${indicator.baseName}:${indicator.country}`;
+        indicator.isFavorite =
+          favoriteBaseNameCountryCombinations.has(favoriteKey);
+
+        // baseName+country 조합으로 구독 여부 확인
+        indicator.hasNotification =
+          subscriptionBaseNameCountryCombinations.has(favoriteKey);
       });
     }
 

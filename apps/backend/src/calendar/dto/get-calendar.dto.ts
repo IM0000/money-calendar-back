@@ -1,5 +1,11 @@
 // src/calendar/dto/get-calendar.dto.ts
-import { IsNotEmpty, Matches, IsDateString, IsOptional } from 'class-validator';
+import {
+  IsNotEmpty,
+  Matches,
+  IsDateString,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class GetCalendarDto {
@@ -26,4 +32,22 @@ export class GetCompanyHistoryDto {
   @IsOptional()
   @Type(() => Number)
   limit = 5;
+}
+
+export class GetIndicatorGroupHistoryDto {
+  @IsNotEmpty({ message: '지표명은 필수 입력값입니다' })
+  @IsString({ message: '지표명은 문자열이어야 합니다' })
+  baseName: string;
+
+  @IsOptional()
+  @IsString({ message: '국가는 문자열이어야 합니다' })
+  country?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  page = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  limit = 10;
 }

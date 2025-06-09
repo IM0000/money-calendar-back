@@ -7,7 +7,7 @@ export class SearchCompanyDto {
   @IsOptional()
   query?: string;
 
-  @ApiProperty({ description: '국가 코드', required: false, example: 'US' })
+  @ApiProperty({ description: '국가 코드', required: false, example: 'USA' })
   @IsString()
   @IsOptional()
   country?: string;
@@ -35,7 +35,7 @@ export class SearchIndicatorDto {
   @IsOptional()
   query?: string;
 
-  @ApiProperty({ description: '국가 코드', required: false, example: 'US' })
+  @ApiProperty({ description: '국가 코드', required: false, example: 'USA' })
   @IsString()
   @IsOptional()
   country?: string;

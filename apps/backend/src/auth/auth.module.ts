@@ -15,11 +15,11 @@ import { EmailModule } from '../email/email.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from './jwt/jwt.module';
-import { UsersModule } from '../users/users.module';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
-    UsersModule,
+    UserModule,
     EmailModule,
     PrismaModule,
     JwtModule,

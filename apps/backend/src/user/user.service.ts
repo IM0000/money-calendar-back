@@ -19,7 +19,7 @@ import {
 } from '../common/constants/error.constant';
 
 @Injectable()
-export class UsersService {
+export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
@@ -360,6 +360,8 @@ export class UsersService {
         errorMessage: ERROR_MESSAGE_MAP.VALIDATION_002,
       });
     }
+
+    await this.prisma.user.delete({ where: { id: userId } });
 
     return { message: '계정이 성공적으로 삭제되었습니다.' };
   }

@@ -14,7 +14,7 @@ describe('SearchService', () => {
       id: 1,
       name: 'Apple Inc.',
       ticker: 'AAPL',
-      country: 'US',
+      country: 'USA',
       description: '애플은 혁신적인 기술 기업입니다.',
       industry: 'Technology',
       sector: 'Consumer Electronics',
@@ -27,7 +27,7 @@ describe('SearchService', () => {
       id: 2,
       name: 'Samsung Electronics',
       ticker: '005930.KS',
-      country: 'KR',
+      country: 'KOR',
       description: '삼성전자는 한국의 대표적인 전자 기업입니다.',
       industry: 'Technology',
       sector: 'Consumer Electronics',
@@ -42,7 +42,8 @@ describe('SearchService', () => {
     {
       id: 1,
       name: 'Non-Farm Payrolls',
-      country: 'US',
+      baseName: 'Non-Farm Payrolls',
+      country: 'USA',
       releaseDate: BigInt(1625097600000),
       importance: 3,
       actual: '850K',
@@ -54,7 +55,8 @@ describe('SearchService', () => {
     {
       id: 2,
       name: 'CPI',
-      country: 'US',
+      baseName: 'CPI',
+      country: 'USA',
       releaseDate: BigInt(1625097600000),
       importance: 3,
       actual: '5.4%',
@@ -65,7 +67,7 @@ describe('SearchService', () => {
     },
   ];
 
-  // 목 Prisma 서비스
+  // 목 Prisma 서비스 (새로운 스키마에 맞게 수정)
   const mockPrismaService = {
     company: {
       count: jest.fn(),
@@ -74,16 +76,16 @@ describe('SearchService', () => {
       findMany: jest.fn(),
       count: jest.fn(),
     },
-    favoriteEarnings: {
+    favoriteCompany: {
       findMany: jest.fn(),
     },
-    favoriteDividends: {
+    subscriptionCompany: {
       findMany: jest.fn(),
     },
-    favoriteIndicator: {
+    favoriteIndicatorGroup: {
       findMany: jest.fn(),
     },
-    indicatorNotification: {
+    subscriptionIndicatorGroup: {
       findMany: jest.fn(),
     },
     $queryRaw: jest.fn().mockResolvedValue(mockCompanies),
@@ -97,20 +99,20 @@ describe('SearchService', () => {
     mockPrismaService.company.count = jest
       .fn()
       .mockResolvedValue(mockCompanies.length);
-    mockPrismaService.favoriteEarnings.findMany = jest
+    mockPrismaService.favoriteCompany.findMany = jest
       .fn()
       .mockResolvedValue([]);
-    mockPrismaService.favoriteDividends.findMany = jest
+    mockPrismaService.subscriptionCompany.findMany = jest
       .fn()
       .mockResolvedValue([]);
     mockPrismaService.economicIndicator.findMany = jest
       .fn()
       .mockResolvedValue([]);
     mockPrismaService.economicIndicator.count = jest.fn().mockResolvedValue(0);
-    mockPrismaService.favoriteIndicator.findMany = jest
+    mockPrismaService.favoriteIndicatorGroup.findMany = jest
       .fn()
       .mockResolvedValue([]);
-    mockPrismaService.indicatorNotification.findMany = jest
+    mockPrismaService.subscriptionIndicatorGroup.findMany = jest
       .fn()
       .mockResolvedValue([]);
 
@@ -164,8 +166,7 @@ describe('SearchService', () => {
           id: mockCompanies[0].id,
           name: mockCompanies[0].name,
           ticker: mockCompanies[0].ticker,
-          isFavoriteEarnings: false,
-          isFavoriteDividend: false,
+          isFavorite: false,
         }),
       );
     });
@@ -173,7 +174,7 @@ describe('SearchService', () => {
     it('쿼리와 페이지네이션으로 기업을 검색해야 합니다', async () => {
       const searchDto: SearchCompanyDto = {
         query: 'Apple',
-        country: 'US',
+        country: 'USA',
         page: 1,
         limit: 5,
       };
@@ -228,42 +229,50 @@ describe('SearchService', () => {
       });
     });
 
-    it('로그인한 사용자의 관심 정보를 포함한 기업 목록을 반환해야 합니다', async () => {
+    it('로그인한 사용자의 회사 단위 즐겨찾기 및 구독 정보를 포함한 기업 목록을 반환해야 합니다', async () => {
       const searchDto: SearchCompanyDto = {};
       const userId = 1;
       const mockTotal = mockCompanies.length;
 
-      // 관심 목록 목 데이터
-      const mockFavoriteEarnings = [{ earnings: { companyId: 1 } }];
-      const mockFavoriteDividends = [{ dividend: { companyId: 2 } }];
+      // 회사 단위 즐겨찾기 및 구독 목 데이터
+      const mockFavoriteCompanies = [{ companyId: 1 }];
+      const mockSubscriptionCompanies = [{ companyId: 2 }];
 
       mockPrismaService.$queryRaw.mockResolvedValue(mockCompanies);
       mockPrismaService.company.count.mockResolvedValue(mockTotal);
-      mockPrismaService.favoriteEarnings.findMany.mockResolvedValue(
-        mockFavoriteEarnings,
+      mockPrismaService.favoriteCompany.findMany.mockResolvedValue(
+        mockFavoriteCompanies,
       );
-      mockPrismaService.favoriteDividends.findMany.mockResolvedValue(
-        mockFavoriteDividends,
+      mockPrismaService.subscriptionCompany.findMany.mockResolvedValue(
+        mockSubscriptionCompanies,
       );
 
       const result = await service.searchCompanies(searchDto, userId);
 
-      expect(mockPrismaService.favoriteEarnings.findMany).toHaveBeenCalledWith({
-        where: { userId },
-        include: { earnings: true },
+      expect(mockPrismaService.favoriteCompany.findMany).toHaveBeenCalledWith({
+        where: {
+          userId,
+          companyId: { in: mockCompanies.map((c) => c.id) },
+          isActive: true,
+        },
+        select: { companyId: true },
       });
 
-      expect(mockPrismaService.favoriteDividends.findMany).toHaveBeenCalledWith(
-        {
-          where: { userId },
-          include: { dividend: true },
+      expect(
+        mockPrismaService.subscriptionCompany.findMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          userId,
+          companyId: { in: mockCompanies.map((c) => c.id) },
+          isActive: true,
         },
-      );
+        select: { companyId: true },
+      });
 
-      expect(result.items[0].isFavoriteEarnings).toBe(true);
-      expect(result.items[0].isFavoriteDividend).toBe(false);
-      expect(result.items[1].isFavoriteEarnings).toBe(false);
-      expect(result.items[1].isFavoriteDividend).toBe(true);
+      expect(result.items[0].isFavorite).toBe(true);
+      expect(result.items[0].hasSubscription).toBe(false);
+      expect(result.items[1].isFavorite).toBe(false);
+      expect(result.items[1].hasSubscription).toBe(true);
     });
   });
 
@@ -318,7 +327,7 @@ describe('SearchService', () => {
     it('쿼리와 페이지네이션으로 경제지표를 검색해야 합니다', async () => {
       const searchDto: SearchIndicatorDto = {
         query: 'CPI',
-        country: 'US',
+        country: 'USA',
         page: 1,
         limit: 5,
       };
@@ -363,38 +372,44 @@ describe('SearchService', () => {
       });
     });
 
-    it('로그인한 사용자의 관심 정보를 포함한 경제지표 목록을 반환해야 합니다', async () => {
+    it('로그인한 사용자의 지표 그룹 단위 즐겨찾기/구독 정보를 포함한 경제지표 목록을 반환해야 합니다', async () => {
       const searchDto: SearchIndicatorDto = {};
       const userId = 1;
       const mockTotal = mockEconomicIndicators.length;
 
-      // 관심 목록 및 알림 목 데이터
-      const mockFavoriteIndicators = [{ indicatorId: 1 }];
-      const mockIndicatorNotifications = [{ indicatorId: 2 }];
+      // 지표 그룹 단위 즐겨찾기/구독 목 데이터
+      const mockFavoriteIndicatorGroups = [
+        { baseName: 'Non-Farm Payrolls', country: 'USA' },
+      ];
+      const mockSubscriptionIndicatorGroups = [
+        { baseName: 'CPI', country: 'USA' },
+      ];
 
       mockPrismaService.economicIndicator.findMany.mockResolvedValue(
         mockEconomicIndicators,
       );
       mockPrismaService.economicIndicator.count.mockResolvedValue(mockTotal);
-      mockPrismaService.favoriteIndicator.findMany.mockResolvedValue(
-        mockFavoriteIndicators,
+      mockPrismaService.favoriteIndicatorGroup.findMany.mockResolvedValue(
+        mockFavoriteIndicatorGroups,
       );
-      mockPrismaService.indicatorNotification.findMany.mockResolvedValue(
-        mockIndicatorNotifications,
+      mockPrismaService.subscriptionIndicatorGroup.findMany.mockResolvedValue(
+        mockSubscriptionIndicatorGroups,
       );
 
       const result = await service.searchIndicators(searchDto, userId);
 
-      expect(mockPrismaService.favoriteIndicator.findMany).toHaveBeenCalledWith(
-        {
-          where: { userId },
-        },
-      );
+      expect(
+        mockPrismaService.favoriteIndicatorGroup.findMany,
+      ).toHaveBeenCalledWith({
+        where: { userId, isActive: true },
+        select: { baseName: true, country: true },
+      });
 
       expect(
-        mockPrismaService.indicatorNotification.findMany,
+        mockPrismaService.subscriptionIndicatorGroup.findMany,
       ).toHaveBeenCalledWith({
-        where: { userId },
+        where: { userId, isActive: true },
+        select: { baseName: true, country: true },
       });
 
       expect(result.items[0].isFavorite).toBe(true);

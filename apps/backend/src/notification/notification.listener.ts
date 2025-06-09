@@ -1,84 +1,64 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationService } from './notification.service';
-import { EmailService } from '../email/email.service';
 import { ContentType } from '@prisma/client';
-import { SendNotificationEmailDto } from './dto/notification.dto';
+import { SubscriptionService } from '../subscription/subscription.service';
 
 @Injectable()
 export class NotificationListener {
   constructor(
     private readonly notificationService: NotificationService,
-    private readonly emailService: EmailService,
+    private readonly subscriptionService: SubscriptionService,
   ) {}
 
   @OnEvent('indicator.actualChanged')
   async onIndicatorChanged({ before, after }) {
-    await this.handleContentChange(
-      ContentType.ECONOMIC_INDICATOR,
-      before.id,
-      before,
-      after,
-      ({ before, after }) => ({
-        subject: `${before.name} 지표 업데이트 알림`,
-        content: `${before.name} 지표가 ${after.actual}로 업데이트되었습니다.`,
-      }),
-    );
+    const subscribers =
+      await this.subscriptionService.getIndicatorGroupSubscribers(
+        before.baseName,
+        before.country,
+      );
+    for (const { userId } of subscribers) {
+      await this.notificationService.createNotification({
+        contentType: ContentType.ECONOMIC_INDICATOR,
+        contentId: before.id,
+        userId,
+        metadata: { before, after },
+      });
+    }
   }
 
   @OnEvent('earnings.actualChanged')
   async onEarningsChanged({ before, after }) {
-    await this.handleContentChange(
-      ContentType.EARNINGS,
-      before.id,
-      before,
-      after,
-      ({ before, after }) => ({
-        subject: `${before.company.name} 실적 업데이트 알림`,
-        content: `${before.company.name}의 실적이 업데이트되었습니다. EPS: ${after.actualEPS}, 매출: ${after.actualRevenue}`,
-      }),
+    const subscribers = await this.subscriptionService.getCompanySubscribers(
+      before.companyId,
     );
+    for (const { userId } of subscribers) {
+      await this.notificationService.createNotification({
+        contentType: ContentType.EARNINGS,
+        contentId: before.id,
+        userId,
+        metadata: { before, after },
+      });
+    }
   }
 
-  private async handleContentChange<T>(
-    type: ContentType,
-    contentId: number,
-    before: T,
-    after: T,
-    buildEmail: (ctx: {
-      before: T;
-      after: T;
-    }) => Pick<SendNotificationEmailDto, 'subject' | 'content'>,
-  ) {
-    const subs = await this.notificationService.findContentSubscriptions(
-      type,
-      contentId,
+  @OnEvent('dividend.dataChanged')
+  async onDividendDataChanged({ before, after }) {
+    const subscribers = await this.subscriptionService.getCompanySubscribers(
+      before.companyId,
     );
-
-    for (const sub of subs) {
+    for (const { userId } of subscribers) {
       await this.notificationService.createNotification({
-        contentType: type,
-        contentId,
-        userId: sub.user.id,
+        contentType: ContentType.DIVIDEND,
+        contentId: before.id,
+        userId,
+        metadata: {
+          before,
+          after,
+          notificationType: 'DATA_CHANGED', // 배당 데이터 변경 알림임을 표시
+        },
       });
-
-      const settings = sub.user.notificationSettings || {
-        emailEnabled: true,
-        preferredMethod: 'BOTH',
-      };
-
-      if (
-        settings.emailEnabled &&
-        ['EMAIL', 'BOTH'].includes(settings.preferredMethod)
-      ) {
-        const { subject, content } = buildEmail({ before, after });
-        const emailDto: SendNotificationEmailDto = {
-          email: sub.user.email,
-          subject,
-          content,
-        };
-        await this.emailService.sendNotificationEmail(emailDto);
-      }
     }
   }
 }

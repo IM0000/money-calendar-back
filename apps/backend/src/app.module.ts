@@ -2,9 +2,10 @@ import { validationSchema } from './config/validation/main.validation';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UsersModule } from './users/users.module';
+import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { EmailModule } from './email/email.module';
+import { SlackModule } from './slack/slack.module';
 import { ConfigModule } from '@nestjs/config';
 import { emailConfig } from './config/email.config';
 import { jwtConfig } from './config/jwt.config';
@@ -18,11 +19,13 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ResponseInterceptor } from './common/interceptor/response.interceptor';
 import { frontendConfig } from './config/frontend.config';
 import { CalendarModule } from './calendar/calendar.module';
-import { FavoritesModule } from './favorites/favorites.module';
+import { FavoriteModule } from './favorite/favorite.module';
+import { SubscriptionModule } from './subscription/subscription.module';
 import { SearchModule } from './search/search.module';
-import { CompaniesModule } from './companies/companies.module';
+import { CompanyModule } from './company/company.module';
 import { NotificationModule } from './notification/notification.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { HealthModule } from './health/health.module';
 import { TerminusModule } from '@nestjs/terminus';
 import { awsConfig } from './config/aws.config';
@@ -35,6 +38,7 @@ console.log('NODE_ENV:', NODE_ENV);
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true, // ConfigModule을 전역으로 설정
       ignoreEnvFile: process.env.NODE_ENV === 'production',
@@ -59,14 +63,16 @@ console.log('NODE_ENV:', NODE_ENV);
       ],
       validationSchema,
     }),
-    UsersModule,
+    UserModule,
     AuthModule,
     EmailModule,
+    SlackModule,
     CalendarModule,
-    FavoritesModule,
+    FavoriteModule,
+    SubscriptionModule,
     NotificationModule,
     SearchModule,
-    CompaniesModule,
+    CompanyModule,
     HealthModule,
     TerminusModule,
     HealthModule,

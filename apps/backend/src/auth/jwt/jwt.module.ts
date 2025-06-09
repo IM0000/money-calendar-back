@@ -5,14 +5,14 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { OptionalJwtAuthGuard } from './optional-jwt-auth.guard';
 import { IngestJwtStrategy } from './ingest-jwt.strategy';
 import { IngestJwtAuthGuard } from './ingest-jwt-auth.guard';
-import { UsersModule } from '../../users/users.module';
+import { UserModule } from '../../user/user.module';
 import { JwtModule as NestJwtModule } from '@nestjs/jwt';
 import { jwtConfig } from '../../config/jwt.config';
 import { ConfigType } from '@nestjs/config';
 
 @Module({
   imports: [
-    forwardRef(() => UsersModule),
+    forwardRef(() => UserModule),
     NestJwtModule.registerAsync({
       useFactory: (cfg: ConfigType<typeof jwtConfig>) => ({
         secret: cfg.secret,

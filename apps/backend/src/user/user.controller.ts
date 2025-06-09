@@ -13,7 +13,7 @@ import {
   Patch,
   Logger,
 } from '@nestjs/common';
-import { UsersService } from './users.service';
+import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
 import {
   UpdateProfileDto,
@@ -26,7 +26,7 @@ import {
 import { Request } from 'express';
 import { NotificationService } from '../notification/notification.service';
 import { UpdateUserNotificationSettingsDto } from '../notification/dto/notification.dto';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ApiResponseWrapper } from '../common/decorators/api-response.decorator';
 
 interface RequestWithUser extends Request {
@@ -38,10 +38,10 @@ interface RequestWithUser extends Request {
 
 @ApiTags('유저')
 @Controller('api/v1/users')
-export class UsersController {
-  private readonly logger = new Logger(UsersController.name);
+export class UserController {
+  private readonly logger = new Logger(UserController.name);
   constructor(
-    private readonly usersService: UsersService,
+    private readonly usersService: UserService,
     private readonly notificationService: NotificationService,
   ) {}
 
@@ -62,7 +62,6 @@ export class UsersController {
    * 사용자 프로필 조회
    */
   @ApiOperation({ summary: '사용자 프로필 조회' })
-  @ApiBearerAuth('JWT-auth')
   @ApiResponseWrapper(ProfileResponseDto)
   @Get('/profile')
   @UseGuards(JwtAuthGuard)
@@ -75,7 +74,6 @@ export class UsersController {
    * 사용자 프로필 업데이트 (닉네임 등)
    */
   @ApiOperation({ summary: '사용자 닉네임 업데이트' })
-  @ApiBearerAuth('JWT-auth')
   @ApiResponseWrapper(ProfileResponseDto)
   @Patch('/profile/nickname')
   @UseGuards(JwtAuthGuard)
@@ -91,7 +89,6 @@ export class UsersController {
    * 사용자 비밀번호 변경 (로그인된 상태에서)
    */
   @ApiOperation({ summary: '사용자 비밀번호 변경' })
-  @ApiBearerAuth('JWT-auth')
   @ApiResponseWrapper(Object)
   @Patch('/profile/password')
   @UseGuards(JwtAuthGuard)
@@ -111,7 +108,6 @@ export class UsersController {
    * 계정 탈퇴
    */
   @ApiOperation({ summary: '계정 탈퇴' })
-  @ApiBearerAuth('JWT-auth')
   @ApiResponseWrapper(Object)
   @Post('/delete')
   @UseGuards(JwtAuthGuard)
@@ -131,7 +127,6 @@ export class UsersController {
    * OAuth 계정 연결 해제
    */
   @ApiOperation({ summary: 'OAuth 계정 연결 해제' })
-  @ApiBearerAuth('JWT-auth')
   @ApiResponseWrapper(Object, false)
   @Delete('/profile/oauth/:provider')
   @UseGuards(JwtAuthGuard)
@@ -148,7 +143,6 @@ export class UsersController {
    * 사용자 알림 목록 조회
    */
   @ApiOperation({ summary: '사용자 알림 목록 조회' })
-  @ApiBearerAuth('JWT-auth')
   @ApiResponseWrapper(Object, true)
   @Get('/me/notifications')
   @UseGuards(JwtAuthGuard)
@@ -169,7 +163,6 @@ export class UsersController {
    * 사용자 읽지 않은 알림 개수 조회
    */
   @ApiOperation({ summary: '읽지 않은 알림 개수 조회' })
-  @ApiBearerAuth('JWT-auth')
   @ApiResponseWrapper(Object)
   @Get('/me/notifications/unread/count')
   @UseGuards(JwtAuthGuard)
@@ -182,7 +175,6 @@ export class UsersController {
    * 사용자 알림 설정 조회
    */
   @ApiOperation({ summary: '사용자 알림 설정 조회' })
-  @ApiBearerAuth('JWT-auth')
   @ApiResponseWrapper(Object)
   @Get('/me/notification-settings')
   @UseGuards(JwtAuthGuard)
@@ -195,7 +187,6 @@ export class UsersController {
    * 사용자 알림 설정 업데이트
    */
   @ApiOperation({ summary: '사용자 알림 설정 업데이트' })
-  @ApiBearerAuth('JWT-auth')
   @ApiResponseWrapper(Object)
   @Put('/me/notification-settings')
   @UseGuards(JwtAuthGuard)
@@ -214,7 +205,6 @@ export class UsersController {
    * 현재 비밀번호 확인
    */
   @ApiOperation({ summary: '현재 비밀번호 확인' })
-  @ApiBearerAuth('JWT-auth')
   @ApiResponseWrapper(Object)
   @Post('/verify-password')
   @UseGuards(JwtAuthGuard)

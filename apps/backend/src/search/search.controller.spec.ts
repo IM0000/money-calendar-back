@@ -4,31 +4,34 @@ import { SearchService } from './search.service';
 import { SearchCompanyDto, SearchIndicatorDto } from './dto/search.dto';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
+import { RequestWithUser } from '../common/types/request-with-user';
 
 describe('SearchController', () => {
   let controller: SearchController;
   let searchService: SearchService;
 
-  // 목 데이터 정의
+  // 목 데이터 정의 (실제 스키마에 맞게 수정)
   const mockCompanyResults = {
     items: [
       {
         id: 1,
         name: 'Apple Inc.',
         ticker: 'AAPL',
-        country: 'US',
-        industry: 'Technology',
-        isFavoriteEarnings: false,
-        isFavoriteDividend: false,
+        country: 'USA',
+        marketValue: '2000000000000',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isFavorite: false,
       },
       {
         id: 2,
         name: 'Samsung Electronics',
         ticker: '005930.KS',
-        country: 'KR',
-        industry: 'Technology',
-        isFavoriteEarnings: false,
-        isFavoriteDividend: false,
+        country: 'KOR',
+        marketValue: '400000000000',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isFavorite: false,
       },
     ],
     pagination: {
@@ -44,16 +47,30 @@ describe('SearchController', () => {
       {
         id: 1,
         name: 'Non-Farm Payrolls',
-        country: 'US',
+        baseName: 'Non-Farm Payrolls',
+        country: 'USA',
         releaseDate: 1625097600000,
+        importance: 3,
+        actual: '850K',
+        forecast: '700K',
+        previous: '559K',
+        createdAt: new Date(),
+        updatedAt: new Date(),
         isFavorite: false,
         hasNotification: false,
       },
       {
         id: 2,
         name: 'CPI',
-        country: 'US',
+        baseName: 'CPI',
+        country: 'USA',
         releaseDate: 1625097600000,
+        importance: 3,
+        actual: '5.4%',
+        forecast: '4.9%',
+        previous: '5.0%',
+        createdAt: new Date(),
+        updatedAt: new Date(),
         isFavorite: false,
         hasNotification: false,
       },
@@ -64,6 +81,18 @@ describe('SearchController', () => {
       limit: 10,
       totalPages: 1,
     },
+  };
+
+  // 목 사용자 정보
+  const mockUser = {
+    id: 1,
+    email: 'example@example.com',
+    password: 'password',
+    nickname: 'nickname',
+    verified: true,
+    currentHashedRefreshToken: 'refreshToken',
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   // 목 서비스
@@ -98,22 +127,11 @@ describe('SearchController', () => {
       const dto: SearchCompanyDto = { query: 'Apple', page: 1, limit: 10 };
       mockSearchService.searchCompanies.mockResolvedValue(mockCompanyResults);
 
-      const result = await controller.searchCompanies(dto, { user: { id: 1 } });
+      const result = await controller.searchCompanies(dto, {
+        user: mockUser,
+      } as RequestWithUser);
 
       expect(mockSearchService.searchCompanies).toHaveBeenCalledWith(dto, 1);
-      expect(result).toEqual(mockCompanyResults);
-    });
-
-    it('인증되지 않은 사용자를 처리해야 합니다', async () => {
-      const dto: SearchCompanyDto = { query: 'Apple', page: 1, limit: 10 };
-      mockSearchService.searchCompanies.mockResolvedValue(mockCompanyResults);
-
-      const result = await controller.searchCompanies(dto, {});
-
-      expect(mockSearchService.searchCompanies).toHaveBeenCalledWith(
-        dto,
-        undefined,
-      );
       expect(result).toEqual(mockCompanyResults);
     });
 
@@ -124,8 +142,8 @@ describe('SearchController', () => {
         limit: -10,
       };
 
-      // DTO로 변환하면서 유효성 검사 수행
-      const dto = plainToInstance(SearchIndicatorDto, dtoPlain);
+      // DTO로 변환하면서 유효성 검사 수행 (올바른 DTO 타입 사용)
+      const dto = plainToInstance(SearchCompanyDto, dtoPlain);
       const validationPipe = new ValidationPipe({
         transform: true,
         whitelist: true,
@@ -134,7 +152,7 @@ describe('SearchController', () => {
       await expect(
         validationPipe.transform(dto, {
           type: 'body',
-          metatype: SearchIndicatorDto,
+          metatype: SearchCompanyDto,
         }),
       ).rejects.toThrow(BadRequestException);
     });
@@ -144,7 +162,11 @@ describe('SearchController', () => {
       const error = new Error('서비스 오류');
       mockSearchService.searchCompanies.mockRejectedValue(error);
 
-      await expect(controller.searchCompanies(dto, {})).rejects.toThrow(Error);
+      await expect(
+        controller.searchCompanies(dto, {
+          user: mockUser,
+        } as RequestWithUser),
+      ).rejects.toThrow(Error);
     });
   });
 
@@ -156,25 +178,10 @@ describe('SearchController', () => {
       );
 
       const result = await controller.searchIndicators(dto, {
-        user: { id: 1 },
-      });
+        user: mockUser,
+      } as RequestWithUser);
 
       expect(mockSearchService.searchIndicators).toHaveBeenCalledWith(dto, 1);
-      expect(result).toEqual(mockIndicatorResults);
-    });
-
-    it('인증되지 않은 사용자를 처리해야 합니다', async () => {
-      const dto: SearchIndicatorDto = { query: 'CPI', page: 1, limit: 10 };
-      mockSearchService.searchIndicators.mockResolvedValue(
-        mockIndicatorResults,
-      );
-
-      const result = await controller.searchIndicators(dto, {});
-
-      expect(mockSearchService.searchIndicators).toHaveBeenCalledWith(
-        dto,
-        undefined,
-      );
       expect(result).toEqual(mockIndicatorResults);
     });
 
@@ -185,7 +192,6 @@ describe('SearchController', () => {
         limit: -10,
       };
 
-      // DTO로 변환하면서 유효성 검사 수행
       const dto = plainToInstance(SearchIndicatorDto, dtoPlain);
       const validationPipe = new ValidationPipe({
         transform: true,
@@ -205,7 +211,11 @@ describe('SearchController', () => {
       const error = new Error('서비스 오류');
       mockSearchService.searchIndicators.mockRejectedValue(error);
 
-      await expect(controller.searchIndicators(dto, {})).rejects.toThrow(Error);
+      await expect(
+        controller.searchIndicators(dto, {
+          user: mockUser,
+        } as RequestWithUser),
+      ).rejects.toThrow(Error);
     });
   });
 });

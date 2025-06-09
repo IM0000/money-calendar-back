@@ -11,6 +11,9 @@ describe('NotificationTestController', () => {
     restoreIndicatorActual: jest.fn(),
     testEarningsActual: jest.fn(),
     restoreEarningsActual: jest.fn(),
+    testDividendData: jest.fn(),
+    restoreDividendData: jest.fn(),
+    testDividendPayment: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -34,62 +37,104 @@ describe('NotificationTestController', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it('정의되어야 합니다', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('testIndicator', () => {
-    it('should call testIndicatorActual with the provided id', async () => {
+  describe('testIndicatorActual', () => {
+    it('제공된 ID로 testIndicatorActual을 호출해야 합니다', async () => {
       const mockResult = { success: true };
       mockNotificationTestService.testIndicatorActual.mockResolvedValue(
         mockResult,
       );
 
-      const result = await controller.testIndicator(1);
+      const result = await controller.testIndicatorActual('1');
 
       expect(service.testIndicatorActual).toHaveBeenCalledWith(1);
       expect(result).toEqual(mockResult);
     });
   });
 
-  describe('restoreIndicator', () => {
-    it('should call restoreIndicatorActual with the provided id', async () => {
+  describe('restoreIndicatorActual', () => {
+    it('제공된 ID로 restoreIndicatorActual을 호출해야 합니다', async () => {
       const mockResult = { success: true };
       mockNotificationTestService.restoreIndicatorActual.mockResolvedValue(
         mockResult,
       );
 
-      const result = await controller.restoreIndicator(1);
+      const result = await controller.restoreIndicatorActual('1');
 
       expect(service.restoreIndicatorActual).toHaveBeenCalledWith(1);
       expect(result).toEqual(mockResult);
     });
   });
 
-  describe('testEarnings', () => {
-    it('should call testEarningsActual with the provided id', async () => {
+  describe('testEarningsActual', () => {
+    it('제공된 ID로 testEarningsActual을 호출해야 합니다', async () => {
       const mockResult = { success: true };
       mockNotificationTestService.testEarningsActual.mockResolvedValue(
         mockResult,
       );
 
-      const result = await controller.testEarnings(1);
+      const result = await controller.testEarningsActual('1');
 
       expect(service.testEarningsActual).toHaveBeenCalledWith(1);
       expect(result).toEqual(mockResult);
     });
   });
 
-  describe('restoreEarnings', () => {
-    it('should call restoreEarningsActual with the provided id', async () => {
+  describe('restoreEarningsActual', () => {
+    it('제공된 ID로 restoreEarningsActual을 호출해야 합니다', async () => {
       const mockResult = { success: true };
       mockNotificationTestService.restoreEarningsActual.mockResolvedValue(
         mockResult,
       );
 
-      const result = await controller.restoreEarnings(1);
+      const result = await controller.restoreEarningsActual('1');
 
       expect(service.restoreEarningsActual).toHaveBeenCalledWith(1);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('testDividendData', () => {
+    it('제공된 ID로 testDividendData를 호출해야 합니다', async () => {
+      const mockResult = { success: true };
+      mockNotificationTestService.testDividendData.mockResolvedValue(
+        mockResult,
+      );
+
+      const result = await controller.testDividendData('1');
+
+      expect(service.testDividendData).toHaveBeenCalledWith(1);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('restoreDividendData', () => {
+    it('제공된 ID로 restoreDividendData를 호출해야 합니다', async () => {
+      const mockResult = { success: true };
+      mockNotificationTestService.restoreDividendData.mockResolvedValue(
+        mockResult,
+      );
+
+      const result = await controller.restoreDividendData('1');
+
+      expect(service.restoreDividendData).toHaveBeenCalledWith(1);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('testDividendPayment', () => {
+    it('testDividendPayment를 호출해야 합니다', async () => {
+      const mockResult = { success: true };
+      mockNotificationTestService.testDividendPayment.mockResolvedValue(
+        mockResult,
+      );
+
+      const result = await controller.testDividendPayment();
+
+      expect(service.testDividendPayment).toHaveBeenCalled();
       expect(result).toEqual(mockResult);
     });
   });

@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CalendarService } from './calendar.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { FavoriteService } from '../favorite/favorite.service';
 import { ReleaseTiming } from '@prisma/client';
 
 describe('CalendarService', () => {
   let service: CalendarService;
   let prismaService: PrismaService;
+  let favoriteService: FavoriteService;
 
   // Mocking PrismaService
   const mockPrismaService = {
@@ -26,9 +28,27 @@ describe('CalendarService', () => {
     company: {
       findUnique: jest.fn(),
     },
-    favorite: {
-      findUnique: jest.fn(),
+    favoriteCompany: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
     },
+    favoriteIndicatorGroup: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    subscriptionCompany: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    subscriptionIndicatorGroup: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+    },
+  };
+
+  // Mocking FavoriteService
+  const mockFavoriteService = {
+    getFavoriteCalendarEvents: jest.fn(),
   };
 
   // Sample data
@@ -50,18 +70,16 @@ describe('CalendarService', () => {
       forecastRevenue: '950000',
       previousRevenue: '900000',
       companyId: mockCompanyId,
-      country: 'US',
+      country: 'USA',
       company: {
         id: mockCompanyId,
         ticker: 'AAPL',
         name: 'Apple Inc.',
-        country: 'US',
+        country: 'USA',
         marketValue: '2000000000000',
       },
       createdAt: new Date(),
       updatedAt: new Date(),
-      favorites: [{ userId: mockUserId }], // 관심 목록에 추가됨
-      notifications: [{ userId: mockUserId }], // 알림 설정됨
     },
   ];
 
@@ -74,17 +92,16 @@ describe('CalendarService', () => {
       paymentDate: BigInt(1622592000000), // 2021-06-02
       dividendYield: '0.65',
       companyId: mockCompanyId,
-      country: 'US',
+      country: 'USA',
       company: {
         id: mockCompanyId,
         ticker: 'AAPL',
         name: 'Apple Inc.',
-        country: 'US',
+        country: 'USA',
         marketValue: '2000000000000',
       },
       createdAt: new Date(),
       updatedAt: new Date(),
-      favorites: [{ userId: mockUserId }], // 관심 목록에 추가됨
     },
   ];
 
@@ -93,15 +110,14 @@ describe('CalendarService', () => {
       id: 1,
       releaseDate: BigInt(1625097600000), // 2021-07-01
       name: 'Non-Farm Payrolls',
+      baseName: 'Non-Farm Payrolls',
       importance: 3, // HIGH importance as number
       actual: '850K',
       forecast: '700K',
       previous: '559K',
-      country: 'US',
+      country: 'USA',
       createdAt: new Date(),
       updatedAt: new Date(),
-      favorites: [{ userId: mockUserId }], // 관심 목록에 추가됨
-      notifications: [{ userId: mockUserId }], // 알림 설정됨
     },
   ];
 
@@ -175,14 +191,19 @@ describe('CalendarService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: FavoriteService,
+          useValue: mockFavoriteService,
+        },
       ],
     }).compile();
 
     service = module.get<CalendarService>(CalendarService);
     prismaService = module.get<PrismaService>(PrismaService);
+    favoriteService = module.get<FavoriteService>(FavoriteService);
   });
 
-  it('should be defined', () => {
+  it('정의되어야 합니다', () => {
     expect(service).toBeDefined();
   });
 
@@ -204,8 +225,6 @@ describe('CalendarService', () => {
         },
         include: {
           company: true,
-          favorites: false,
-          notifications: false,
         },
         orderBy: {
           releaseDate: 'asc',
@@ -228,6 +247,12 @@ describe('CalendarService', () => {
 
     it('사용자 ID와 함께 실적 이벤트를 조회하고 관심 정보를 표시해야 합니다', async () => {
       mockPrismaService.earnings.findMany.mockResolvedValue(mockEarnings);
+      mockPrismaService.favoriteCompany.findMany.mockResolvedValue([
+        { companyId: mockCompanyId },
+      ]);
+      mockPrismaService.subscriptionCompany.findMany.mockResolvedValue([
+        { companyId: mockCompanyId },
+      ]);
 
       const result = await service.getEarningsEvents(
         mockStartTimestamp,
@@ -244,20 +269,20 @@ describe('CalendarService', () => {
         },
         include: {
           company: true,
-          favorites: {
-            where: {
-              userId: mockUserId,
-            },
-          },
-          notifications: {
-            where: {
-              userId: mockUserId,
-            },
-          },
         },
         orderBy: {
           releaseDate: 'asc',
         },
+      });
+
+      expect(prismaService.favoriteCompany.findMany).toHaveBeenCalledWith({
+        where: { userId: mockUserId, isActive: true },
+        select: { companyId: true },
+      });
+
+      expect(prismaService.subscriptionCompany.findMany).toHaveBeenCalledWith({
+        where: { userId: mockUserId, isActive: true },
+        select: { companyId: true },
       });
 
       expect(result).toHaveLength(mockEarnings.length);
@@ -293,7 +318,6 @@ describe('CalendarService', () => {
         },
         include: {
           company: true,
-          favorites: false,
         },
         orderBy: {
           exDividendDate: 'asc',
@@ -316,6 +340,12 @@ describe('CalendarService', () => {
 
     it('사용자 ID와 함께 배당 이벤트를 조회하고 관심 정보를 표시해야 합니다', async () => {
       mockPrismaService.dividend.findMany.mockResolvedValue(mockDividends);
+      mockPrismaService.favoriteCompany.findMany.mockResolvedValue([
+        { companyId: mockCompanyId },
+      ]);
+      mockPrismaService.subscriptionCompany.findMany.mockResolvedValue([
+        { companyId: mockCompanyId },
+      ]);
 
       const result = await service.getDividendEvents(
         mockStartTimestamp,
@@ -332,15 +362,20 @@ describe('CalendarService', () => {
         },
         include: {
           company: true,
-          favorites: {
-            where: {
-              userId: mockUserId,
-            },
-          },
         },
         orderBy: {
           exDividendDate: 'asc',
         },
+      });
+
+      expect(prismaService.favoriteCompany.findMany).toHaveBeenCalledWith({
+        where: { userId: mockUserId, isActive: true },
+        select: { companyId: true },
+      });
+
+      expect(prismaService.subscriptionCompany.findMany).toHaveBeenCalledWith({
+        where: { userId: mockUserId, isActive: true },
+        select: { companyId: true },
       });
 
       expect(result).toHaveLength(mockDividends.length);
@@ -376,10 +411,6 @@ describe('CalendarService', () => {
             lte: mockEndTimestamp,
           },
         },
-        include: {
-          favorites: false,
-          notifications: false,
-        },
         orderBy: {
           releaseDate: 'asc',
         },
@@ -402,6 +433,12 @@ describe('CalendarService', () => {
       mockPrismaService.economicIndicator.findMany.mockResolvedValue(
         mockEconomicIndicators,
       );
+      mockPrismaService.favoriteIndicatorGroup.findMany.mockResolvedValue([
+        { baseName: 'Non-Farm Payrolls', country: 'USA' },
+      ]);
+      mockPrismaService.subscriptionIndicatorGroup.findMany.mockResolvedValue([
+        { baseName: 'Non-Farm Payrolls', country: 'USA' },
+      ]);
 
       const result = await service.getEconomicIndicatorsEvents(
         mockStartTimestamp,
@@ -416,21 +453,23 @@ describe('CalendarService', () => {
             lte: mockEndTimestamp,
           },
         },
-        include: {
-          favorites: {
-            where: {
-              userId: mockUserId,
-            },
-          },
-          notifications: {
-            where: {
-              userId: mockUserId,
-            },
-          },
-        },
         orderBy: {
           releaseDate: 'asc',
         },
+      });
+
+      expect(
+        prismaService.favoriteIndicatorGroup.findMany,
+      ).toHaveBeenCalledWith({
+        where: { userId: mockUserId, isActive: true },
+        select: { baseName: true, country: true },
+      });
+
+      expect(
+        prismaService.subscriptionIndicatorGroup.findMany,
+      ).toHaveBeenCalledWith({
+        where: { userId: mockUserId, isActive: true },
+        select: { baseName: true, country: true },
       });
 
       expect(result).toHaveLength(mockEconomicIndicators.length);
@@ -560,8 +599,6 @@ describe('CalendarService', () => {
             country: 'USA',
             marketValue: 1000000000,
           },
-          favorites: [],
-          notifications: [],
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -571,6 +608,14 @@ describe('CalendarService', () => {
         mockEarningsHistory,
       );
       mockPrismaService.earnings.count.mockResolvedValue(1);
+      mockPrismaService.favoriteCompany.findFirst.mockResolvedValue({
+        id: 1,
+        isActive: true,
+      });
+      mockPrismaService.subscriptionCompany.findFirst.mockResolvedValue({
+        id: 1,
+        isActive: true,
+      });
 
       const result = await service.getCompanyEarningsHistory(
         companyId,
@@ -585,16 +630,6 @@ describe('CalendarService', () => {
         },
         include: {
           company: true,
-          favorites: {
-            where: {
-              userId,
-            },
-          },
-          notifications: {
-            where: {
-              userId,
-            },
-          },
         },
         orderBy: {
           releaseDate: 'desc',
@@ -607,6 +642,20 @@ describe('CalendarService', () => {
         where: {
           companyId,
         },
+      });
+
+      expect(mockPrismaService.favoriteCompany.findFirst).toHaveBeenCalledWith({
+        where: {
+          userId,
+          companyId,
+          isActive: true,
+        },
+      });
+
+      expect(
+        mockPrismaService.subscriptionCompany.findFirst,
+      ).toHaveBeenCalledWith({
+        where: { userId, companyId, isActive: true },
       });
 
       expect(result).toHaveProperty('items');
@@ -640,7 +689,6 @@ describe('CalendarService', () => {
             country: 'USA',
             marketValue: 1500000000,
           },
-          favorites: [],
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -650,6 +698,14 @@ describe('CalendarService', () => {
         mockDividendHistory,
       );
       mockPrismaService.dividend.count.mockResolvedValue(1);
+      mockPrismaService.favoriteCompany.findFirst.mockResolvedValue({
+        id: 1,
+        isActive: true,
+      });
+      mockPrismaService.subscriptionCompany.findFirst.mockResolvedValue({
+        id: 1,
+        isActive: true,
+      });
 
       const result = await service.getCompanyDividendHistory(
         companyId,
@@ -664,11 +720,6 @@ describe('CalendarService', () => {
         },
         include: {
           company: true,
-          favorites: {
-            where: {
-              userId,
-            },
-          },
         },
         orderBy: {
           exDividendDate: 'desc',
@@ -681,6 +732,20 @@ describe('CalendarService', () => {
         where: {
           companyId,
         },
+      });
+
+      expect(mockPrismaService.favoriteCompany.findFirst).toHaveBeenCalledWith({
+        where: {
+          userId,
+          companyId,
+          isActive: true,
+        },
+      });
+
+      expect(
+        mockPrismaService.subscriptionCompany.findFirst,
+      ).toHaveBeenCalledWith({
+        where: { userId, companyId, isActive: true },
       });
 
       expect(result).toHaveProperty('items');

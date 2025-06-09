@@ -8,9 +8,8 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor(private readonly eventEmitter: EventEmitter2) {
-    super(); // ★ 옵션 없이 그냥 호출
+    super();
 
-    // 1) defineExtension으로 훅 정의
     const indicatorExt = Prisma.defineExtension((client) =>
       client.$extends({
         name: 'indicatorExt',
@@ -30,6 +29,7 @@ export class PrismaService
         },
       }),
     );
+
     const earningsExt = Prisma.defineExtension((client) =>
       client.$extends({
         name: 'earningsExt',
@@ -51,10 +51,35 @@ export class PrismaService
       }),
     );
 
-    // 2) this.$extends 체인 → DynamicClientExtensionThis 반환
-    const extended = this.$extends(indicatorExt).$extends(earningsExt);
+    const dividendExt = Prisma.defineExtension((client) =>
+      client.$extends({
+        name: 'dividendExt',
+        query: {
+          dividend: {
+            async update({ args, query }) {
+              const before = await client.dividend.findUnique({
+                where: args.where,
+                include: { company: true },
+              });
+              const after = await query(args);
+              // 배당금이나 배당수익률이 변경된 경우
+              if (
+                before?.dividendAmount !== after.dividendAmount ||
+                before?.dividendYield !== after.dividendYield
+              ) {
+                eventEmitter.emit('dividend.dataChanged', { before, after });
+              }
+              return after;
+            },
+          },
+        },
+      }),
+    );
 
-    // 3) Object.assign으로 this(PrismaService)에 덮어쓰기
+    const extended = this.$extends(indicatorExt)
+      .$extends(earningsExt)
+      .$extends(dividendExt);
+
     Object.assign(this, extended);
   }
 

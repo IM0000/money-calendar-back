@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersController } from './users.controller';
-import { UsersService } from './users.service';
+import { UserController } from './user.controller';
+import { UserService } from './user.service';
 import { NotificationService } from '../notification/notification.service';
 import { jwtConfig } from '../config/jwt.config';
-import { UpdatePasswordDto } from '../users/dto/profile.dto';
+import { UpdatePasswordDto } from './dto/profile.dto';
 import {
   DeleteUserDto,
   UpdateProfileDto,
@@ -12,9 +12,9 @@ import {
 } from './dto/profile.dto';
 import { UpdateUserNotificationSettingsDto } from '../notification/dto/notification.dto';
 
-describe('UsersController', () => {
-  let controller: UsersController;
-  let usersService: UsersService;
+describe('UserController', () => {
+  let controller: UserController;
+  let usersService: UserService;
   let notificationService: NotificationService;
 
   const mockUsersService = {
@@ -42,10 +42,10 @@ describe('UsersController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [UsersController],
+      controllers: [UserController],
       providers: [
         {
-          provide: UsersService,
+          provide: UserService,
           useValue: mockUsersService,
         },
         {
@@ -59,8 +59,8 @@ describe('UsersController', () => {
       ],
     }).compile();
 
-    controller = module.get<UsersController>(UsersController);
-    usersService = module.get<UsersService>(UsersService);
+    controller = module.get<UserController>(UserController);
+    usersService = module.get<UserService>(UserService);
     notificationService = module.get<NotificationService>(NotificationService);
 
     jest.clearAllMocks();
@@ -312,8 +312,9 @@ describe('UsersController', () => {
 
       const updateSettingsDto: UpdateUserNotificationSettingsDto = {
         emailEnabled: false,
-        pushEnabled: true,
-        preferredMethod: 'PUSH',
+        slackEnabled: false,
+        slackWebhookUrl:
+          'https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX',
       };
 
       const mockUpdatedSettings = {

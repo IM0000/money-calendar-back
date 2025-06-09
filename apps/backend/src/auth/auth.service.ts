@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
+import { UserService } from '../user/user.service';
 import { LoginDto } from './dto/auth.dto';
 import { User } from '@prisma/client';
 import { ConfigType } from '@nestjs/config';
@@ -30,7 +30,7 @@ export class AuthService {
     @Inject(jwtConfig.KEY)
     private readonly jwtCfg: ConfigType<typeof jwtConfig>,
     private readonly jwt: JwtService,
-    private readonly usersService: UsersService,
+    private readonly usersService: UserService,
     private readonly emailService: EmailService,
   ) {}
 

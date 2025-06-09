@@ -1,27 +1,29 @@
-import { ContentType, NotificationMethod } from '@prisma/client';
+export enum NotificationChannel {
+  EMAIL = 'EMAIL',
+  SLACK = 'SLACK',
+}
+
+export enum NotificationStatus {
+  PENDING = 'PENDING',
+  SENT = 'SENT',
+  FAILED = 'FAILED',
+}
+
 import {
-  IsNumber,
-  IsEnum,
-  IsString,
-  IsOptional,
   IsBoolean,
   IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  ValidateIf,
+  Matches,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class CreateNotificationDto {
-  @ApiProperty({ description: '알림 콘텐츠 타입', enum: ContentType })
-  @IsEnum(ContentType)
-  contentType: ContentType;
-
-  @ApiProperty({ description: '콘텐츠 ID' })
-  @IsNumber()
-  contentId: number;
-
-  @ApiProperty({ description: '사용자 ID' })
-  @IsNumber()
-  userId: number;
-}
+// Slack 웹훅 URL 정규식
+const SLACK_WEBHOOK_URL_REGEX =
+  /^https:\/\/hooks\.slack\.com\/services\/[A-Z0-9]+\/[A-Z0-9]+\/[A-Za-z0-9]+$/;
 
 export class UpdateUserNotificationSettingsDto {
   @ApiProperty({ description: '이메일 알림 활성화 여부', required: false })
@@ -29,19 +31,33 @@ export class UpdateUserNotificationSettingsDto {
   @IsOptional()
   emailEnabled?: boolean;
 
-  @ApiProperty({ description: '푸시 알림 활성화 여부', required: false })
+  @ApiProperty({ description: 'Slack 알림 활성화 여부', required: false })
   @IsBoolean()
   @IsOptional()
-  pushEnabled?: boolean;
+  slackEnabled?: boolean;
 
   @ApiProperty({
-    description: '선호하는 알림 방식',
+    description: 'Slack Webhook URL (slackEnabled가 true일 때 필수)',
     required: false,
-    example: 'EMAIL',
+    example:
+      'https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX',
   })
-  @IsString()
+  @ValidateIf((o) => o.slackEnabled === true)
+  @IsNotEmpty({
+    message: 'Slack 알림을 활성화할 때는 slackWebhookUrl이 필요합니다.',
+  })
+  @IsUrl({}, { message: '올바른 URL 형식이 아닙니다.' })
+  @Matches(SLACK_WEBHOOK_URL_REGEX, {
+    message:
+      '올바른 Slack 웹훅 URL 형식이 아닙니다. (예: https://hooks.slack.com/services/...)',
+  })
   @IsOptional()
-  preferredMethod?: string;
+  slackWebhookUrl?: string;
+
+  @ApiProperty({ description: '모든 알림 활성화 여부', required: false })
+  @IsBoolean()
+  @IsOptional()
+  allEnabled?: boolean;
 }
 
 export class SendNotificationEmailDto {
