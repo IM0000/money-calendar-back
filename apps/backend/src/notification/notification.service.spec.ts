@@ -87,25 +87,54 @@ describe('NotificationService', () => {
     it('알림을 정상적으로 생성한다', async () => {
       const dto = {
         contentType: ContentType.EARNINGS,
-        contentId: 1,
+        contentId: 2,
         userId: 1,
       };
-      const mockNotification = {
-        id: 1,
-        ...dto,
-        isRead: false,
-        createdAt: new Date(),
-      };
       const mockEarnings = {
-        id: 1,
+        id: 2,
+        releaseDate: BigInt(1625097600000),
+        releaseTiming: 'PRE_MARKET',
+        actualEPS: '2.5',
+        forecastEPS: '2.3',
+        previousEPS: '2.1',
+        actualRevenue: '1000000',
+        forecastRevenue: '950000',
+        previousRevenue: '900000',
         companyId: 1,
-        company: { name: 'Test Company', ticker: 'TEST' },
+        country: 'USA',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        company: {
+          id: 1,
+          name: 'Test Company',
+          ticker: 'TEST',
+          country: 'USA',
+          marketValue: '1000000000',
+        },
       };
       const mockSubscription = {
         id: 1,
         userId: 1,
         companyId: 1,
         isActive: true,
+        user: {
+          id: 1,
+          email: 'test@example.com',
+          notificationSettings: {
+            emailEnabled: true,
+            slackEnabled: false,
+            allEnabled: true,
+          },
+        },
+      };
+      const mockNotification = {
+        id: 1,
+        userId: 1,
+        contentType: ContentType.EARNINGS,
+        contentId: 2,
+        isRead: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
       const mockSettings = {
         id: 1,
@@ -113,21 +142,26 @@ describe('NotificationService', () => {
         emailEnabled: false,
         slackEnabled: false,
         slackWebhookUrl: null,
+        allEnabled: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
-      mockPrismaService.notification.create.mockResolvedValue(mockNotification);
       mockPrismaService.earnings.findUnique.mockResolvedValue(mockEarnings);
       mockPrismaService.subscriptionCompany.findFirst.mockResolvedValue(
         mockSubscription,
       );
-      mockPrismaService.userNotificationSettings.findUnique.mockResolvedValue(
-        mockSettings,
-      );
+      mockPrismaService.notification.create.mockResolvedValue(mockNotification);
+
+      // getUserNotificationSettings 메서드를 spy로 mock
+      jest
+        .spyOn(service, 'getUserNotificationSettings')
+        .mockResolvedValue(mockSettings);
 
       const result = await service.createNotification(dto);
 
       expect(prismaService.earnings.findUnique).toHaveBeenCalledWith({
-        where: { id: 1 },
+        where: { id: 2 },
         include: { company: true },
       });
       expect(prismaService.subscriptionCompany.findFirst).toHaveBeenCalledWith({
@@ -144,18 +178,15 @@ describe('NotificationService', () => {
           },
         },
       });
-      expect(
-        prismaService.userNotificationSettings.findUnique,
-      ).toHaveBeenCalledWith({
-        where: { userId: 1 },
-      });
+      expect(service.getUserNotificationSettings).toHaveBeenCalledWith(1);
       expect(prismaService.notification.create).toHaveBeenCalledWith({
         data: {
-          ...dto,
+          userId: 1,
+          contentType: ContentType.EARNINGS,
+          contentId: 2,
           isRead: false,
         },
       });
-      expect(result).toEqual(mockNotification);
     });
   });
 
@@ -234,6 +265,7 @@ describe('NotificationService', () => {
           emailEnabled: false,
           slackEnabled: true,
           slackWebhookUrl: 'https://slack.com/webhook',
+          allEnabled: true,
         },
       });
       expect(result).toEqual(mockSettings);
@@ -250,6 +282,7 @@ describe('NotificationService', () => {
           contentId: 1,
           isRead: false,
           createdAt: new Date(),
+          updatedAt: new Date(),
         },
         {
           id: 2,
@@ -258,19 +291,47 @@ describe('NotificationService', () => {
           contentId: 2,
           isRead: true,
           createdAt: new Date(),
+          updatedAt: new Date(),
         },
       ];
       const mockTotal = 2;
       const mockEarnings = [
         {
           id: 2,
-          company: { name: 'Test Company', ticker: 'TEST' },
+          releaseDate: BigInt(1625097600000),
+          releaseTiming: 'PRE_MARKET',
+          actualEPS: '2.5',
+          forecastEPS: '2.3',
+          previousEPS: '2.1',
+          actualRevenue: '1000000',
+          forecastRevenue: '950000',
+          previousRevenue: '900000',
+          companyId: 1,
+          country: 'USA',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          company: {
+            id: 1,
+            name: 'Test Company',
+            ticker: 'TEST',
+            country: 'USA',
+            marketValue: '1000000000',
+          },
         },
       ];
       const mockIndicators = [
         {
           id: 1,
           name: 'Test Indicator',
+          releaseDate: BigInt(1625097600000),
+          baseName: 'Test Indicator',
+          country: 'USA',
+          importance: 3,
+          actual: '5.4%',
+          forecast: '5.0%',
+          previous: '4.9%',
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
       ];
 

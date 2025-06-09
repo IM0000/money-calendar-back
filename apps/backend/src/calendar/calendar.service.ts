@@ -600,4 +600,89 @@ export class CalendarService {
       },
     };
   }
+
+  /**
+   * 특정 지표 그룹(baseName + country)의 경제지표 히스토리 조회 (사용자의 관심 정보 포함)
+   * @param baseName 지표 기본명 (ex: "CPI", "PPI")
+   * @param country 국가 코드 (선택사항)
+   * @param page 페이지 번호
+   * @param limit 한 페이지당 항목 수
+   * @param userId 사용자 ID (선택사항)
+   */
+  async getIndicatorGroupHistory(
+    baseName: string,
+    country: string | undefined,
+    page: number,
+    limit: number,
+    userId?: number,
+  ) {
+    const skip = (page - 1) * limit;
+
+    // 조건 생성: country가 있으면 정확히 매칭, 없으면 baseName만 매칭
+    const whereCondition = country ? { baseName, country } : { baseName };
+
+    const [indicators, total] = await Promise.all([
+      this.prisma.economicIndicator.findMany({
+        where: whereCondition,
+        orderBy: {
+          releaseDate: 'desc', // 최신 지표부터 표시
+        },
+        skip,
+        take: limit,
+      }),
+      this.prisma.economicIndicator.count({
+        where: whereCondition,
+      }),
+    ]);
+
+    // 지표 그룹 즐겨찾기/구독 여부 확인
+    let isFavoriteGroup = false;
+    let isSubscribedGroup = false;
+
+    if (userId) {
+      const [favoriteCheck, subscriptionCheck] = await Promise.all([
+        this.prisma.favoriteIndicatorGroup.findFirst({
+          where: {
+            userId,
+            baseName,
+            country,
+            isActive: true,
+          },
+        }),
+        this.prisma.subscriptionIndicatorGroup.findFirst({
+          where: { userId, baseName, country, isActive: true },
+        }),
+      ]);
+
+      isFavoriteGroup = !!favoriteCheck;
+      isSubscribedGroup = !!subscriptionCheck;
+    }
+
+    // 결과 가공: 관심 정보 추가
+    const formattedIndicators = indicators.map((indicator) => ({
+      id: indicator.id,
+      country: indicator.country,
+      releaseDate: Number(indicator.releaseDate),
+      name: indicator.name,
+      baseName: indicator.baseName,
+      importance: indicator.importance,
+      actual: indicator.actual,
+      forecast: indicator.forecast,
+      previous: indicator.previous,
+      createdAt: indicator.createdAt.toISOString(),
+      updatedAt: indicator.updatedAt.toISOString(),
+      isFavorite: isFavoriteGroup,
+      hasNotification: isSubscribedGroup,
+    }));
+
+    return {
+      items: formattedIndicators,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 }

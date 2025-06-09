@@ -43,6 +43,7 @@ export class SearchService {
     const itemsWithFavorites = items.map((company) => ({
       ...company,
       isFavorite: false,
+      hasSubscription: false,
     }));
 
     if (userId) {
@@ -56,12 +57,28 @@ export class SearchService {
         select: { companyId: true },
       });
 
+      // 회사 단위 구독 정보 조회
+      const subscriptionCompanies =
+        await this.prisma.subscriptionCompany.findMany({
+          where: {
+            userId,
+            companyId: { in: items.map((c) => c.id) },
+            isActive: true,
+          },
+          select: { companyId: true },
+        });
+
       const favoriteCompanyIds = new Set(
         favoriteCompanies.map((f) => f.companyId),
       );
 
+      const subscriptionCompanyIds = new Set(
+        subscriptionCompanies.map((s) => s.companyId),
+      );
+
       itemsWithFavorites.forEach((c) => {
         c.isFavorite = favoriteCompanyIds.has(c.id);
+        c.hasSubscription = subscriptionCompanyIds.has(c.id);
       });
     }
 

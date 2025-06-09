@@ -8,7 +8,11 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { GetCalendarDto, GetCompanyHistoryDto } from './dto/get-calendar.dto';
+import {
+  GetCalendarDto,
+  GetCompanyHistoryDto,
+  GetIndicatorGroupHistoryDto,
+} from './dto/get-calendar.dto';
 import { CalendarService } from './calendar.service';
 import { OptionalJwtAuthGuard } from '../auth/jwt/optional-jwt-auth.guard';
 import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
@@ -189,6 +193,32 @@ export class CalendarController {
 
     return await this.calendarService.getCompanyDividendHistory(
       companyId,
+      query.page,
+      query.limit,
+      userId,
+    );
+  }
+
+  /**
+   * 특정 지표 그룹의 경제지표 히스토리 조회
+   * GET /calendar/indicators/history?baseName=CPI&country=US&page=1&limit=10
+   */
+  @ApiOperation({
+    summary: '경제지표 그룹 히스토리 조회',
+    description:
+      '특정 지표 그룹(baseName + country)의 이전 경제지표 정보를 페이지네이션으로 조회합니다.',
+  })
+  @ApiResponseWrapper(Object)
+  @Get('indicators/history')
+  async getIndicatorGroupHistory(
+    @Query() query: GetIndicatorGroupHistoryDto,
+    @Request() req,
+  ) {
+    const userId = req.user?.id;
+
+    return await this.calendarService.getIndicatorGroupHistory(
+      query.baseName,
+      query.country,
       query.page,
       query.limit,
       userId,

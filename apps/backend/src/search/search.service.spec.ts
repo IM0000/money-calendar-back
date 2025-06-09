@@ -79,6 +79,9 @@ describe('SearchService', () => {
     favoriteCompany: {
       findMany: jest.fn(),
     },
+    subscriptionCompany: {
+      findMany: jest.fn(),
+    },
     favoriteIndicatorGroup: {
       findMany: jest.fn(),
     },
@@ -97,6 +100,9 @@ describe('SearchService', () => {
       .fn()
       .mockResolvedValue(mockCompanies.length);
     mockPrismaService.favoriteCompany.findMany = jest
+      .fn()
+      .mockResolvedValue([]);
+    mockPrismaService.subscriptionCompany.findMany = jest
       .fn()
       .mockResolvedValue([]);
     mockPrismaService.economicIndicator.findMany = jest
@@ -223,18 +229,22 @@ describe('SearchService', () => {
       });
     });
 
-    it('로그인한 사용자의 회사 단위 즐겨찾기 정보를 포함한 기업 목록을 반환해야 합니다', async () => {
+    it('로그인한 사용자의 회사 단위 즐겨찾기 및 구독 정보를 포함한 기업 목록을 반환해야 합니다', async () => {
       const searchDto: SearchCompanyDto = {};
       const userId = 1;
       const mockTotal = mockCompanies.length;
 
-      // 회사 단위 즐겨찾기 목 데이터
+      // 회사 단위 즐겨찾기 및 구독 목 데이터
       const mockFavoriteCompanies = [{ companyId: 1 }];
+      const mockSubscriptionCompanies = [{ companyId: 2 }];
 
       mockPrismaService.$queryRaw.mockResolvedValue(mockCompanies);
       mockPrismaService.company.count.mockResolvedValue(mockTotal);
       mockPrismaService.favoriteCompany.findMany.mockResolvedValue(
         mockFavoriteCompanies,
+      );
+      mockPrismaService.subscriptionCompany.findMany.mockResolvedValue(
+        mockSubscriptionCompanies,
       );
 
       const result = await service.searchCompanies(searchDto, userId);
@@ -248,8 +258,21 @@ describe('SearchService', () => {
         select: { companyId: true },
       });
 
+      expect(
+        mockPrismaService.subscriptionCompany.findMany,
+      ).toHaveBeenCalledWith({
+        where: {
+          userId,
+          companyId: { in: mockCompanies.map((c) => c.id) },
+          isActive: true,
+        },
+        select: { companyId: true },
+      });
+
       expect(result.items[0].isFavorite).toBe(true);
+      expect(result.items[0].hasSubscription).toBe(false);
       expect(result.items[1].isFavorite).toBe(false);
+      expect(result.items[1].hasSubscription).toBe(true);
     });
   });
 

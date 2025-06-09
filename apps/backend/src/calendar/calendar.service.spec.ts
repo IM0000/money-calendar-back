@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CalendarService } from './calendar.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { FavoriteService } from '../favorite/favorite.service';
 import { ReleaseTiming } from '@prisma/client';
 
 describe('CalendarService', () => {
   let service: CalendarService;
   let prismaService: PrismaService;
+  let favoriteService: FavoriteService;
 
   // Mocking PrismaService
   const mockPrismaService = {
@@ -42,6 +44,11 @@ describe('CalendarService', () => {
       findMany: jest.fn(),
       findFirst: jest.fn(),
     },
+  };
+
+  // Mocking FavoriteService
+  const mockFavoriteService = {
+    getFavoriteCalendarEvents: jest.fn(),
   };
 
   // Sample data
@@ -184,14 +191,19 @@ describe('CalendarService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: FavoriteService,
+          useValue: mockFavoriteService,
+        },
       ],
     }).compile();
 
     service = module.get<CalendarService>(CalendarService);
     prismaService = module.get<PrismaService>(PrismaService);
+    favoriteService = module.get<FavoriteService>(FavoriteService);
   });
 
-  it('should be defined', () => {
+  it('정의되어야 합니다', () => {
     expect(service).toBeDefined();
   });
 
