@@ -9,11 +9,6 @@ hooks:
     - location: scripts/cleanup.sh
       runas: ec2-user
 
-  BeforeInstall:
-    - location: scripts/stop_old.sh
-      timeout: 300
-      runas: ec2-user
-
   AfterInstall:
     - location: scripts/pull_and_prepare.sh
       timeout: 300
