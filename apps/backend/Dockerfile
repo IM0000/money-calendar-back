@@ -48,9 +48,6 @@ COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
 # 2-2) 빌드 결과물 복사
 COPY --from=builder --chown=nodejs:nodejs /app/dist/apps/backend ./dist
 
-# 2-3) AppSpec 파일도 복사
-COPY --from=builder --chown=nodejs:nodejs /app/appspec.yml ./appspec.yml
-
 # 환경 설정
 ENV NODE_ENV=production
 ENV PRISMA_BINARY_PLATFORM="linux-musl"
