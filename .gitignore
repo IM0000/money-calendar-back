@@ -41,6 +41,6 @@ lerna-debug.log*
 .env
 
 # dp dump
-.sql
+data-only.sql
 
 가이드.md

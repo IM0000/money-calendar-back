@@ -32,7 +32,14 @@ ALTER TABLE "IndicatorNotification" DROP CONSTRAINT "IndicatorNotification_userI
 DROP INDEX "Notification_userId_read_contentType_idx";
 
 -- AlterTable
-ALTER TABLE "EconomicIndicator" ADD COLUMN     "baseName" TEXT NOT NULL;
+-- 1) 컬럼 추가 (NULL 허용)
+ALTER TABLE "EconomicIndicator" ADD COLUMN "baseName" TEXT;
+
+-- 2) 기존 데이터 백필
+UPDATE "EconomicIndicator" SET "baseName" = "name" WHERE "baseName" IS NULL;
+
+-- 3) NOT NULL 제약 추가
+ALTER TABLE "EconomicIndicator" ALTER COLUMN "baseName" SET NOT NULL;
 
 -- AlterTable
 ALTER TABLE "Notification" DROP COLUMN "method",
