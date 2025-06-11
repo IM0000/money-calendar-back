@@ -75,6 +75,7 @@ describe('SearchService', () => {
     economicIndicator: {
       findMany: jest.fn(),
       count: jest.fn(),
+      groupBy: jest.fn(),
     },
     favoriteCompany: {
       findMany: jest.fn(),
@@ -109,6 +110,9 @@ describe('SearchService', () => {
       .fn()
       .mockResolvedValue([]);
     mockPrismaService.economicIndicator.count = jest.fn().mockResolvedValue(0);
+    mockPrismaService.economicIndicator.groupBy = jest
+      .fn()
+      .mockResolvedValue([]);
     mockPrismaService.favoriteIndicatorGroup.findMany = jest
       .fn()
       .mockResolvedValue([]);
@@ -279,36 +283,47 @@ describe('SearchService', () => {
   describe('searchIndicators', () => {
     it('쿼리 없이 경제지표 목록을 검색해야 합니다', async () => {
       const searchDto: SearchIndicatorDto = {};
-      const mockTotal = mockEconomicIndicators.length;
+
+      const mockGroupsWithCount = [
+        { baseName: 'Non-Farm Payrolls', country: 'USA' },
+        { baseName: 'CPI', country: 'USA' },
+      ];
+
+      const mockTotalGroups = [
+        { baseName: 'Non-Farm Payrolls', country: 'USA' },
+        { baseName: 'CPI', country: 'USA' },
+      ];
+
+      mockPrismaService.economicIndicator.groupBy
+        .mockResolvedValueOnce(mockGroupsWithCount)
+        .mockResolvedValueOnce(mockTotalGroups);
 
       mockPrismaService.economicIndicator.findMany.mockResolvedValue(
         mockEconomicIndicators,
       );
-      mockPrismaService.economicIndicator.count.mockResolvedValue(mockTotal);
 
       const result = await service.searchIndicators(searchDto);
 
-      expect(mockPrismaService.economicIndicator.findMany).toHaveBeenCalledWith(
-        {
-          where: {},
-          skip: 0,
-          take: 10,
-          orderBy: [{ releaseDate: 'desc' }, { name: 'asc' }],
-          distinct: ['name', 'country', 'releaseDate'],
-        },
-      );
+      expect(mockPrismaService.economicIndicator.groupBy).toHaveBeenCalledWith({
+        by: ['baseName', 'country'],
+        where: {},
+        orderBy: [{ baseName: 'asc' }, { country: 'asc' }],
+        skip: 0,
+        take: 10,
+      });
 
-      expect(mockPrismaService.economicIndicator.count).toHaveBeenCalledWith({
+      expect(mockPrismaService.economicIndicator.groupBy).toHaveBeenCalledWith({
+        by: ['baseName', 'country'],
         where: {},
       });
 
       expect(result).toEqual({
         items: expect.any(Array),
         pagination: {
-          total: mockTotal,
+          total: mockTotalGroups.length,
           page: 1,
           limit: 10,
-          totalPages: Math.ceil(mockTotal / 10),
+          totalPages: Math.ceil(mockTotalGroups.length / 10),
         },
       });
 
@@ -331,43 +346,46 @@ describe('SearchService', () => {
         page: 1,
         limit: 5,
       };
-      const mockTotal = 1;
 
       const filteredIndicators = mockEconomicIndicators.filter(
         (i) =>
           i.name.includes(searchDto.query) && i.country === searchDto.country,
       );
 
+      const mockGroupsWithCount = [{ baseName: 'CPI', country: 'USA' }];
+      const mockTotalGroups = [{ baseName: 'CPI', country: 'USA' }];
+
+      mockPrismaService.economicIndicator.groupBy
+        .mockResolvedValueOnce(mockGroupsWithCount)
+        .mockResolvedValueOnce(mockTotalGroups);
+
       mockPrismaService.economicIndicator.findMany.mockResolvedValue(
         filteredIndicators,
       );
-      mockPrismaService.economicIndicator.count.mockResolvedValue(mockTotal);
 
       const result = await service.searchIndicators(searchDto);
 
-      expect(mockPrismaService.economicIndicator.findMany).toHaveBeenCalledWith(
-        {
-          where: {
-            name: {
-              contains: searchDto.query,
-              mode: Prisma.QueryMode.insensitive,
-            },
-            country: searchDto.country,
+      expect(mockPrismaService.economicIndicator.groupBy).toHaveBeenCalledWith({
+        by: ['baseName', 'country'],
+        where: {
+          name: {
+            contains: searchDto.query,
+            mode: Prisma.QueryMode.insensitive,
           },
-          skip: 0,
-          take: searchDto.limit,
-          orderBy: [{ releaseDate: 'desc' }, { name: 'asc' }],
-          distinct: ['name', 'country', 'releaseDate'],
+          country: searchDto.country,
         },
-      );
+        orderBy: [{ baseName: 'asc' }, { country: 'asc' }],
+        skip: 0,
+        take: searchDto.limit,
+      });
 
       expect(result).toEqual({
         items: expect.any(Array),
         pagination: {
-          total: mockTotal,
+          total: mockTotalGroups.length,
           page: searchDto.page,
           limit: searchDto.limit,
-          totalPages: Math.ceil(mockTotal / searchDto.limit),
+          totalPages: Math.ceil(mockTotalGroups.length / searchDto.limit),
         },
       });
     });
@@ -375,7 +393,16 @@ describe('SearchService', () => {
     it('로그인한 사용자의 지표 그룹 단위 즐겨찾기/구독 정보를 포함한 경제지표 목록을 반환해야 합니다', async () => {
       const searchDto: SearchIndicatorDto = {};
       const userId = 1;
-      const mockTotal = mockEconomicIndicators.length;
+
+      const mockGroupsWithCount = [
+        { baseName: 'Non-Farm Payrolls', country: 'USA' },
+        { baseName: 'CPI', country: 'USA' },
+      ];
+
+      const mockTotalGroups = [
+        { baseName: 'Non-Farm Payrolls', country: 'USA' },
+        { baseName: 'CPI', country: 'USA' },
+      ];
 
       // 지표 그룹 단위 즐겨찾기/구독 목 데이터
       const mockFavoriteIndicatorGroups = [
@@ -385,10 +412,13 @@ describe('SearchService', () => {
         { baseName: 'CPI', country: 'USA' },
       ];
 
+      mockPrismaService.economicIndicator.groupBy
+        .mockResolvedValueOnce(mockGroupsWithCount)
+        .mockResolvedValueOnce(mockTotalGroups);
+
       mockPrismaService.economicIndicator.findMany.mockResolvedValue(
         mockEconomicIndicators,
       );
-      mockPrismaService.economicIndicator.count.mockResolvedValue(mockTotal);
       mockPrismaService.favoriteIndicatorGroup.findMany.mockResolvedValue(
         mockFavoriteIndicatorGroups,
       );
