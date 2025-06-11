@@ -26,8 +26,6 @@ RUN pnpm run build:backend
 # Prisma 관련 파일은 이미 생성되어 있으므로 --prod로 설치해도 문제 없음
 RUN pnpm prune --prod
 
-COPY apps/backend/entrypoint.sh ./entrypoint.sh
-
 ###############################################################################
 # 2) Runner 스테이지 (최종 이미지)
 ###############################################################################
@@ -57,11 +55,5 @@ USER nodejs
 
 EXPOSE 3000
 
-# entrypoint 스크립트 복사
-COPY --from=builder --chown=nodejs:nodejs /app/entrypoint.sh ./entrypoint.sh
-
-# 실행 권한 부여
-RUN chmod +x ./entrypoint.sh
-
-# 컨테이너 시작 시 entrypoint.sh 실행
-ENTRYPOINT ["./entrypoint.sh"]
+# 애플리케이션 직접 실행
+CMD ["node", "dist/src/main.js"]

@@ -104,20 +104,45 @@ export class SearchService {
       ...(country ? { country } : {}),
     };
 
-    const [items, total] = await Promise.all([
-      this.prisma.economicIndicator.findMany({
+    const [groupsWithCount, totalGroups] = await Promise.all([
+      this.prisma.economicIndicator.groupBy({
+        by: ['baseName', 'country'],
         where,
+        orderBy: [{ baseName: 'asc' }, { country: 'asc' }],
         skip,
         take: limit,
-        orderBy: [{ releaseDate: 'desc' }, { name: 'asc' }],
-        distinct: ['name', 'country', 'releaseDate'],
       }),
-      this.prisma.economicIndicator.count({
+      this.prisma.economicIndicator.groupBy({
+        by: ['baseName', 'country'],
         where,
       }),
     ]);
 
-    // BigInt 변환 및 관심 정보 초기화
+    const total = totalGroups.length;
+
+    if (groupsWithCount.length === 0) {
+      return {
+        items: [],
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    }
+
+    const items = await this.prisma.economicIndicator.findMany({
+      where: {
+        OR: groupsWithCount.map((group) => ({
+          baseName: group.baseName,
+          country: group.country,
+        })),
+      },
+      orderBy: [{ releaseDate: 'desc' }, { importance: 'desc' }],
+      distinct: ['baseName', 'country'],
+    });
+
     const processedItems = items.map((indicator) => ({
       ...indicator,
       releaseDate: indicator.releaseDate ? Number(indicator.releaseDate) : null,

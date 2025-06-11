@@ -10,11 +10,14 @@ hooks:
       runas: ec2-user
 
   AfterInstall:
+    - location: scripts/setup_blue_green.sh
+      timeout: 60
+      runas: ec2-user
     - location: scripts/pull_and_prepare.sh
       timeout: 300
       runas: ec2-user
 
   ApplicationStart:
     - location: scripts/start_new.sh
-      timeout: 300
+      timeout: 600
       runas: ec2-user

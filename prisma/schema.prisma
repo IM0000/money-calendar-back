@@ -142,6 +142,7 @@ model EconomicIndicator {
   updatedAt   DateTime  @updatedAt
 
   @@unique([releaseDate, name, country])
+  @@index([baseName, country])
 }
 
 model FavoriteCompany {
