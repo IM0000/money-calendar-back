@@ -18,25 +18,41 @@ export class IngestService {
    */
   async scrapeAndIngestEconomicIndicator(dto: ScrapeDto) {
     const data = await this.scrapingService.scrapeEconomicIndicator(dto);
-    // await this.transportService.sendScrapedData('economic-indicator', data);
-    await this.persistenceService.saveEconomicIndicatorData(data);
+    await this.transportService.sendScrapedData('economic-indicator', data);
   }
 
   async scrapeAndIngestDividend(dto: ScrapeDto) {
     const data = await this.scrapingService.scrapeDividend(dto);
-    // await this.transportService.sendScrapedData('dividend', data);
-    await this.persistenceService.saveDividendData(data);
+    await this.transportService.sendScrapedData('dividend', data);
   }
 
   async scrapeAndIngestEarnings(dto: ScrapeDto) {
     const data = await this.scrapingService.scrapeEarnings(dto);
-    // await this.transportService.sendScrapedData('earnings', data);
-    await this.persistenceService.saveEarningsData(data);
+    await this.transportService.sendScrapedData('earnings', data);
   }
 
   async scrapeAndIngestCompany() {
     const data = await this.scrapingService.scrapeUSACompany();
-    // await this.transportService.sendScrapedData('company', data);
+    await this.transportService.sendScrapedData('company', data);
+  }
+
+  async scrapeAndPersistEconomicIndicator(dto: ScrapeDto) {
+    const data = await this.scrapingService.scrapeEconomicIndicator(dto);
+    await this.persistenceService.saveEconomicIndicatorData(data);
+  }
+
+  async scrapeAndPersistDividend(dto: ScrapeDto) {
+    const data = await this.scrapingService.scrapeDividend(dto);
+    await this.persistenceService.saveDividendData(data);
+  }
+
+  async scrapeAndPersistEarnings(dto: ScrapeDto) {
+    const data = await this.scrapingService.scrapeEarnings(dto);
+    await this.persistenceService.saveEarningsData(data);
+  }
+
+  async scrapeAndPersistCompany() {
+    const data = await this.scrapingService.scrapeUSACompany();
     await this.persistenceService.saveCompanyData(data);
   }
 }
