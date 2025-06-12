@@ -63,6 +63,9 @@ export class EconomicIndicatorDto {
   @IsString()
   name: string;
 
+  @IsString()
+  baseName?: string;
+
   @IsNumber()
   @Type(() => Number)
   importance: number;

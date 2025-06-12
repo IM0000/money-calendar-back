@@ -38,4 +38,32 @@ export class IngestController {
     await this.ingestionService.scrapeAndIngestCompany();
     return { message: 'Company data ingested' };
   }
+
+  @Post('economic-indicator-persist')
+  @ApiOperation({ summary: '스크래핑 → 저장 (경제지표)' })
+  async persistEconomicIndicator(@Body() dto: ScrapeDto) {
+    await this.ingestionService.scrapeAndPersistEconomicIndicator(dto);
+    return { message: 'Economic indicator persisted' };
+  }
+
+  @Post('dividend-persist')
+  @ApiOperation({ summary: '스크래핑 → 저장 (배당)' })
+  async persistDividend(@Body() dto: ScrapeDto) {
+    await this.ingestionService.scrapeAndPersistDividend(dto);
+    return { message: 'Dividend persisted' };
+  }
+
+  @Post('earnings-persist')
+  @ApiOperation({ summary: '스크래핑 → 저장 (실적)' })
+  async persistEarnings(@Body() dto: ScrapeDto) {
+    await this.ingestionService.scrapeAndPersistEarnings(dto);
+    return { message: 'Earnings persisted' };
+  }
+
+  @Post('company-persist')
+  @ApiOperation({ summary: '스크래핑 → 저장 (기업 정보)' })
+  async persistCompany() {
+    await this.ingestionService.scrapeAndPersistCompany();
+    return { message: 'Company data persisted' };
+  }
 }
