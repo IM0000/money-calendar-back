@@ -30,8 +30,11 @@ for i in {1..30}; do
 done
 
 # 3) AWS CLI를 사용하여 ALB 대상그룹 전환
-# 현재 인스턴스 ID 가져오기
-INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+# IMDSv2를 사용한 인스턴스 ID 조회
+METADATA_BASE="http://169.254.169.254/latest"
+TOKEN=$(curl -sX PUT "$METADATA_BASE/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds:21600")
+HDR_ARGS=(-H "X-aws-ec2-metadata-token: $TOKEN")
+INSTANCE_ID=$(curl -sf "${HDR_ARGS[@]}" "$METADATA_BASE/meta-data/instance-id")
 
 # 대상그룹 ARN 설정 (환경변수에서 가져오거나 하드코딩)
 TARGET_GROUP_3000_ARN=$(cat /home/ec2-user/target_group_3000_arn)

@@ -1,8 +1,30 @@
 #!/bin/bash
 set -e
 
-# 현재 활성 포트 확인 (ALB 대상그룹 헬스체크를 통해)
-ACTIVE_PORT=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4 | xargs -I {} sh -c 'curl -s --connect-timeout 2 http://{}:3000/health && echo 3000 || curl -s --connect-timeout 2 http://{}:3001/health && echo 3001 || echo none')
+# IMDSv2를 사용한 메타데이터 조회
+METADATA_BASE="http://169.254.169.254/latest"
+
+# 1) IMDSv2 토큰 발급 - 실패 시 스크립트 종료
+TOKEN=$(curl -sX PUT "$METADATA_BASE/api/token" \
+    -H "X-aws-ec2-metadata-token-ttl-seconds:21600")
+
+# 2) 헤더 args 설정
+HDR_ARGS=(-H "X-aws-ec2-metadata-token: $TOKEN")
+
+# 3) IP 조회 - 실패 시 스크립트 종료
+IP=$(curl -sf "${HDR_ARGS[@]}" "$METADATA_BASE/meta-data/local-ipv4")
+echo "Instance IP: $IP"
+
+# 4) 활성 포트 감지 (둘 다 실패하면 ACTIVE_PORT='none')
+if curl -sf --connect-timeout 2 http://$IP:3000/health; then
+    ACTIVE_PORT=3000
+elif curl -sf --connect-timeout 2 http://$IP:3001/health; then
+    ACTIVE_PORT=3001
+else
+    ACTIVE_PORT=none
+fi
+
+echo "Detected active port: $ACTIVE_PORT"
 
 # 활성 포트가 3000이면 3001을 정리, 3001이면 3000을 정리
 if [ "$ACTIVE_PORT" = "3000" ]; then

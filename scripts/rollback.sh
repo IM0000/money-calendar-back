@@ -8,7 +8,12 @@ echo "Starting rollback process..."
 
 # 현재 상태 읽기
 CURRENT_ACTIVE_PORT=$(cat /home/ec2-user/current_active_port)
-INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+
+# IMDSv2를 사용한 인스턴스 ID 조회
+METADATA_BASE="http://169.254.169.254/latest"
+TOKEN=$(curl -sX PUT "$METADATA_BASE/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds:21600")
+HDR_ARGS=(-H "X-aws-ec2-metadata-token: $TOKEN")
+INSTANCE_ID=$(curl -sf "${HDR_ARGS[@]}" "$METADATA_BASE/meta-data/instance-id")
 
 if [ "$CURRENT_ACTIVE_PORT" = "none" ]; then
     echo "No active deployment found. Nothing to rollback."
