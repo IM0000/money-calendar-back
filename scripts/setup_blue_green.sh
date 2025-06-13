@@ -10,9 +10,9 @@ if [ -n "$TARGET_GROUP_3000_ARN" ] && [ -n "$TARGET_GROUP_3001_ARN" ]; then
     echo "$TARGET_GROUP_3001_ARN" > /home/ec2-user/target_group_3001_arn
     echo "Target group ARNs loaded from environment variables"
 elif aws ssm get-parameter --name "/moneycalendar/TARGET_GROUP_3000_ARN" --region ap-northeast-2 >/dev/null 2>&1; then
-    # Parameter Store에서 가져오기
-    TARGET_GROUP_3000_ARN=$(aws ssm get-parameter --name "/moneycalendar/TARGET_GROUP_3000_ARN" --query 'Parameter.Value' --output text --region ap-northeast-2)
-    TARGET_GROUP_3001_ARN=$(aws ssm get-parameter --name "/moneycalendar/TARGET_GROUP_3001_ARN" --query 'Parameter.Value' --output text --region ap-northeast-2)
+    # Parameter Store에서 가져오기 (SecureString 복호화)
+    TARGET_GROUP_3000_ARN=$(aws ssm get-parameter --name "/moneycalendar/TARGET_GROUP_3000_ARN" --with-decryption --query 'Parameter.Value' --output text --region ap-northeast-2)
+    TARGET_GROUP_3001_ARN=$(aws ssm get-parameter --name "/moneycalendar/TARGET_GROUP_3001_ARN" --with-decryption --query 'Parameter.Value' --output text --region ap-northeast-2)
     
     echo "$TARGET_GROUP_3000_ARN" > /home/ec2-user/target_group_3000_arn
     echo "$TARGET_GROUP_3001_ARN" > /home/ec2-user/target_group_3001_arn
