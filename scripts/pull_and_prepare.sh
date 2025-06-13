@@ -2,7 +2,26 @@
 set -e
 
 # 배포 대상 포트 읽기 (cleanup.sh에서 설정됨)
-DEPLOY_TARGET_PORT=$(cat /home/ec2-user/deploy_target_port)
+if [ -f "/home/ec2-user/deploy_target_port" ]; then
+    DEPLOY_TARGET_PORT=$(cat /home/ec2-user/deploy_target_port)
+else
+    # 첫 배포이거나 cleanup.sh가 실행되지 않은 경우 fallback
+    echo "deploy_target_port file not found, determining target port..."
+    CURRENT_ACTIVE_PORT=$(cat /home/ec2-user/current_active_port 2>/dev/null || echo "none")
+    
+    if [ "$CURRENT_ACTIVE_PORT" = "3000" ]; then
+        DEPLOY_TARGET_PORT=3001
+    elif [ "$CURRENT_ACTIVE_PORT" = "3001" ]; then
+        DEPLOY_TARGET_PORT=3000
+    else
+        # 첫 배포인 경우 3000으로 설정
+        DEPLOY_TARGET_PORT=3000
+    fi
+    
+    echo "$DEPLOY_TARGET_PORT" > /home/ec2-user/deploy_target_port
+    echo "Created deploy_target_port file with value: $DEPLOY_TARGET_PORT"
+fi
+
 CONTAINER_NAME="app-$DEPLOY_TARGET_PORT"
 
 echo "Deploying to inactive port: $DEPLOY_TARGET_PORT"
