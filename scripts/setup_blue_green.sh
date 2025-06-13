@@ -81,4 +81,4 @@ echo "Configuration:"
 echo "- 3000 port target group: $(cat /home/ec2-user/target_group_3000_arn)"
 echo "- 3001 port target group: $(cat /home/ec2-user/target_group_3001_arn)"
 echo "- ALB Listener: $(cat /home/ec2-user/alb_listener_arn)"
-echo "- Docker image base: $(cat /home/ec2-user/docker_image_base
+echo "- Docker image base: $(cat /home/ec2-user/docker_image_base)"
