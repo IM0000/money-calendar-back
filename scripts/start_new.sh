@@ -12,7 +12,7 @@ CONTAINER_NAME="app-$DEPLOY_TARGET_PORT"
 echo "Starting container $CONTAINER_NAME on port $DEPLOY_TARGET_PORT"
 sudo docker start $CONTAINER_NAME
 
-# 1) 미리 생성해 둔 컨테이너를 즉시 start
+# 1) 로컬 헬스체크
 echo "Waiting for health check on port $DEPLOY_TARGET_PORT..."
 for i in {1..30}; do
     if curl -f http://localhost:$DEPLOY_TARGET_PORT/health 2>/dev/null; then
@@ -64,11 +64,11 @@ for i in {1..60}; do
     sleep 5
 done
 
-# 4) 이전 컨테이너 정리
+# 4) 이전 컨테이너 완전 삭제 (이미지는 보존됨)
 if [ "$CURRENT_ACTIVE_PORT" != "none" ]; then
     echo "Removing old container app-$CURRENT_ACTIVE_PORT"
     sudo docker stop app-$CURRENT_ACTIVE_PORT 2>/dev/null || true
-    sudo docker rm   app-$CURRENT_ACTIVE_PORT 2>/dev/null || true
+    sudo docker rm app-$CURRENT_ACTIVE_PORT 2>/dev/null || true
 fi
 
 # 5) 상태 파일 업데이트

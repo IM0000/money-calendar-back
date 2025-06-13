@@ -4,16 +4,18 @@ set -e
 # AWS 리전 설정
 AWS_REGION=${AWS_REGION:-ap-northeast-2}
 
-echo "Starting rollback process..."
+echo "Starting image-based rollback process..."
+
+# Docker 이미지 설정 확인
+if [ ! -f "/home/ec2-user/docker_image_base" ]; then
+    echo "ERROR: Docker image base not configured"
+    exit 1
+fi
+
+IMAGE_BASE=$(cat /home/ec2-user/docker_image_base)
 
 # 현재 상태 읽기
 CURRENT_ACTIVE_PORT=$(cat /home/ec2-user/current_active_port)
-
-# IMDSv2를 사용한 인스턴스 ID 조회
-METADATA_BASE="http://169.254.169.254/latest"
-TOKEN=$(curl -sX PUT "$METADATA_BASE/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds:21600")
-HDR_ARGS=(-H "X-aws-ec2-metadata-token: $TOKEN")
-INSTANCE_ID=$(curl -sf "${HDR_ARGS[@]}" "$METADATA_BASE/meta-data/instance-id")
 
 if [ "$CURRENT_ACTIVE_PORT" = "none" ]; then
     echo "No active deployment found. Nothing to rollback."
@@ -22,42 +24,52 @@ fi
 
 # 이전 포트 계산
 if [ "$CURRENT_ACTIVE_PORT" = "3000" ]; then
-    PREVIOUS_PORT=3001
+    ROLLBACK_PORT=3001
 else
-    PREVIOUS_PORT=3000
+    ROLLBACK_PORT=3000
 fi
 
-echo "Rolling back from port $CURRENT_ACTIVE_PORT to port $PREVIOUS_PORT"
+echo "Rolling back from port $CURRENT_ACTIVE_PORT to port $ROLLBACK_PORT"
 
-# 대상그룹 ARN 읽기
-TARGET_GROUP_3000_ARN=$(cat /home/ec2-user/target_group_3000_arn)
-TARGET_GROUP_3001_ARN=$(cat /home/ec2-user/target_group_3001_arn)
-
-if [ "$PREVIOUS_PORT" = "3000" ]; then
-    ROLLBACK_TARGET_GROUP_ARN=$TARGET_GROUP_3000_ARN
-    CURRENT_TARGET_GROUP_ARN=$TARGET_GROUP_3001_ARN
-else
-    ROLLBACK_TARGET_GROUP_ARN=$TARGET_GROUP_3001_ARN
-    CURRENT_TARGET_GROUP_ARN=$TARGET_GROUP_3000_ARN
-fi
-
-# 이전 버전 컨테이너가 존재하는지 확인
-PREVIOUS_CONTAINER_NAME="app-$PREVIOUS_PORT"
-if ! sudo docker ps -a --filter "name=$PREVIOUS_CONTAINER_NAME" --format "table {{.Names}}" | grep -q "$PREVIOUS_CONTAINER_NAME"; then
-    echo "ERROR: Previous container $PREVIOUS_CONTAINER_NAME not found"
+# 이전 이미지 확인
+if [ ! -f "/home/ec2-user/previous_image" ]; then
+    echo "ERROR: No previous image found for rollback"
     exit 1
 fi
 
-# 이전 컨테이너 시작
-echo "Starting previous container: $PREVIOUS_CONTAINER_NAME"
-sudo docker start $PREVIOUS_CONTAINER_NAME 2>/dev/null || {
-    echo "Failed to start previous container. It may already be running."
-}
+PREVIOUS_IMAGE=$(cat /home/ec2-user/previous_image)
+ROLLBACK_IMAGE="$IMAGE_BASE:previous"
 
-# 헬스체크
+echo "Rolling back to image: $PREVIOUS_IMAGE"
+
+# ARN 읽기
+LISTENER_ARN=$(cat /home/ec2-user/alb_listener_arn)
+TARGET_GROUP_3000_ARN=$(cat /home/ec2-user/target_group_3000_arn)
+TARGET_GROUP_3001_ARN=$(cat /home/ec2-user/target_group_3001_arn)
+
+if [ "$ROLLBACK_PORT" = "3000" ]; then
+    ROLLBACK_TARGET_GROUP_ARN=$TARGET_GROUP_3000_ARN
+else
+    ROLLBACK_TARGET_GROUP_ARN=$TARGET_GROUP_3001_ARN
+fi
+
+# 1) 이전 이미지로 새 컨테이너 생성
+ROLLBACK_CONTAINER_NAME="app-$ROLLBACK_PORT"
+
+echo "Creating rollback container with previous image"
+sudo docker create --name $ROLLBACK_CONTAINER_NAME \
+  --env-file /home/ec2-user/app.env \
+  -p $ROLLBACK_PORT:3000 \
+  $ROLLBACK_IMAGE
+
+# 2) 롤백 컨테이너 시작
+echo "Starting rollback container: $ROLLBACK_CONTAINER_NAME"
+sudo docker start $ROLLBACK_CONTAINER_NAME
+
+# 3) 로컬 헬스체크
 echo "Waiting for rollback container health check..."
 for i in {1..30}; do
-    if curl -f http://localhost:$PREVIOUS_PORT/health 2>/dev/null; then
+    if curl -f http://localhost:$ROLLBACK_PORT/health 2>/dev/null; then
         echo "Rollback container health check passed!"
         break
     fi
@@ -69,16 +81,21 @@ for i in {1..30}; do
     sleep 2
 done
 
-# ALB 대상그룹 전환
-echo "Switching ALB to previous version..."
+# 4) ALB 리스너 대상그룹 변경
+echo "Switching ALB listener to rollback version..."
+aws elbv2 modify-listener \
+    --listener-arn $LISTENER_ARN \
+    --default-actions Type=forward,TargetGroupArn=$ROLLBACK_TARGET_GROUP_ARN \
+    --region $AWS_REGION
 
-# 이전 버전을 대상그룹에 등록
-aws elbv2 register-targets --target-group-arn $ROLLBACK_TARGET_GROUP_ARN --targets Id=$INSTANCE_ID,Port=$PREVIOUS_PORT --region $AWS_REGION
-
-# ALB 헬스체크 통과 대기
+# 5) ALB 헬스체크 통과 대기
 echo "Waiting for ALB health check on rollback target..."
 for i in {1..60}; do
-    HEALTH_STATUS=$(aws elbv2 describe-target-health --target-group-arn $ROLLBACK_TARGET_GROUP_ARN --targets Id=$INSTANCE_ID,Port=$PREVIOUS_PORT --query 'TargetHealthDescriptions[0].TargetHealth.State' --output text --region $AWS_REGION)
+    HEALTH_STATUS=$(aws elbv2 describe-target-health \
+        --target-group-arn $ROLLBACK_TARGET_GROUP_ARN \
+        --query 'TargetHealthDescriptions[0].TargetHealth.State' \
+        --output text \
+        --region $AWS_REGION || echo "")
     if [ "$HEALTH_STATUS" = "healthy" ]; then
         echo "ALB health check passed for rollback target!"
         break
@@ -91,17 +108,18 @@ for i in {1..60}; do
     sleep 5
 done
 
-# 현재 버전을 대상그룹에서 제거
-echo "Removing current version from target group..."
-aws elbv2 deregister-targets --target-group-arn $CURRENT_TARGET_GROUP_ARN --targets Id=$INSTANCE_ID,Port=$CURRENT_ACTIVE_PORT --region $AWS_REGION
-
-# 현재 컨테이너 정지
-sleep 10
+# 6) 현재 컨테이너 정리
 CURRENT_CONTAINER_NAME="app-$CURRENT_ACTIVE_PORT"
+echo "Removing current container: $CURRENT_CONTAINER_NAME"
 sudo docker stop $CURRENT_CONTAINER_NAME 2>/dev/null || true
+sudo docker rm $CURRENT_CONTAINER_NAME 2>/dev/null || true
 
-# 상태 파일 업데이트
-echo "$PREVIOUS_PORT" > /home/ec2-user/current_active_port
+# 7) 상태 파일 업데이트
+echo "$ROLLBACK_PORT" > /home/ec2-user/current_active_port
 
-echo "Rollback completed successfully!"
-echo "Active port rolled back from $CURRENT_ACTIVE_PORT to $PREVIOUS_PORT" 
+# 8) 이미지 정보 업데이트
+echo "$ROLLBACK_IMAGE" > /home/ec2-user/current_image
+
+echo "Image-based rollback completed successfully!"
+echo "Active port rolled back from $CURRENT_ACTIVE_PORT to $ROLLBACK_PORT"
+echo "Using image: $PREVIOUS_IMAGE" 
