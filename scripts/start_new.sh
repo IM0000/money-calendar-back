@@ -51,12 +51,12 @@ fi
 echo "Switching ALB target groups..."
 
 # 새 대상그룹에 인스턴스 등록
-aws elbv2 register-targets --target-group-arn $NEW_TARGET_GROUP_ARN --targets Id=$INSTANCE_ID,Port=$DEPLOY_TARGET_PORT --region $AWS_REGION
+aws elbv2 register-targets --target-group-arn $NEW_TARGET_GROUP_ARN --targets Id="$INSTANCE_ID,Port=$DEPLOY_TARGET_PORT" --region $AWS_REGION
 
 # 헬스체크 통과 대기 (ALB 대상그룹 레벨)
 echo "Waiting for ALB health check to pass..."
 for i in {1..60}; do
-    HEALTH_STATUS=$(aws elbv2 describe-target-health --target-group-arn $NEW_TARGET_GROUP_ARN --targets Id=$INSTANCE_ID,Port=$DEPLOY_TARGET_PORT --query 'TargetHealthDescriptions[0].TargetHealth.State' --output text --region $AWS_REGION)
+    HEALTH_STATUS=$(aws elbv2 describe-target-health --target-group-arn $NEW_TARGET_GROUP_ARN --targets Id="$INSTANCE_ID,Port=$DEPLOY_TARGET_PORT" --query 'TargetHealthDescriptions[0].TargetHealth.State' --output text --region $AWS_REGION)
     if [ "$HEALTH_STATUS" = "healthy" ]; then
         echo "ALB health check passed!"
         break
@@ -72,7 +72,7 @@ done
 # 이전 대상그룹에서 인스턴스 제거 (graceful)
 if [ "$CURRENT_ACTIVE_PORT" != "none" ]; then
     echo "Removing from old target group..."
-    aws elbv2 deregister-targets --target-group-arn $OLD_TARGET_GROUP_ARN --targets Id=$INSTANCE_ID,Port=$CURRENT_ACTIVE_PORT --region $AWS_REGION
+    aws elbv2 deregister-targets --target-group-arn $OLD_TARGET_GROUP_ARN --targets Id="$INSTANCE_ID,Port=$CURRENT_ACTIVE_PORT" --region $AWS_REGION
     
     # 잠시 대기 후 이전 컨테이너 정리
     sleep 10
