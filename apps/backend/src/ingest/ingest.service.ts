@@ -76,6 +76,7 @@ export class IngestService {
         country: data.country,
         releaseDate: data.releaseDate,
         name: data.name,
+        baseName: data.baseName,
         importance: data.importance,
         actual: data.actual,
         forecast: data.forecast,
