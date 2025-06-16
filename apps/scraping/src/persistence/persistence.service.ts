@@ -63,6 +63,7 @@ export class PersistenceService {
         await this.prisma.economicIndicator.update({
           where: { id: existingRecord.id },
           data: {
+            baseName: data.baseName,
             importance: data.importance,
             actual: data.actual,
             forecast: data.forecast,
@@ -75,6 +76,7 @@ export class PersistenceService {
             country: data.country,
             releaseDate: data.releaseDate,
             name: data.name,
+            baseName: data.baseName,
             importance: data.importance,
             actual: data.actual,
             forecast: data.forecast,
