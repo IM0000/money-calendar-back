@@ -160,7 +160,9 @@ export class NotificationService {
       if (contentType === ContentType.EARNINGS) {
         const { before, after } = metadata;
         subject = `${before.company.name} 실적 업데이트 알림`;
-        emailContent = `${before.company.name}의 실적이 업데이트되었습니다. EPS: ${after.actualEPS}, 매출: ${after.actualRevenue}`;
+        emailContent = `${before.company.name}의 실적이 업데이트되었습니다.`;
+        emailContent += `\nEPS: ${after.actualEPS}, 매출: ${after.actualRevenue}`;
+        emailContent += `\n예측 EPS: ${after.forecastEPS}, 예측 매출: ${after.forecastRevenue}`;
       } else if (contentType === ContentType.DIVIDEND) {
         const { before, after, notificationType } = metadata;
 
@@ -232,7 +234,9 @@ export class NotificationService {
         if (contentType === ContentType.EARNINGS) {
           const { before, after } = metadata;
           title = `${before.company.name} 실적 업데이트 알림`;
-          content = `${before.company.name}의 실적이 업데이트되었습니다.\nEPS: ${after.actualEPS}\n매출: ${after.actualRevenue}`;
+          content = `${before.company.name}의 실적이 업데이트되었습니다.`;
+          content += `\nEPS: ${after.actualEPS}, 매출: ${after.actualRevenue}`;
+          content += `\n예측 EPS: ${after.forecastEPS}, 예측 매출: ${after.forecastRevenue}`;
         } else if (contentType === ContentType.DIVIDEND) {
           const { before, after, notificationType } = metadata;
 

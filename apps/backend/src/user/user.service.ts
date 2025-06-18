@@ -10,7 +10,7 @@ import { User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { RandomNickList } from '../common/random-nick.constants';
 import { EmailService } from '../email/email.service';
-import { generateSixDigitCode } from '../utils/code-generator';
+import { generateSixDigitCode } from '../common/utils/code-generator';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/profile.dto';
 import {
