@@ -4,29 +4,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ContentType } from '@prisma/client';
-import {
-  UpdateUserNotificationSettingsDto,
-  NotificationChannel,
-  NotificationStatus,
-} from './dto/notification.dto';
-import { Subject } from 'rxjs';
+import { ContentType, NotificationType } from '@prisma/client';
+import { UpdateUserNotificationSettingsDto } from './dto/notification.dto';
 import {
   ERROR_CODE_MAP,
   ERROR_MESSAGE_MAP,
 } from '../common/constants/error.constant';
-import { EmailService } from '../email/email.service';
-import { SlackService } from '../slack/slack.service';
+import { NotificationQueueService } from './queue/notification-queue.service';
+import { NotificationSSEService } from './sse/notification-sse.service';
 
 @Injectable()
 export class NotificationService {
-  private readonly notificationSubject = new Subject<any>();
-  public readonly notification$ = this.notificationSubject.asObservable();
-
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService,
-    private readonly slackService: SlackService,
+    private readonly queueService: NotificationQueueService,
+    private readonly sseService: NotificationSSEService,
   ) {}
 
   /**
@@ -36,268 +28,132 @@ export class NotificationService {
     contentType: ContentType;
     contentId: number;
     userId: number;
-    metadata?: any;
+    notificationType: NotificationType;
+    previousData?: any;
+    currentData?: any;
   }) {
-    const { contentType, contentId, userId, metadata } = dto;
+    const {
+      contentType,
+      contentId,
+      userId,
+      notificationType,
+      previousData,
+      currentData,
+    } = dto;
 
-    // 1. 콘텐츠 정보 조회
-    let content: any;
-    let subscription: any;
+    // 1. 구독 정보 및 사용자 정보 조회
+    const subscriptionWithUser = await this.getSubscriptionWithUser(
+      contentType,
+      contentId,
+      userId,
+    );
 
-    if (contentType === ContentType.EARNINGS) {
-      content = await this.prisma.earnings.findUnique({
-        where: { id: contentId },
-        include: { company: true },
-      });
-
-      if (!content) {
-        throw new NotFoundException({
-          errorCode: ERROR_CODE_MAP.RESOURCE_001,
-          errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
-        });
-      }
-
-      subscription = await this.prisma.subscriptionCompany.findFirst({
-        where: {
-          userId,
-          companyId: content.companyId,
-          isActive: true,
-        },
-        include: {
-          user: {
-            include: {
-              notificationSettings: true,
-            },
-          },
-        },
-      });
-    } else if (contentType === ContentType.DIVIDEND) {
-      content = await this.prisma.dividend.findUnique({
-        where: { id: contentId },
-        include: { company: true },
-      });
-
-      if (!content) {
-        throw new NotFoundException({
-          errorCode: ERROR_CODE_MAP.RESOURCE_001,
-          errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
-        });
-      }
-
-      subscription = await this.prisma.subscriptionCompany.findFirst({
-        where: {
-          userId,
-          companyId: content.companyId,
-          isActive: true,
-        },
-        include: {
-          user: {
-            include: {
-              notificationSettings: true,
-            },
-          },
-        },
-      });
-    } else if (contentType === ContentType.ECONOMIC_INDICATOR) {
-      content = await this.prisma.economicIndicator.findUnique({
-        where: { id: contentId },
-      });
-
-      if (!content) {
-        throw new NotFoundException({
-          errorCode: ERROR_CODE_MAP.RESOURCE_001,
-          errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
-        });
-      }
-
-      subscription = await this.prisma.subscriptionIndicatorGroup.findFirst({
-        where: {
-          userId,
-          baseName: content.baseName,
-          country: content.country,
-          isActive: true,
-        },
-        include: {
-          user: {
-            include: {
-              notificationSettings: true,
-            },
-          },
-        },
-      });
-    } else {
+    if (!subscriptionWithUser) {
       throw new NotFoundException({
         errorCode: ERROR_CODE_MAP.RESOURCE_001,
         errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
       });
     }
 
-    if (!subscription) {
-      throw new NotFoundException({
-        errorCode: ERROR_CODE_MAP.RESOURCE_001,
-        errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
-      });
-    }
-
-    // 2. 사용자 알림 설정 조회
-    const settings = await this.getUserNotificationSettings(userId);
-
-    // 3. 통합 알림 생성
+    // 2. 알림 DB 생성
     const notification = await this.prisma.notification.create({
       data: {
         userId,
         contentType,
         contentId,
+        notificationType,
         isRead: false,
       },
     });
 
-    // 4. 이메일 전송
-    if (settings.emailEnabled && metadata) {
-      let subject = '';
-      let emailContent = '';
+    // 3. 사용자 알림 설정 조회
+    const userSettings = await this.getUserNotificationSettings(
+      subscriptionWithUser.user.id,
+    );
 
-      if (contentType === ContentType.EARNINGS) {
-        const { before, after } = metadata;
-        subject = `${before.company.name} 실적 업데이트 알림`;
-        emailContent = `${before.company.name}의 실적이 업데이트되었습니다.`;
-        emailContent += `\nEPS: ${after.actualEPS}, 매출: ${after.actualRevenue}`;
-        emailContent += `\n예측 EPS: ${after.forecastEPS}, 예측 매출: ${after.forecastRevenue}`;
-      } else if (contentType === ContentType.DIVIDEND) {
-        const { before, after, notificationType } = metadata;
+    // 4. 큐에 알림 작업 추가
+    await this.queueService.addNotificationJob({
+      notificationId: notification.id,
+      userId: subscriptionWithUser.user.id,
+      userEmail: subscriptionWithUser.user.email,
+      contentType,
+      contentId,
+      notificationType,
+      previousData,
+      currentData,
+      userSettings,
+    });
 
-        if (notificationType === 'DATA_CHANGED') {
-          // 배당 데이터 변경 알림
-          subject = `${before.company.name} 배당 정보 업데이트 알림`;
-          emailContent = `${before.company.name}의 배당 정보가 업데이트되었습니다.\n`;
+    // 5. 읽지 않은 알림 개수 조회 및 SSE 이벤트 발행
+    const { count: unreadCount } = await this.getUnreadNotificationsCount(
+      userId,
+    );
 
-          if (before.dividendAmount !== after.dividendAmount) {
-            emailContent += `배당금: ${before.dividendAmount} → ${after.dividendAmount}\n`;
-          }
-          if (before.dividendYield !== after.dividendYield) {
-            emailContent += `배당수익률: ${before.dividendYield} → ${after.dividendYield}\n`;
-          }
-
-          emailContent += `배당락일: ${new Date(
-            after.exDividendDate,
-          ).toLocaleDateString()}`;
-        } else {
-          // 배당 지급일 알림 (기존 로직)
-          subject = `${before.company.name} 배당지급일 알림`;
-          emailContent = `오늘은 ${
-            before.company.name
-          }의 배당지급일입니다. \n배당지급일: ${new Date(
-            after.paymentDate,
-          ).toLocaleDateString()}\n배당금: ${after.dividendAmount}`;
-        }
-      } else if (contentType === ContentType.ECONOMIC_INDICATOR) {
-        const { before, after } = metadata;
-        subject = `${before.name} 지표 업데이트 알림`;
-        emailContent = `${before.name} 지표가 ${after.actual}로 업데이트되었습니다.`;
-      }
-
-      try {
-        await this.emailService.sendNotificationEmail({
-          email: subscription.user.email,
-          subject,
-          content: emailContent,
-        });
-
-        // 전송 성공 기록
-        await this.prisma.notificationDelivery.create({
-          data: {
-            notificationId: notification.id,
-            channelKey: NotificationChannel.EMAIL,
-            status: NotificationStatus.SENT,
-            deliveredAt: new Date(),
-          },
-        });
-      } catch (error) {
-        // 전송 실패 기록
-        await this.prisma.notificationDelivery.create({
-          data: {
-            notificationId: notification.id,
-            channelKey: NotificationChannel.EMAIL,
-            status: NotificationStatus.FAILED,
-            errorMessage: error.message,
-          },
-        });
-      }
-    }
-
-    // 5. 슬랙 알림 전송
-    if (settings && settings.slackEnabled) {
-      try {
-        let title = '';
-        let content = '';
-
-        if (contentType === ContentType.EARNINGS) {
-          const { before, after } = metadata;
-          title = `${before.company.name} 실적 업데이트 알림`;
-          content = `${before.company.name}의 실적이 업데이트되었습니다.`;
-          content += `\nEPS: ${after.actualEPS}, 매출: ${after.actualRevenue}`;
-          content += `\n예측 EPS: ${after.forecastEPS}, 예측 매출: ${after.forecastRevenue}`;
-        } else if (contentType === ContentType.DIVIDEND) {
-          const { before, after, notificationType } = metadata;
-
-          if (notificationType === 'DATA_CHANGED') {
-            // 배당 데이터 변경 알림
-            title = `${before.company.name} 배당 정보 업데이트 알림`;
-            content = `${before.company.name}의 배당 정보가 업데이트되었습니다.\n`;
-
-            if (before.dividendAmount !== after.dividendAmount) {
-              content += `배당금: ${before.dividendAmount} → ${after.dividendAmount}\n`;
-            }
-            if (before.dividendYield !== after.dividendYield) {
-              content += `배당수익률: ${before.dividendYield} → ${after.dividendYield}\n`;
-            }
-
-            content += `배당락일: ${new Date(
-              after.exDividendDate,
-            ).toLocaleDateString()}`;
-          } else {
-            // 배당 지급일 알림
-            title = `${before.company.name} 배당지급일 알림`;
-            content = `오늘은 ${before.company.name}의 배당지급일입니다.\n배당금: ${after.dividendAmount}`;
-          }
-        } else if (contentType === ContentType.ECONOMIC_INDICATOR) {
-          const { before, after } = metadata;
-          title = `${before.name} 지표 업데이트 알림`;
-          content = `${before.name} 지표가 ${after.actual}로 업데이트되었습니다.`;
-        }
-
-        await this.slackService.sendNotificationMessage({
-          userId,
-          text: title,
-          blocks: this.slackService.createNotificationBlocks(title, content),
-        });
-
-        // 전송 성공 기록
-        await this.prisma.notificationDelivery.create({
-          data: {
-            notificationId: notification.id,
-            channelKey: NotificationChannel.SLACK,
-            status: NotificationStatus.SENT,
-            deliveredAt: new Date(),
-          },
-        });
-      } catch (error) {
-        // 전송 실패 기록
-        await this.prisma.notificationDelivery.create({
-          data: {
-            notificationId: notification.id,
-            channelKey: NotificationChannel.SLACK,
-            status: NotificationStatus.FAILED,
-            errorMessage: error.message,
-          },
-        });
-      }
-    }
-
-    // 6. 알림 이벤트 발행
-    this.notificationSubject.next(notification);
+    await this.sseService.publishNewNotification({
+      id: notification.id,
+      userId: notification.userId,
+      contentType: notification.contentType,
+      contentId: notification.contentId,
+      isRead: notification.isRead,
+      createdAt: notification.createdAt,
+      unreadCount, // 정확한 읽지 않은 알림 개수 포함
+    });
 
     return notification;
+  }
+
+  /**
+   * 콘텐츠 타입별 구독 정보 조회
+   */
+  private async getSubscriptionWithUser(
+    contentType: ContentType,
+    contentId: number,
+    userId: number,
+  ) {
+    switch (contentType) {
+      case ContentType.EARNINGS:
+        const earnings = await this.prisma.earnings.findUnique({
+          where: { id: contentId },
+          include: { company: true },
+        });
+        if (!earnings) return null;
+
+        return this.prisma.subscriptionCompany.findFirst({
+          where: { userId, companyId: earnings.companyId, isActive: true },
+          include: { user: true },
+        });
+
+      case ContentType.DIVIDEND:
+        const dividend = await this.prisma.dividend.findUnique({
+          where: { id: contentId },
+          include: { company: true },
+        });
+        if (!dividend) return null;
+
+        return this.prisma.subscriptionCompany.findFirst({
+          where: { userId, companyId: dividend.companyId, isActive: true },
+          include: { user: true },
+        });
+
+      case ContentType.ECONOMIC_INDICATOR:
+        const indicator = await this.prisma.economicIndicator.findUnique({
+          where: { id: contentId },
+        });
+        if (!indicator) return null;
+
+        return this.prisma.subscriptionIndicatorGroup.findFirst({
+          where: {
+            userId,
+            baseName: indicator.baseName,
+            country: indicator.country,
+            isActive: true,
+          },
+          include: { user: true },
+        });
+
+      default:
+        throw new Error(`지원하지 않는 콘텐츠 타입: ${contentType}`);
+    }
   }
 
   /**
@@ -312,13 +168,13 @@ export class NotificationService {
       return settings;
     }
 
-    // 설정이 없으면 기본값으로 생성
     return this.prisma.userNotificationSettings.create({
       data: {
         userId,
         emailEnabled: false,
         slackEnabled: false,
         slackWebhookUrl: null,
+        notificationsEnabled: true,
       },
     });
   }
@@ -330,7 +186,12 @@ export class NotificationService {
     userId: number,
     dto: UpdateUserNotificationSettingsDto,
   ) {
-    const { emailEnabled, slackEnabled, slackWebhookUrl, allEnabled } = dto;
+    const {
+      emailEnabled,
+      slackEnabled,
+      slackWebhookUrl,
+      notificationsEnabled,
+    } = dto;
 
     return this.prisma.userNotificationSettings.upsert({
       where: { userId },
@@ -340,14 +201,14 @@ export class NotificationService {
         ...(slackWebhookUrl !== undefined && {
           slackWebhookUrl,
         }),
-        ...(allEnabled !== undefined && { allEnabled }),
+        ...(notificationsEnabled !== undefined && { notificationsEnabled }),
       },
       create: {
         userId,
         emailEnabled: emailEnabled ?? false,
         slackEnabled: slackEnabled ?? false,
         slackWebhookUrl,
-        allEnabled: allEnabled ?? true,
+        notificationsEnabled: notificationsEnabled ?? true,
       },
     });
   }
@@ -519,6 +380,13 @@ export class NotificationService {
       data: { isRead: true },
     });
 
+    // 읽지 않은 알림 개수 업데이트 이벤트 발행
+    const unreadCount = await this.prisma.notification.count({
+      where: { userId, isRead: false },
+    });
+
+    await this.sseService.publishUnreadCountUpdate(userId, unreadCount);
+
     return { message: '알림이 읽음으로 변경되었습니다.' };
   }
 
@@ -533,6 +401,9 @@ export class NotificationService {
       },
       data: { isRead: true },
     });
+
+    // 읽지 않은 알림 개수 0으로 업데이트 이벤트 발행
+    await this.sseService.publishUnreadCountUpdate(userId, 0);
 
     return {
       message: '모든 알림을 읽음으로 표시했습니다.',

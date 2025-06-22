@@ -123,7 +123,7 @@ describe('NotificationService', () => {
           notificationSettings: {
             emailEnabled: true,
             slackEnabled: false,
-            allEnabled: true,
+            notificationsEnabled: true,
           },
         },
       };
@@ -142,7 +142,7 @@ describe('NotificationService', () => {
         emailEnabled: false,
         slackEnabled: false,
         slackWebhookUrl: null,
-        allEnabled: true,
+        notificationsEnabled: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -265,7 +265,7 @@ describe('NotificationService', () => {
           emailEnabled: false,
           slackEnabled: true,
           slackWebhookUrl: 'https://slack.com/webhook',
-          allEnabled: true,
+          notificationsEnabled: true,
         },
       });
       expect(result).toEqual(mockSettings);

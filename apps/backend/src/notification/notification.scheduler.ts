@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationService } from './notification.service';
-import { ContentType } from '@prisma/client';
+import { ContentType, NotificationType } from '@prisma/client';
 
 @Injectable()
-export class DividendNotificationScheduler {
-  private readonly logger = new Logger(DividendNotificationScheduler.name);
+export class NotificationScheduler {
+  private readonly logger = new Logger(NotificationScheduler.name);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -104,7 +104,7 @@ export class DividendNotificationScheduler {
         const user = subscription.user;
 
         // 사용자의 알림 설정 확인
-        if (!user.notificationSettings?.allEnabled) {
+        if (!user.notificationSettings?.notificationsEnabled) {
           this.logger.log(
             `사용자 ${user.id}는 알림이 비활성화되어 있어 건너뜁니다.`,
           );
@@ -116,16 +116,8 @@ export class DividendNotificationScheduler {
           contentType: ContentType.DIVIDEND,
           contentId: dividend.id,
           userId: user.id,
-          metadata: {
-            before: dividend, // 기존 구조와 맞추기 위해
-            after: dividend, // 기존 구조와 맞추기 위해
-            notificationType: 'PAYMENT_DATE', // 배당 지급일 알림임을 표시
-            type: 'DIVIDEND_PAYMENT', // 기존 호환성을 위해 유지
-            companyName: dividend.company.name,
-            ticker: dividend.company.ticker,
-            dividendAmount: dividend.dividendAmount,
-            paymentDate: dividend.paymentDate,
-          },
+          notificationType: NotificationType.PAYMENT_DATE,
+          currentData: dividend,
         });
 
         this.logger.log(

@@ -34,9 +34,9 @@ export class EmailService {
 
   async sendNotificationEmail(dto: SendNotificationEmailDto) {
     const mailOptions: EmailOptions = {
-      to: dto.email,
+      to: dto.to,
       subject: dto.subject,
-      html: dto.content,
+      html: dto.html,
     };
     return await this.provider.sendMail(mailOptions);
   }

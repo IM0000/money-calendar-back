@@ -29,8 +29,10 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { HealthModule } from './health/health.module';
 import { TerminusModule } from '@nestjs/terminus';
 import { awsConfig } from './config/aws.config';
+import { redisConfig } from './config/redis.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { IngestModule } from './ingest/ingest.module';
+import { BullModule } from '@nestjs/bull';
 import * as cookieParser from 'cookie-parser';
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -39,6 +41,14 @@ console.log('NODE_ENV:', NODE_ENV);
   imports: [
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
+    BullModule.forRoot({
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT, 10) || 6379,
+        password: process.env.REDIS_PASSWORD || undefined,
+        db: parseInt(process.env.REDIS_DB, 10) || 0,
+      },
+    }),
     ConfigModule.forRoot({
       isGlobal: true, // ConfigModule을 전역으로 설정
       ignoreEnvFile: process.env.NODE_ENV === 'production',
@@ -53,6 +63,7 @@ console.log('NODE_ENV:', NODE_ENV);
           : undefined,
       load: [
         awsConfig,
+        redisConfig,
         frontendConfig,
         emailConfig,
         jwtConfig,

@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationTestService } from './notification-test.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { DividendNotificationScheduler } from './dividend-notification.scheduler';
+import { NotificationScheduler } from './notification.scheduler';
 import { NotFoundException } from '@nestjs/common';
 
 describe('NotificationTestService', () => {
   let service: NotificationTestService;
   let prismaService: PrismaService;
-  let dividendScheduler: DividendNotificationScheduler;
+  let dividendScheduler: NotificationScheduler;
 
   const mockPrismaService = {
     economicIndicator: {
@@ -37,7 +37,7 @@ describe('NotificationTestService', () => {
           useValue: mockPrismaService,
         },
         {
-          provide: DividendNotificationScheduler,
+          provide: NotificationScheduler,
           useValue: mockDividendScheduler,
         },
       ],
@@ -45,8 +45,8 @@ describe('NotificationTestService', () => {
 
     service = module.get<NotificationTestService>(NotificationTestService);
     prismaService = module.get<PrismaService>(PrismaService);
-    dividendScheduler = module.get<DividendNotificationScheduler>(
-      DividendNotificationScheduler,
+    dividendScheduler = module.get<NotificationScheduler>(
+      NotificationScheduler,
     );
   });
 

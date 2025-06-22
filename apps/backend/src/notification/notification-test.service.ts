@@ -1,13 +1,13 @@
 // src/notification/notification-test.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { DividendNotificationScheduler } from './dividend-notification.scheduler';
+import { NotificationScheduler } from './notification.scheduler';
 
 @Injectable()
 export class NotificationTestService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly dividendScheduler: DividendNotificationScheduler,
+    private readonly dividendScheduler: NotificationScheduler,
   ) {}
 
   /**

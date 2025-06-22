@@ -8,7 +8,7 @@ export interface SlackBlock {
 }
 
 export interface SlackMessageOptions {
-  userId: number;
+  webhookUrl: string;
   text: string;
   blocks?: SlackBlock[];
 }
