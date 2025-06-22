@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Subject, Observable } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import { ConfigService } from '@nestjs/config';
 
 export interface NotificationSSEPayload {

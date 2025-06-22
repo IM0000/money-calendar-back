@@ -5,11 +5,18 @@ import {
   NOTIFICATION_QUEUE_NAME,
   NotificationJobType,
 } from './notification-queue.constants';
-import { ContentType } from '@prisma/client';
+import {
+  ContentType,
+  NotificationType,
+  NotificationChannel,
+  NotificationStatus,
+} from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 
 describe('NotificationQueueService', () => {
   let service: NotificationQueueService;
   let mockQueue: any;
+  let mockPrisma: any;
 
   beforeEach(async () => {
     mockQueue = {
@@ -20,12 +27,22 @@ describe('NotificationQueueService', () => {
       getFailed: jest.fn().mockResolvedValue([]),
     };
 
+    mockPrisma = {
+      notificationDelivery: {
+        create: jest.fn(),
+      },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationQueueService,
         {
           provide: getQueueToken(NOTIFICATION_QUEUE_NAME),
           useValue: mockQueue,
+        },
+        {
+          provide: PrismaService,
+          useValue: mockPrisma,
         },
       ],
     }).compile();
@@ -37,21 +54,46 @@ describe('NotificationQueueService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should add notification job to queue', async () => {
+  it('should add notification job to queue with email enabled', async () => {
+    const mockDelivery = { id: 1 };
+    mockPrisma.notificationDelivery.create.mockResolvedValue(mockDelivery);
+
     const jobData = {
       notificationId: 1,
       userId: 1,
-      title: '테스트 알림',
-      body: '테스트 내용',
-      meta: { contentType: ContentType.DIVIDEND },
+      userEmail: 'test@example.com',
+      contentType: ContentType.DIVIDEND,
+      contentId: 123,
+      notificationType: NotificationType.DATA_CHANGED,
+      userSettings: {
+        emailEnabled: true,
+        slackEnabled: false,
+        notificationsEnabled: true,
+      },
     };
 
     await service.addNotificationJob(jobData);
 
+    expect(mockPrisma.notificationDelivery.create).toHaveBeenCalledWith({
+      data: {
+        notificationId: 1,
+        channelKey: NotificationChannel.EMAIL,
+        status: NotificationStatus.PENDING,
+        retryCount: 0,
+      },
+    });
+
     expect(mockQueue.add).toHaveBeenCalledWith(
-      NotificationJobType.SEND_ALL_CHANNELS,
-      jobData,
-      { priority: 10 }, // DIVIDEND는 높은 우선순위
+      NotificationJobType.SEND_EMAIL,
+      expect.objectContaining({
+        notificationId: 1,
+        userId: 1,
+        userEmail: 'test@example.com',
+        contentType: ContentType.DIVIDEND,
+        contentId: 123,
+        notificationType: NotificationType.DATA_CHANGED,
+        deliveryId: 1,
+      }),
     );
   });
 
@@ -71,38 +113,60 @@ describe('NotificationQueueService', () => {
     expect(mockQueue.getFailed).toHaveBeenCalled();
   });
 
-  it('should prioritize dividend notifications', async () => {
-    const dividendJob = {
+  it('should add both email and slack jobs when both enabled', async () => {
+    const mockEmailDelivery = { id: 1 };
+    const mockSlackDelivery = { id: 2 };
+    mockPrisma.notificationDelivery.create
+      .mockResolvedValueOnce(mockEmailDelivery)
+      .mockResolvedValueOnce(mockSlackDelivery);
+
+    const jobData = {
       notificationId: 1,
       userId: 1,
-      title: '배당 알림',
-      body: '배당 내용',
-      meta: { contentType: ContentType.DIVIDEND },
+      userEmail: 'test@example.com',
+      contentType: ContentType.EARNINGS,
+      contentId: 456,
+      notificationType: NotificationType.DATA_CHANGED,
+      userSettings: {
+        emailEnabled: true,
+        slackEnabled: true,
+        slackWebhookUrl: 'https://hooks.slack.com/test',
+        notificationsEnabled: true,
+      },
     };
 
-    const earningsJob = {
-      notificationId: 2,
+    await service.addNotificationJob(jobData);
+
+    expect(mockQueue.add).toHaveBeenCalledTimes(2);
+    expect(mockQueue.add).toHaveBeenCalledWith(
+      NotificationJobType.SEND_EMAIL,
+      expect.objectContaining({ deliveryId: 1 }),
+    );
+    expect(mockQueue.add).toHaveBeenCalledWith(
+      NotificationJobType.SEND_SLACK,
+      expect.objectContaining({ deliveryId: 2 }),
+    );
+  });
+
+  it('should not add jobs when notifications disabled', async () => {
+    const jobData = {
+      notificationId: 1,
       userId: 1,
-      title: '실적 알림',
-      body: '실적 내용',
-      meta: { contentType: ContentType.EARNINGS },
+      userEmail: 'test@example.com',
+      contentType: ContentType.DIVIDEND,
+      contentId: 123,
+      notificationType: NotificationType.DATA_CHANGED,
+      userSettings: {
+        emailEnabled: true,
+        slackEnabled: true,
+        slackWebhookUrl: 'https://hooks.slack.com/test',
+        notificationsEnabled: false, // 비활성화
+      },
     };
 
-    await service.addNotificationJob(dividendJob);
-    await service.addNotificationJob(earningsJob);
+    await service.addNotificationJob(jobData);
 
-    expect(mockQueue.add).toHaveBeenNthCalledWith(
-      1,
-      NotificationJobType.SEND_ALL_CHANNELS,
-      dividendJob,
-      { priority: 10 },
-    );
-
-    expect(mockQueue.add).toHaveBeenNthCalledWith(
-      2,
-      NotificationJobType.SEND_ALL_CHANNELS,
-      earningsJob,
-      { priority: 5 },
-    );
+    expect(mockQueue.add).not.toHaveBeenCalled();
+    expect(mockPrisma.notificationDelivery.create).not.toHaveBeenCalled();
   });
 });

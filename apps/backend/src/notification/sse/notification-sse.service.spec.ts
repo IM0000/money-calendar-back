@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { NotificationSSEService } from './notification-sse.service';
 
-// Redis Mock
+// Redis Mock 객체
 const mockRedis = {
   publish: jest.fn().mockResolvedValue(1),
   subscribe: jest.fn().mockResolvedValue(1),
@@ -13,10 +13,10 @@ const mockRedis = {
   status: 'ready',
 };
 
-// Redis 생성자 Mock
-jest.mock('ioredis', () => {
-  return jest.fn().mockImplementation(() => mockRedis);
-});
+// ioredis 모듈 전체를 모킹
+jest.mock('ioredis', () => ({
+  Redis: jest.fn().mockImplementation(() => mockRedis),
+}));
 
 describe('NotificationSSEService', () => {
   let service: NotificationSSEService;

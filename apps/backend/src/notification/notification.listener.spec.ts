@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationListener } from './notification.listener';
 import { NotificationService } from './notification.service';
 import { SubscriptionService } from '../subscription/subscription.service';
-import { ContentType } from '@prisma/client';
+import { ContentType, NotificationType } from '@prisma/client';
 
 describe('NotificationListener', () => {
   let listener: NotificationListener;
@@ -58,13 +58,17 @@ describe('NotificationListener', () => {
         contentType: ContentType.EARNINGS,
         contentId: 1,
         userId: 1,
-        metadata: { before: mockBefore, after: mockAfter },
+        notificationType: NotificationType.DATA_CHANGED,
+        previousData: mockBefore,
+        currentData: mockAfter,
       });
       expect(notificationService.createNotification).toHaveBeenCalledWith({
         contentType: ContentType.EARNINGS,
         contentId: 1,
         userId: 2,
-        metadata: { before: mockBefore, after: mockAfter },
+        notificationType: NotificationType.DATA_CHANGED,
+        previousData: mockBefore,
+        currentData: mockAfter,
       });
     });
   });
@@ -91,7 +95,9 @@ describe('NotificationListener', () => {
         contentType: ContentType.ECONOMIC_INDICATOR,
         contentId: 2,
         userId: 3,
-        metadata: { before: mockBefore, after: mockAfter },
+        notificationType: NotificationType.DATA_CHANGED,
+        previousData: mockBefore,
+        currentData: mockAfter,
       });
     });
   });
