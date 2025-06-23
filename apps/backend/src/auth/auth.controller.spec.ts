@@ -5,8 +5,8 @@ import { UserService } from '../user/user.service';
 import { frontendConfig } from '../config/frontend.config';
 import { RegisterDto, UserDto } from './dto/users.dto';
 import { VerifyDto, LoginDto, OAuthConnectionDto } from './dto/auth.dto';
-import { OAuthGuardFactory } from './oauth/oauth-strategy.factory';
-import { OAuthProviderEnum } from './enum/oauth-provider.enum';
+import { OAuthGuardFactory } from '../security/factories/oauth-strategy.factory';
+import { OAuthProviderEnum } from '../security/enum/oauth-provider.enum';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -23,17 +23,15 @@ describe('AuthController', () => {
     refreshTokens: jest.fn(),
     getFrontendUrl: jest.fn(() => mockFrontendConfig.baseUrl),
     handleOAuthLogin: jest.fn(),
-  };
-
-  const mockUsersService = {
     sendVerificationCode: jest.fn(),
     verifyEmailCode: jest.fn(),
     findEmailFromVerificationToken: jest.fn(),
-    linkOAuthAccount: jest.fn(),
+    removeRefreshTokenHash: jest.fn(),
+  };
+
+  const mockUsersService = {
     findUserByOAuthId: jest.fn(),
     findUserByEmail: jest.fn(),
-    createUserFromOAuth: jest.fn(),
-    removeRefreshTokenHash: jest.fn(),
   };
 
   const mockFrontendConfig = {
@@ -90,12 +88,12 @@ describe('AuthController', () => {
       const token = 'verification-token';
       const message = '인증 코드가 이메일로 전송되었습니다.';
 
-      mockUsersService.sendVerificationCode.mockResolvedValue(undefined);
+      mockAuthService.sendVerificationCode.mockResolvedValue(undefined);
       mockAuthService.generateVerificationToken.mockResolvedValue(token);
 
       const result = await controller.register(registerDto);
 
-      expect(usersService.sendVerificationCode).toHaveBeenCalledWith(
+      expect(authService.sendVerificationCode).toHaveBeenCalledWith(
         registerDto.email,
       );
       expect(authService.generateVerificationToken).toHaveBeenCalledWith(
@@ -121,11 +119,11 @@ describe('AuthController', () => {
         updatedAt: new Date(),
       };
 
-      mockUsersService.verifyEmailCode.mockResolvedValue(user);
+      mockAuthService.verifyEmailCode.mockResolvedValue(user);
 
       const result = await controller.verifyEmailCode(verifyDto);
 
-      expect(usersService.verifyEmailCode).toHaveBeenCalledWith(
+      expect(authService.verifyEmailCode).toHaveBeenCalledWith(
         verifyDto.email,
         verifyDto.code,
       );
@@ -138,11 +136,11 @@ describe('AuthController', () => {
       const token = 'verification-token';
       const email = 'test@example.com';
 
-      mockUsersService.findEmailFromVerificationToken.mockResolvedValue(email);
+      mockAuthService.findEmailFromVerificationToken.mockResolvedValue(email);
 
       const result = await controller.getVerifyEmail(token);
 
-      expect(usersService.findEmailFromVerificationToken).toHaveBeenCalledWith(
+      expect(authService.findEmailFromVerificationToken).toHaveBeenCalledWith(
         token,
       );
       expect(result).toEqual({ email });
@@ -394,7 +392,7 @@ describe('AuthController', () => {
         clearCookie: jest.fn().mockReturnThis(),
         json: jest.fn(),
       };
-      mockUsersService.removeRefreshTokenHash = jest
+      mockAuthService.removeRefreshTokenHash = jest
         .fn()
         .mockResolvedValue(undefined);
 

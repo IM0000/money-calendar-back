@@ -8,7 +8,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { OAuthProviderEnum } from './enum/oauth-provider.enum';
+import { OAuthProviderEnum } from '../security/enum/oauth-provider.enum';
 import { EmailService } from '../email/email.service';
 import { frontendConfig } from '../config/frontend.config';
 import { JwtService } from '@nestjs/jwt';
@@ -28,13 +28,23 @@ describe('AuthService', () => {
 
   const mockUsersService = {
     findUserByEmail: jest.fn(),
-    storeVerificationToken: jest.fn(),
-    setCurrentRefreshTokenHash: jest.fn(),
     findUserById: jest.fn(),
-    linkOAuthAccount: jest.fn(),
     findUserByOAuthId: jest.fn(),
-    createUserFromOAuth: jest.fn(),
-    verifyRefreshToken: jest.fn(),
+  };
+
+  const mockPrismaService = {
+    emailVerificationToken: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
+      delete: jest.fn(),
+    },
+    user: {
+      update: jest.fn(),
+      create: jest.fn(),
+    },
+    oAuthAccount: {
+      create: jest.fn(),
+    },
   };
 
   const mockJwtConfig = {
@@ -71,6 +81,10 @@ describe('AuthService', () => {
         {
           provide: EmailService,
           useValue: { sendPasswordResetEmail: jest.fn() },
+        },
+        {
+          provide: 'PrismaService',
+          useValue: mockPrismaService,
         },
       ],
     }).compile();
