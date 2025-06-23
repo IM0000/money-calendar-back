@@ -24,8 +24,7 @@ import {
   ProfileResponseDto,
 } from './dto/profile.dto';
 import { Request } from 'express';
-import { NotificationService } from '../notification/notification.service';
-import { UpdateUserNotificationSettingsDto } from '../notification/dto/notification.dto';
+
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ApiResponseWrapper } from '../common/decorators/api-response.decorator';
 
@@ -40,10 +39,7 @@ interface RequestWithUser extends Request {
 @Controller('api/v1/users')
 export class UserController {
   private readonly logger = new Logger(UserController.name);
-  constructor(
-    private readonly usersService: UserService,
-    private readonly notificationService: NotificationService,
-  ) {}
+  constructor(private readonly usersService: UserService) {}
 
   @ApiOperation({ summary: '비밀번호 업데이트' })
   @ApiResponseWrapper(Object)
@@ -137,68 +133,6 @@ export class UserController {
   ) {
     const userId = req.user.id;
     return await this.usersService.disconnectOAuthAccount(userId, provider);
-  }
-
-  /**
-   * 사용자 알림 목록 조회
-   */
-  @ApiOperation({ summary: '사용자 알림 목록 조회' })
-  @ApiResponseWrapper(Object, true)
-  @Get('/me/notifications')
-  @UseGuards(JwtAuthGuard)
-  async getUserNotifications(
-    @Req() req: RequestWithUser,
-    @Query('page') page = '1',
-    @Query('limit') limit = '10',
-  ) {
-    const userId = req.user.id;
-    return await this.notificationService.getUserNotifications(
-      userId,
-      parseInt(page),
-      parseInt(limit),
-    );
-  }
-
-  /**
-   * 사용자 읽지 않은 알림 개수 조회
-   */
-  @ApiOperation({ summary: '읽지 않은 알림 개수 조회' })
-  @ApiResponseWrapper(Object)
-  @Get('/me/notifications/unread/count')
-  @UseGuards(JwtAuthGuard)
-  async getUnreadNotificationsCount(@Req() req: RequestWithUser) {
-    const userId = req.user.id;
-    return await this.notificationService.getUnreadNotificationsCount(userId);
-  }
-
-  /**
-   * 사용자 알림 설정 조회
-   */
-  @ApiOperation({ summary: '사용자 알림 설정 조회' })
-  @ApiResponseWrapper(Object)
-  @Get('/me/notification-settings')
-  @UseGuards(JwtAuthGuard)
-  async getNotificationSettings(@Req() req: RequestWithUser) {
-    const userId = req.user.id;
-    return await this.notificationService.getUserNotificationSettings(userId);
-  }
-
-  /**
-   * 사용자 알림 설정 업데이트
-   */
-  @ApiOperation({ summary: '사용자 알림 설정 업데이트' })
-  @ApiResponseWrapper(Object)
-  @Put('/me/notification-settings')
-  @UseGuards(JwtAuthGuard)
-  async updateNotificationSettings(
-    @Req() req: RequestWithUser,
-    @Body() updateSettingsDto: UpdateUserNotificationSettingsDto,
-  ) {
-    const userId = req.user.id;
-    return await this.notificationService.updateUserNotificationSettings(
-      userId,
-      updateSettingsDto,
-    );
   }
 
   /**
