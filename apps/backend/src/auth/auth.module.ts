@@ -7,12 +7,14 @@ import { JwtModule } from '@nestjs/jwt';
 import { jwtConfig } from '../config/jwt.config';
 import { ConfigType } from '@nestjs/config';
 import { UserModule } from '../user/user.module';
+import { SecurityModule } from '../security/security.module';
 
 @Module({
   imports: [
     UserModule,
     EmailModule,
     PrismaModule,
+    SecurityModule,
     JwtModule.registerAsync({
       useFactory: (cfg: ConfigType<typeof jwtConfig>) => ({
         secret: cfg.secret,

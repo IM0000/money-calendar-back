@@ -12,6 +12,7 @@ import { OAuthProviderEnum } from '../security/enum/oauth-provider.enum';
 import { EmailService } from '../email/email.service';
 import { frontendConfig } from '../config/frontend.config';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
 
 jest.mock('bcryptjs');
 
@@ -30,21 +31,31 @@ describe('AuthService', () => {
     findUserByEmail: jest.fn(),
     findUserById: jest.fn(),
     findUserByOAuthId: jest.fn(),
+    createUser: jest.fn(),
+    updateUser: jest.fn(),
   };
 
   const mockPrismaService = {
-    emailVerificationToken: {
+    verificationToken: {
       create: jest.fn(),
       findFirst: jest.fn(),
       delete: jest.fn(),
     },
+    verificationCode: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      deleteMany: jest.fn(),
+    },
     user: {
       update: jest.fn(),
       create: jest.fn(),
+      findUnique: jest.fn(),
     },
     oAuthAccount: {
       create: jest.fn(),
+      findUnique: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   const mockJwtConfig = {
@@ -83,7 +94,7 @@ describe('AuthService', () => {
           useValue: { sendPasswordResetEmail: jest.fn() },
         },
         {
-          provide: 'PrismaService',
+          provide: PrismaService,
           useValue: mockPrismaService,
         },
       ],
@@ -94,12 +105,12 @@ describe('AuthService', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it('정의되어야 합니다', () => {
     expect(service).toBeDefined();
   });
 
   describe('validateUser', () => {
-    it('should return true if password is valid', async () => {
+    it('비밀번호가 유효하면 true를 반환해야 합니다', async () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
@@ -124,7 +135,7 @@ describe('AuthService', () => {
       expect(result).toBe(true);
     });
 
-    it('should return false if user not found', async () => {
+    it('사용자를 찾을 수 없으면 false를 반환해야 합니다', async () => {
       mockUsersService.findUserByEmail.mockResolvedValue(null);
 
       const result = await service.validateUser(
@@ -138,7 +149,7 @@ describe('AuthService', () => {
       expect(result).toBe(false);
     });
 
-    it('should return false if user has no password', async () => {
+    it('사용자에게 비밀번호가 없으면 false를 반환해야 합니다', async () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
@@ -158,7 +169,7 @@ describe('AuthService', () => {
       expect(result).toBe(false);
     });
 
-    it('should return false if password is invalid', async () => {
+    it('비밀번호가 유효하지 않으면 false를 반환해야 합니다', async () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
@@ -185,7 +196,7 @@ describe('AuthService', () => {
   });
 
   describe('loginWithEmail', () => {
-    it('should return access token and user info if login is successful', async () => {
+    it('로그인이 성공하면 액세스 토큰과 사용자 정보를 반환해야 합니다', async () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
@@ -203,6 +214,7 @@ describe('AuthService', () => {
       mockJwtService.sign
         .mockReturnValueOnce('mock-access-token')
         .mockReturnValueOnce('mock-refresh-token');
+      mockPrismaService.user.update.mockResolvedValue(mockUser);
 
       const result = await service.loginWithEmail(loginDto);
 
@@ -214,10 +226,7 @@ describe('AuthService', () => {
         loginDto.password,
       );
       expect(mockJwtService.sign).toHaveBeenCalledTimes(2);
-      expect(mockUsersService.setCurrentRefreshTokenHash).toHaveBeenCalledWith(
-        mockUser.id,
-        'mock-refresh-token',
-      );
+      expect(mockPrismaService.user.update).toHaveBeenCalled();
       expect(result).toEqual({
         accessToken: 'mock-access-token',
         refreshToken: 'mock-refresh-token',
@@ -225,7 +234,7 @@ describe('AuthService', () => {
       });
     });
 
-    it('should throw ForbiddenException if user not found', async () => {
+    it('사용자를 찾을 수 없으면 ForbiddenException을 발생시켜야 합니다', async () => {
       const loginDto = {
         email: 'nonexistent@example.com',
         password: 'password123',
@@ -238,7 +247,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw ForbiddenException if user has no password', async () => {
+    it('사용자에게 비밀번호가 없으면 ForbiddenException을 발생시켜야 합니다', async () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
@@ -258,7 +267,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw UnauthorizedException if password is invalid', async () => {
+    it('비밀번호가 유효하지 않으면 UnauthorizedException을 발생시켜야 합니다', async () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
@@ -281,7 +290,7 @@ describe('AuthService', () => {
   });
 
   describe('loginWithOAuth', () => {
-    it('should return access token and refresh token', async () => {
+    it('액세스 토큰과 리프레시 토큰을 반환해야 합니다', async () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
@@ -291,14 +300,12 @@ describe('AuthService', () => {
       mockJwtService.sign
         .mockReturnValueOnce('mock-access-token')
         .mockReturnValueOnce('mock-refresh-token');
+      mockPrismaService.user.update.mockResolvedValue(mockUser);
 
       const result = await service.loginWithOAuth(mockUser as any);
 
       expect(mockJwtService.sign).toHaveBeenCalledTimes(2);
-      expect(mockUsersService.setCurrentRefreshTokenHash).toHaveBeenCalledWith(
-        mockUser.id,
-        'mock-refresh-token',
-      );
+      expect(mockPrismaService.user.update).toHaveBeenCalled();
       expect(result).toEqual({
         accessToken: 'mock-access-token',
         refreshToken: 'mock-refresh-token',
@@ -307,24 +314,24 @@ describe('AuthService', () => {
   });
 
   describe('generateVerificationToken', () => {
-    it('should generate a verification token and store it', async () => {
+    it('인증 토큰을 생성하고 저장해야 합니다', async () => {
       const email = 'test@example.com';
 
-      mockUsersService.storeVerificationToken.mockResolvedValue(undefined);
+      mockPrismaService.verificationToken.create.mockResolvedValue({
+        token: 'mock-token',
+        email,
+      });
 
       const token = await service.generateVerificationToken(email);
 
       expect(token).toBeTruthy();
       expect(typeof token).toBe('string');
-      expect(mockUsersService.storeVerificationToken).toHaveBeenCalledWith(
-        token,
-        email,
-      );
+      expect(mockPrismaService.verificationToken.create).toHaveBeenCalled();
     });
   });
 
   describe('generateOAuthStateToken', () => {
-    it('should generate an OAuth state token', () => {
+    it('OAuth 상태 토큰을 생성해야 합니다', () => {
       const userId = 1;
       const provider = OAuthProviderEnum.Google.toString();
       mockJwtService.sign.mockReturnValueOnce('mock-state-token');
@@ -340,7 +347,7 @@ describe('AuthService', () => {
       );
       expect(token).toBe('mock-state-token');
     });
-    it('should throw an error for invalid provider', () => {
+    it('유효하지 않은 제공자에 대해 오류를 발생시켜야 합니다', () => {
       const userId = 1;
       const provider = 'invalid-provider';
       expect(() => service.generateOAuthStateToken(userId, provider)).toThrow(
@@ -350,7 +357,7 @@ describe('AuthService', () => {
   });
 
   describe('verifyJwtToken', () => {
-    it('should verify JWT token and return payload', () => {
+    it('JWT 토큰을 검증하고 페이로드를 반환해야 합니다', () => {
       const token = 'valid-token';
       const mockPayload = { sub: 1, email: 'test@example.com', type: 'access' };
       mockJwtService.verify.mockReturnValueOnce(mockPayload);
@@ -361,7 +368,7 @@ describe('AuthService', () => {
   });
 
   describe('setAuthCookies', () => {
-    it('should set Authentication and Refresh cookies with correct options', () => {
+    it('올바른 옵션으로 인증 및 리프레시 쿠키를 설정해야 합니다', () => {
       const res = { cookie: jest.fn().mockReturnThis() };
       const accessToken = 'access-token';
       const refreshToken = 'refresh-token';

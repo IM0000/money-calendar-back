@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, VerifyCallback } from 'passport-apple';
-import { AuthService } from '../../auth/auth.service';
 import { appleConfig } from '../../config/apple.config';
 import { ConfigType } from '@nestjs/config';
 import { OAuthProviderEnum } from '../enum/oauth-provider.enum';
@@ -13,15 +12,14 @@ export class AppleStrategy extends PassportStrategy(
 ) {
   constructor(
     @Inject(appleConfig.KEY)
-    private readonly appleConfiguration: ConfigType<typeof appleConfig>,
-    private readonly authService: AuthService,
+    private readonly appleCfg: ConfigType<typeof appleConfig>,
   ) {
     super({
-      clientID: appleConfiguration.clientID,
-      teamID: appleConfiguration.teamID,
-      keyID: appleConfiguration.keyID,
-      privateKeyString: appleConfiguration.privateKeyString,
-      callbackURL: appleConfiguration.callbackURL,
+      clientID: appleCfg.clientID,
+      teamID: appleCfg.teamID,
+      keyID: appleCfg.keyID,
+      privateKeyString: appleCfg.privateKeyString,
+      callbackURL: appleCfg.callbackURL,
       scope: ['name', 'email'],
     });
   }

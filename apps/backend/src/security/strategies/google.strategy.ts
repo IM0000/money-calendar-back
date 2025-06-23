@@ -5,7 +5,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
-import { AuthService } from '../../auth/auth.service';
 import { ConfigType } from '@nestjs/config';
 import { googleConfig } from '../../config/google.config';
 import { OAuthProviderEnum } from '../enum/oauth-provider.enum';
@@ -24,14 +23,13 @@ export class GoogleStrategy extends CustomOauthStrategy(
 
   constructor(
     @Inject(googleConfig.KEY)
-    private readonly googleConfiguration: ConfigType<typeof googleConfig>,
-    private readonly authService: AuthService,
+    private readonly googleCfg: ConfigType<typeof googleConfig>,
   ) {
     super({
-      clientID: googleConfiguration.clientID,
-      clientSecret: googleConfiguration.clientSecret,
-      callbackURL: googleConfiguration.callbackURL,
-      connectCallbackURL: googleConfiguration.connectCallbackURL,
+      clientID: googleCfg.clientID,
+      clientSecret: googleCfg.clientSecret,
+      callbackURL: googleCfg.callbackURL,
+      connectCallbackURL: googleCfg.connectCallbackURL,
       scope: ['email', 'profile'],
     });
   }

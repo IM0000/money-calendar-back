@@ -51,12 +51,12 @@ describe('UserController', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it('정의되어야 합니다', () => {
     expect(controller).toBeDefined();
   });
 
   describe('updatePassword', () => {
-    it('should update password and return success message', async () => {
+    it('비밀번호를 업데이트하고 성공 메시지를 반환해야 합니다', async () => {
       const updatePasswordDto: UpdatePasswordDto = {
         email: 'test@example.com',
         password: 'newPassword123',
@@ -75,7 +75,7 @@ describe('UserController', () => {
   });
 
   describe('getProfile', () => {
-    it('should return user profile', async () => {
+    it('사용자 프로필을 반환해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
@@ -97,7 +97,7 @@ describe('UserController', () => {
   });
 
   describe('updateProfile', () => {
-    it('should update user profile', async () => {
+    it('사용자 프로필을 업데이트해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
@@ -128,7 +128,7 @@ describe('UserController', () => {
   });
 
   describe('changeUserPassword', () => {
-    it('should change user password', async () => {
+    it('사용자 비밀번호를 변경해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
@@ -158,7 +158,7 @@ describe('UserController', () => {
   });
 
   describe('deleteUser', () => {
-    it('should delete user account', async () => {
+    it('사용자 계정을 삭제해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
@@ -184,7 +184,7 @@ describe('UserController', () => {
   });
 
   describe('disconnectOAuthAccount', () => {
-    it('should disconnect OAuth account', async () => {
+    it('OAuth 계정 연결을 해제해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
@@ -209,7 +209,7 @@ describe('UserController', () => {
   });
 
   describe('verifyPassword', () => {
-    it('should verify user password and return result', async () => {
+    it('사용자 비밀번호를 검증하고 결과를 반환해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
@@ -232,7 +232,7 @@ describe('UserController', () => {
       expect(result).toEqual({ isValid: true });
     });
 
-    it('should return false if password is invalid', async () => {
+    it('비밀번호가 유효하지 않으면 false를 반환해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };

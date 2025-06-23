@@ -32,12 +32,10 @@ import { discordConfig } from '../config/discord.config';
 
 // Dependencies
 import { UserModule } from '../user/user.module';
-import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     UserModule, // 사용자 검증용
-    AuthModule, // AuthService 사용
     PassportModule.register({}),
     JwtModule.registerAsync({
       useFactory: (cfg: ConfigType<typeof jwtConfig>) => ({
@@ -77,6 +75,8 @@ import { AuthModule } from '../auth/auth.module';
     OptionalJwtAuthGuard,
     IngestJwtAuthGuard,
     DynamicAuthGuard,
+    // OAuthGuardFactory도 export 추가
+    OAuthGuardFactory,
   ],
 })
 export class SecurityModule {}

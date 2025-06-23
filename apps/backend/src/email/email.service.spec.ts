@@ -136,7 +136,11 @@ describe('EmailService', () => {
   });
 
   it('transporter.sendMail 을 호출해야 합니다', async () => {
-    const dto = { email: 'a@b.com', subject: '제목', content: '내용' };
+    const dto: SendNotificationEmailDto = {
+      to: 'a@b.com',
+      subject: '제목',
+      html: '내용',
+    };
     // sendMail 이 Promise 를 반환하도록 세팅
     mockTransporter.sendMail.mockResolvedValue({ messageId: 'id123' });
 
@@ -144,9 +148,9 @@ describe('EmailService', () => {
 
     expect(emailProviderMock.sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
-        to: dto.email,
+        to: dto.to,
         subject: dto.subject,
-        html: expect.stringContaining(dto.content),
+        html: expect.stringContaining(dto.html),
       }),
     );
   });

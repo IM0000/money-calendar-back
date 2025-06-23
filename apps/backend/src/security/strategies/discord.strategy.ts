@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Strategy } from 'passport-discord';
-import { AuthService } from '../../auth/auth.service';
 import { discordConfig } from '../../config/discord.config';
 import { ConfigType } from '@nestjs/config';
 import { OAuthProviderEnum } from '../enum/oauth-provider.enum';
@@ -13,13 +12,12 @@ export class DiscordStrategy extends CustomOauthStrategy(
 ) {
   constructor(
     @Inject(discordConfig.KEY)
-    private readonly discordConfiguration: ConfigType<typeof discordConfig>,
-    private readonly authService: AuthService,
+    private readonly discordCfg: ConfigType<typeof discordConfig>,
   ) {
     super({
-      clientID: discordConfiguration.clientID,
-      clientSecret: discordConfiguration.clientSecret,
-      callbackURL: discordConfiguration.callbackURL,
+      clientID: discordCfg.clientID,
+      clientSecret: discordCfg.clientSecret,
+      callbackURL: discordCfg.callbackURL,
       scope: ['identify', 'email'],
     });
   }
