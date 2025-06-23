@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Strategy } from 'passport-discord';
-import { AuthService } from '../auth.service';
+import { AuthService } from '../../auth/auth.service';
 import { discordConfig } from '../../config/discord.config';
 import { ConfigType } from '@nestjs/config';
 import { OAuthProviderEnum } from '../enum/oauth-provider.enum';

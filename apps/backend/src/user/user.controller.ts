@@ -14,7 +14,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
+import { JwtAuthGuard } from '../security/guards/jwt-auth.guard';
 import {
   UpdateProfileDto,
   UpdateUserPasswordDto,

@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Strategy } from 'passport-kakao';
-import { AuthService } from '../auth.service';
+import { AuthService } from '../../auth/auth.service';
 import { kakaoConfig } from '../../config/kakao.config';
 import { ConfigType } from '@nestjs/config';
 import { OAuthProviderEnum } from '../enum/oauth-provider.enum';

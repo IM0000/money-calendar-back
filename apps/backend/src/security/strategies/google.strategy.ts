@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
-import { AuthService } from '../auth.service';
+import { AuthService } from '../../auth/auth.service';
 import { ConfigType } from '@nestjs/config';
 import { googleConfig } from '../../config/google.config';
 import { OAuthProviderEnum } from '../enum/oauth-provider.enum';

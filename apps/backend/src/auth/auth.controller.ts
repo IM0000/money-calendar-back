@@ -18,9 +18,9 @@ import { UserService } from '../user/user.service';
 import { RegisterDto } from './dto/users.dto';
 import { OAuthConnectionDto, VerifyDto } from './dto/auth.dto';
 import { LoginDto } from './dto/auth.dto';
-import { DynamicAuthGuard } from './oauth/dynamic-auth.guard';
+import { DynamicAuthGuard } from '../security/guards/dynamic-auth.guard';
 import { UserDto } from './dto/users.dto';
-import { JwtAuthGuard } from './jwt/jwt-auth.guard';
+import { JwtAuthGuard } from '../security/guards/jwt-auth.guard';
 import { RequestWithUser } from '../common/types/request-with-user';
 import {
   ApiTags,

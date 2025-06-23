@@ -14,7 +14,7 @@ import { ConfigType } from '@nestjs/config';
 import { jwtConfig } from '../config/jwt.config';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcryptjs';
-import { OAuthProviderEnum } from './enum/oauth-provider.enum';
+import { OAuthProviderEnum } from '../security/enum/oauth-provider.enum';
 import { JwtService } from '@nestjs/jwt';
 import { frontendConfig } from '../config/frontend.config';
 import { Response } from 'express';

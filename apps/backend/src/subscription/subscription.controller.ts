@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
+import { JwtAuthGuard } from '../security/guards/jwt-auth.guard';
 import { RequestWithUser } from '../common/types/request-with-user';
 import { SubscriptionIndicatorGroupDto } from './dto/subscription-indicator-group.dto';
 import { SubscriptionCompanyDto } from './dto/subscription-company.dto';
