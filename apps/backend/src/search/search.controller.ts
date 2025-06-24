@@ -3,7 +3,7 @@ import { SearchService } from './search.service';
 import { SearchCompanyDto, SearchIndicatorDto } from './dto/search.dto';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ApiResponseWrapper } from '../common/decorators/api-response.decorator';
-import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
+import { JwtAuthGuard } from '../security/guards/jwt-auth.guard';
 import { RequestWithUser } from '../common/types/request-with-user';
 
 @ApiTags('검색')

@@ -1,6 +1,6 @@
 import { Controller, Post, Param, UseGuards } from '@nestjs/common';
 import { NotificationTestService } from './notification-test.service';
-import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
+import { JwtAuthGuard } from '../security/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { ApiResponseWrapper } from '../common/decorators/api-response.decorator';
 

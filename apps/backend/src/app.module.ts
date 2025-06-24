@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
+import { SecurityModule } from './security/security.module';
 import { EmailModule } from './email/email.module';
 import { SlackModule } from './slack/slack.module';
 import { ConfigModule } from '@nestjs/config';
@@ -76,6 +77,7 @@ console.log('NODE_ENV:', NODE_ENV);
     }),
     UserModule,
     AuthModule,
+    SecurityModule,
     EmailModule,
     SlackModule,
     CalendarModule,

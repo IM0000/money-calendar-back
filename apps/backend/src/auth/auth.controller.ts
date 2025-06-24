@@ -18,9 +18,9 @@ import { UserService } from '../user/user.service';
 import { RegisterDto } from './dto/users.dto';
 import { OAuthConnectionDto, VerifyDto } from './dto/auth.dto';
 import { LoginDto } from './dto/auth.dto';
-import { DynamicAuthGuard } from './oauth/dynamic-auth.guard';
+import { DynamicAuthGuard } from '../security/guards/dynamic-auth.guard';
 import { UserDto } from './dto/users.dto';
-import { JwtAuthGuard } from './jwt/jwt-auth.guard';
+import { JwtAuthGuard } from '../security/guards/jwt-auth.guard';
 import { RequestWithUser } from '../common/types/request-with-user';
 import {
   ApiTags,
@@ -122,7 +122,7 @@ export class AuthController {
     @Body() registerDto: RegisterDto,
   ): Promise<{ token: string; message: string }> {
     const { email } = registerDto;
-    await this.usersService.sendVerificationCode(email);
+    await this.authService.sendVerificationCode(email);
     const emailVerificationToken =
       await this.authService.generateVerificationToken(email);
     return {
@@ -142,7 +142,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async verifyEmailCode(@Body() verifyDto: VerifyDto): Promise<UserDto> {
     const { email, code } = verifyDto;
-    const user = await this.usersService.verifyEmailCode(email, code);
+    const user = await this.authService.verifyEmailCode(email, code);
     return user;
   }
 
@@ -158,7 +158,7 @@ export class AuthController {
   async getVerifyEmail(
     @Query('token') token: string,
   ): Promise<{ email: string }> {
-    const email = await this.usersService.findEmailFromVerificationToken(token);
+    const email = await this.authService.findEmailFromVerificationToken(token);
     return { email };
   }
 
@@ -284,7 +284,7 @@ export class AuthController {
   async logout(@Req() req: RequestWithUser, @Res() res: Response) {
     const user = req.user;
     if (user) {
-      await this.usersService.removeRefreshTokenHash(user.id);
+      await this.authService.removeRefreshTokenHash(user.id);
     }
     res
       .clearCookie('Authentication', {

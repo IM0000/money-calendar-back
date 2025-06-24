@@ -5,8 +5,8 @@ import { UserService } from '../user/user.service';
 import { frontendConfig } from '../config/frontend.config';
 import { RegisterDto, UserDto } from './dto/users.dto';
 import { VerifyDto, LoginDto, OAuthConnectionDto } from './dto/auth.dto';
-import { OAuthGuardFactory } from './oauth/oauth-strategy.factory';
-import { OAuthProviderEnum } from './enum/oauth-provider.enum';
+import { OAuthGuardFactory } from '../security/factories/oauth-strategy.factory';
+import { OAuthProviderEnum } from '../security/enum/oauth-provider.enum';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -23,17 +23,15 @@ describe('AuthController', () => {
     refreshTokens: jest.fn(),
     getFrontendUrl: jest.fn(() => mockFrontendConfig.baseUrl),
     handleOAuthLogin: jest.fn(),
-  };
-
-  const mockUsersService = {
     sendVerificationCode: jest.fn(),
     verifyEmailCode: jest.fn(),
     findEmailFromVerificationToken: jest.fn(),
-    linkOAuthAccount: jest.fn(),
+    removeRefreshTokenHash: jest.fn(),
+  };
+
+  const mockUsersService = {
     findUserByOAuthId: jest.fn(),
     findUserByEmail: jest.fn(),
-    createUserFromOAuth: jest.fn(),
-    removeRefreshTokenHash: jest.fn(),
   };
 
   const mockFrontendConfig = {
@@ -77,12 +75,12 @@ describe('AuthController', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it('정의되어야 합니다', () => {
     expect(controller).toBeDefined();
   });
 
   describe('register', () => {
-    it('should register a user and send verification code', async () => {
+    it('사용자를 등록하고 인증 코드를 전송해야 합니다', async () => {
       const registerDto: RegisterDto = {
         email: 'test@example.com',
       };
@@ -90,12 +88,12 @@ describe('AuthController', () => {
       const token = 'verification-token';
       const message = '인증 코드가 이메일로 전송되었습니다.';
 
-      mockUsersService.sendVerificationCode.mockResolvedValue(undefined);
+      mockAuthService.sendVerificationCode.mockResolvedValue(undefined);
       mockAuthService.generateVerificationToken.mockResolvedValue(token);
 
       const result = await controller.register(registerDto);
 
-      expect(usersService.sendVerificationCode).toHaveBeenCalledWith(
+      expect(authService.sendVerificationCode).toHaveBeenCalledWith(
         registerDto.email,
       );
       expect(authService.generateVerificationToken).toHaveBeenCalledWith(
@@ -106,7 +104,7 @@ describe('AuthController', () => {
   });
 
   describe('verifyEmailCode', () => {
-    it('should verify email code and return user', async () => {
+    it('이메일 코드를 검증하고 사용자를 반환해야 합니다', async () => {
       const verifyDto: VerifyDto = {
         email: 'test@example.com',
         code: '123456',
@@ -121,11 +119,11 @@ describe('AuthController', () => {
         updatedAt: new Date(),
       };
 
-      mockUsersService.verifyEmailCode.mockResolvedValue(user);
+      mockAuthService.verifyEmailCode.mockResolvedValue(user);
 
       const result = await controller.verifyEmailCode(verifyDto);
 
-      expect(usersService.verifyEmailCode).toHaveBeenCalledWith(
+      expect(authService.verifyEmailCode).toHaveBeenCalledWith(
         verifyDto.email,
         verifyDto.code,
       );
@@ -134,15 +132,15 @@ describe('AuthController', () => {
   });
 
   describe('getVerifyEmail', () => {
-    it('should return email from verification token', async () => {
+    it('인증 토큰에서 이메일을 반환해야 합니다', async () => {
       const token = 'verification-token';
       const email = 'test@example.com';
 
-      mockUsersService.findEmailFromVerificationToken.mockResolvedValue(email);
+      mockAuthService.findEmailFromVerificationToken.mockResolvedValue(email);
 
       const result = await controller.getVerifyEmail(token);
 
-      expect(usersService.findEmailFromVerificationToken).toHaveBeenCalledWith(
+      expect(authService.findEmailFromVerificationToken).toHaveBeenCalledWith(
         token,
       );
       expect(result).toEqual({ email });
@@ -150,7 +148,7 @@ describe('AuthController', () => {
   });
 
   describe('login', () => {
-    it('should set cookies and return user info', async () => {
+    it('쿠키를 설정하고 사용자 정보를 반환해야 합니다', async () => {
       const loginDto = { email: 'test@example.com', password: 'password123' };
       const loginResult = {
         accessToken: 'jwt-token',
@@ -173,7 +171,7 @@ describe('AuthController', () => {
   });
 
   describe('getStatus', () => {
-    it('should return authenticated status and user', () => {
+    it('인증 상태와 사용자를 반환해야 합니다', () => {
       const req = Object.assign(
         {
           user: {
@@ -198,7 +196,7 @@ describe('AuthController', () => {
   });
 
   describe('connectOAuthAccount', () => {
-    it('should generate oauth state token and return redirect url', () => {
+    it('OAuth 상태 토큰을 생성하고 리다이렉트 URL을 반환해야 합니다', () => {
       const req = {
         user: {
           id: 1,
@@ -231,7 +229,7 @@ describe('AuthController', () => {
   });
 
   describe('oauthCallback', () => {
-    it('should handle oauth login when user already exists', async () => {
+    it('사용자가 이미 존재할 때 OAuth 로그인을 처리해야 합니다', async () => {
       const provider = 'google';
       const query = {};
       const req = {
@@ -274,7 +272,7 @@ describe('AuthController', () => {
       );
     });
 
-    it('should handle oauth account connection with valid state token', async () => {
+    it('유효한 상태 토큰으로 OAuth 계정 연결을 처리해야 합니다', async () => {
       const provider = 'google';
       const stateToken = 'valid-state-token';
       const req = {
@@ -321,7 +319,7 @@ describe('AuthController', () => {
       );
     });
 
-    it('should create a new user when no existing account is found', async () => {
+    it('기존 계정을 찾을 수 없을 때 새 사용자를 생성해야 합니다', async () => {
       const provider = 'google';
       const query = {};
       const req = {
@@ -364,7 +362,7 @@ describe('AuthController', () => {
   });
 
   describe('refreshTokens', () => {
-    it('should set cookies and return message', async () => {
+    it('쿠키를 설정하고 메시지를 반환해야 합니다', async () => {
       const req = { signedCookies: { Refresh: 'refresh-token' } };
       const res = { json: jest.fn() };
       const tokens = { accessToken: 'new-access', refreshToken: 'new-refresh' };
@@ -388,13 +386,13 @@ describe('AuthController', () => {
   });
 
   describe('logout', () => {
-    it('should clear cookies and return message', async () => {
+    it('쿠키를 지우고 메시지를 반환해야 합니다', async () => {
       const req = { user: { id: 1 } };
       const res = {
         clearCookie: jest.fn().mockReturnThis(),
         json: jest.fn(),
       };
-      mockUsersService.removeRefreshTokenHash = jest
+      mockAuthService.removeRefreshTokenHash = jest
         .fn()
         .mockResolvedValue(undefined);
 
