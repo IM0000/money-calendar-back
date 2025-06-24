@@ -25,27 +25,35 @@ export class NotificationScheduler {
     this.logger.log('배당 지급일 알림 스케줄러 시작');
 
     try {
-      // 오늘 날짜의 시작과 끝 (밀리초)
       const today = new Date();
       const startOfDay = new Date(
         today.getFullYear(),
         today.getMonth(),
         today.getDate(),
-      ).getTime();
-      const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
+      );
+      const endOfDay = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        23,
+        59,
+        59,
+        999,
+      );
+
+      const startOfDayTimestamp = BigInt(startOfDay.getTime());
+      const endOfDayTimestamp = BigInt(endOfDay.getTime());
 
       this.logger.log(
-        `오늘 날짜 범위: ${new Date(startOfDay).toISOString()} ~ ${new Date(
-          endOfDay,
-        ).toISOString()}`,
+        `오늘 날짜 범위: ${startOfDay.toISOString()} ~ ${endOfDay.toISOString()}`,
       );
 
       // 오늘 배당 지급일인 배당 이벤트들 조회
       const todayDividends = await this.prisma.dividend.findMany({
         where: {
           paymentDate: {
-            gte: startOfDay,
-            lte: endOfDay,
+            gte: startOfDayTimestamp,
+            lte: endOfDayTimestamp,
           },
         },
         include: {

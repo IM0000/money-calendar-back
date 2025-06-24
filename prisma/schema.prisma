@@ -9,82 +9,220 @@ datasource db {
 }
 
 model User {
-  id                          Int                               @id @default(autoincrement())
-  email                       String                            @unique
-  password                    String?                           // 이메일 로그인 사용자의 경우 사용
+  id                          Int                          @id @default(autoincrement())
+  email                       String                       @unique
+  password                    String?
   nickname                    String?
-  verified                    Boolean                           @default(false)
+  verified                    Boolean                      @default(false)
   currentHashedRefreshToken   String?
-  oauthAccounts               OAuthAccount[]
-  notificationSettings        UserNotificationSettings?
-  notifications               Notification[]
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
   favoriteCompanies           FavoriteCompany[]
   favoriteIndicatorGroups     FavoriteIndicatorGroup[]
-
+  notifications               Notification[]
+  oauthAccounts               OAuthAccount[]
   subscriptionCompanies       SubscriptionCompany[]
   subscriptionIndicatorGroups SubscriptionIndicatorGroup[]
-
-  createdAt                   DateTime                          @default(now())
-  updatedAt                   DateTime                          @updatedAt
+  notificationSettings        UserNotificationSettings?
 }
 
 model UserNotificationSettings {
-  id                    Int       @id @default(autoincrement())
-  userId                Int       @unique
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  emailEnabled          Boolean   @default(false)
-  slackEnabled          Boolean   @default(false)
-  slackWebhookUrl       String?
-  notificationsEnabled  Boolean   @default(true)
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  id                   Int      @id @default(autoincrement())
+  userId               Int      @unique
+  emailEnabled         Boolean  @default(false)
+  slackEnabled         Boolean  @default(false)
+  slackWebhookUrl      String?
+  notificationsEnabled Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model OAuthAccount {
-  id            Int       @id @default(autoincrement())
-  provider      String
-  providerId    String
-  oauthEmail    String?
-  accessToken   String?
-  refreshToken  String?
-  tokenExpiry   DateTime?
-  userId        Int
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           Int       @id @default(autoincrement())
+  provider     String
+  providerId   String
+  oauthEmail   String?
+  accessToken  String?
+  refreshToken String?
+  tokenExpiry  DateTime?
+  userId       Int
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerId])
 }
 
 model VerificationCode {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
   code      String
   expiresAt DateTime
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 }
 
 model VerificationToken {
-  id        Int       @id @default(autoincrement())
-  token     String    @unique
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
   email     String
   expiresAt DateTime
 }
 
 model Company {
-  id                    Int                     @id @default(autoincrement())
+  id                    Int                   @id @default(autoincrement())
   ticker                String
   name                  String
   country               String
-  marketValue           String                  @default("")
-  earnings              Earnings[]
+  marketValue           String                @default("")
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
   dividends             Dividend[]
-  subscriptionCompanies SubscriptionCompany[]
+  earnings              Earnings[]
   favoriteCompanies     FavoriteCompany[]
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
+  subscriptionCompanies SubscriptionCompany[]
 
   @@unique([ticker, country])
+}
+
+model Earnings {
+  id              Int           @id @default(autoincrement())
+  country         String
+  releaseDate     BigInt
+  releaseTiming   ReleaseTiming @default(UNKNOWN)
+  actualEPS       String
+  forecastEPS     String
+  previousEPS     String
+  actualRevenue   String
+  forecastRevenue String
+  previousRevenue String
+  companyId       Int
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  company         Company       @relation(fields: [companyId], references: [id])
+
+  @@unique([releaseDate, companyId])
+}
+
+model Dividend {
+  id                     Int      @id @default(autoincrement())
+  country                String
+  exDividendDate         BigInt
+  dividendAmount         String
+  previousDividendAmount String
+  paymentDate            BigInt
+  dividendYield          String
+  companyId              Int
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  company                Company  @relation(fields: [companyId], references: [id])
+
+  @@unique([exDividendDate, companyId])
+}
+
+model EconomicIndicator {
+  id          Int      @id @default(autoincrement())
+  country     String
+  releaseDate BigInt
+  name        String
+  baseName    String?
+  importance  Int
+  actual      String
+  forecast    String
+  previous    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([releaseDate, name, country])
+  @@index([baseName, country])
+}
+
+model FavoriteCompany {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  companyId   Int
+  favoritedAt DateTime @default(now())
+  isActive    Boolean  @default(true)
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId, isActive])
+}
+
+model FavoriteIndicatorGroup {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  baseName    String
+  country     String?
+  favoritedAt DateTime @default(now())
+  isActive    Boolean  @default(true)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, baseName, country])
+  @@index([baseName, country, isActive])
+}
+
+model SubscriptionCompany {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  companyId    Int
+  subscribedAt DateTime @default(now())
+  isActive     Boolean  @default(true)
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId, isActive])
+}
+
+model SubscriptionIndicatorGroup {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  baseName     String
+  country      String?
+  subscribedAt DateTime @default(now())
+  isActive     Boolean  @default(true)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, baseName, country])
+  @@index([baseName, country, isActive])
+}
+
+model Notification {
+  id                   Int                    @id @default(autoincrement())
+  userId               Int
+  contentType          ContentType
+  contentId            Int
+  isRead               Boolean                @default(false)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  notificationType     NotificationType       @default(DATA_CHANGED)
+  user                 User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationDelivery NotificationDelivery[]
+
+  @@index([userId, isRead])
+  @@index([contentType, contentId])
+}
+
+model NotificationDelivery {
+  id               Int                 @id @default(autoincrement())
+  notificationId   Int
+  channelKey       NotificationChannel
+  status           NotificationStatus
+  errorMessage     String?
+  deliveredAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  errorCode        String?
+  lastAttemptAt    DateTime?
+  processingTimeMs Int?
+  retryCount       Int                 @default(0)
+  notification     Notification        @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId])
+  @@index([status])
+  @@index([channelKey, status])
 }
 
 enum ReleaseTiming {
@@ -93,134 +231,10 @@ enum ReleaseTiming {
   POST_MARKET
 }
 
-model Earnings {
-  id              Int           @id @default(autoincrement())
-  country         String        // 국가
-  releaseDate     BigInt        // 발표 날짜 (밀리초 단위)
-  releaseTiming   ReleaseTiming @default(UNKNOWN)
-  actualEPS       String        // 실제 EPS
-  forecastEPS     String        // 예측 EPS
-  previousEPS     String        // 이전 EPS
-  actualRevenue   String        // 실제 매출
-  forecastRevenue String        // 예측 매출
-  previousRevenue String        // 이전 매출
-  companyId       Int
-  company         Company       @relation(fields: [companyId], references: [id])
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  @@unique([releaseDate, companyId])
-}
-
-model Dividend {
-  id                      Int       @id @default(autoincrement())
-  country                 String    // 국가
-  exDividendDate          BigInt    // 배당락일 (밀리초 단위)
-  dividendAmount          String    // 배당금
-  previousDividendAmount  String    // 이전 배당금
-  paymentDate             BigInt    // 배당 지급일 (밀리초 단위)
-  dividendYield           String    // 배당 수익률
-  companyId               Int
-  company                 Company   @relation(fields: [companyId], references: [id])
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
-
-  @@unique([exDividendDate, companyId])
-}
-
-model EconomicIndicator {
-  id          Int       @id @default(autoincrement())
-  country     String    // 국가
-  releaseDate BigInt    // 발표 날짜 (밀리초 단위)
-  name        String    // 지표 이름
-  baseName    String?   // 날짜 제거된 지표 이름 (e.g. "CPI", "PPI")
-  importance  Int       // 중요도 (1~5)
-  actual      String    // 실제 값
-  forecast    String    // 예측 값
-  previous    String    // 이전 값
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@unique([releaseDate, name, country])
-  @@index([baseName, country])
-}
-
-model FavoriteCompany {
-  id          Int       @id @default(autoincrement())
-  userId      Int
-  companyId   Int
-  favoritedAt DateTime  @default(now())
-  isActive    Boolean   @default(true)
-
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, companyId])
-  @@index([companyId, isActive])
-}
-
-model FavoriteIndicatorGroup {
-  id          Int       @id @default(autoincrement())
-  userId      Int
-  baseName    String    // ex: "CPI", "PPI" 등
-  country     String?   // ex: "US", null이면 국가 구분 없음
-  favoritedAt DateTime  @default(now())
-  isActive    Boolean   @default(true)
-
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, baseName, country])
-  @@index([baseName, country, isActive])
-}
-
-model SubscriptionCompany {
-  id            Int       @id @default(autoincrement())
-  userId        Int
-  companyId     Int
-  subscribedAt  DateTime  @default(now())
-  isActive      Boolean   @default(true)
-
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, companyId])
-  @@index([companyId, isActive])
-}
-
-model SubscriptionIndicatorGroup {
-  id            Int       @id @default(autoincrement())
-  userId        Int
-  baseName      String    // ex: "CPI", "PPI"
-  country       String?   // ex: "US", null이면 모든 국가
-  subscribedAt  DateTime  @default(now())
-  isActive      Boolean   @default(true)
-
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, baseName, country])
-  @@index([baseName, country, isActive])
-}
-
 enum ContentType {
   EARNINGS
   DIVIDEND
   ECONOMIC_INDICATOR
-}
-
-model Notification {
-  id                   Int                    @id @default(autoincrement())
-  userId               Int
-  contentType          ContentType
-  contentId            Int                    // 실제 이벤트 테이블(Earnings.id, Dividend.id, EconomicIndicator.id)을 가리킴
-  notificationType     NotificationType       @default(DATA_CHANGED) // 알림 종류 (DATA_CHANGED, PAYMENT_DATE, RELEASE_DATE)
-  isRead               Boolean                @default(false)
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  user                 User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  notificationDelivery NotificationDelivery[]
-
-  @@index([userId, isRead])
-  @@index([contentType, contentId])
 }
 
 enum NotificationChannel {
@@ -238,24 +252,4 @@ enum NotificationType {
   DATA_CHANGED
   PAYMENT_DATE
   RELEASE_DATE
-}
-
-model NotificationDelivery {
-  id                Int           @id @default(autoincrement())
-  notificationId    Int
-  channelKey        NotificationChannel
-  status            NotificationStatus
-  errorMessage      String?
-  errorCode         String?
-  deliveredAt       DateTime?
-  retryCount        Int           @default(0)
-  lastAttemptAt     DateTime?
-  processingTimeMs  Int?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  notification      Notification  @relation(fields: [notificationId], references: [id], onDelete: Cascade)
-
-  @@index([notificationId])
-  @@index([status])
-  @@index([channelKey, status])
 }
