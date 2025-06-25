@@ -4,7 +4,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { EmailService } from '../../email/email.service';
 import { buildNotificationMessages, MessageContext } from '../message-builders';
 import {
-  NOTIFICATION_QUEUE_NAME,
+  EMAIL_QUEUE_NAME,
   NotificationJobData,
   NotificationJobType,
 } from '../queue/notification-queue.constants';
@@ -14,7 +14,7 @@ import { NotificationDeliveryService } from '../notification-delivery.service';
  * 이메일 알림 전용 워커
  * 이메일 전송만 담당하는 단일 책임 워커
  */
-@Processor(NOTIFICATION_QUEUE_NAME)
+@Processor(EMAIL_QUEUE_NAME)
 @Injectable()
 export class EmailWorker {
   private readonly logger = new Logger(EmailWorker.name);

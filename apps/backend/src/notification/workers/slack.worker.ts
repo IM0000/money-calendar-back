@@ -4,7 +4,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SlackService } from '../../slack/slack.service';
 import { buildNotificationMessages, MessageContext } from '../message-builders';
 import {
-  NOTIFICATION_QUEUE_NAME,
+  SLACK_QUEUE_NAME,
   NotificationJobData,
   NotificationJobType,
 } from '../queue/notification-queue.constants';
@@ -14,7 +14,7 @@ import { NotificationDeliveryService } from '../notification-delivery.service';
  * 슬랙 알림 전용 워커
  * 슬랙 전송만 담당하는 단일 책임 워커
  */
-@Processor(NOTIFICATION_QUEUE_NAME)
+@Processor(SLACK_QUEUE_NAME)
 @Injectable()
 export class SlackWorker {
   private readonly logger = new Logger(SlackWorker.name);
@@ -55,11 +55,16 @@ export class SlackWorker {
 
       const messages = buildNotificationMessages(messageContext);
 
-      await this.slackService.sendNotificationMessage({
+      const slackMessage: any = {
         webhookUrl: userSettings.slackWebhookUrl,
         text: messages.slack.text,
-        blocks: messages.slack.blocks,
-      });
+      };
+
+      if (messages.slack.blocks) {
+        slackMessage.blocks = messages.slack.blocks;
+      }
+
+      await this.slackService.sendNotificationMessage(slackMessage);
 
       // 전송 성공 처리 (서비스 레이어 사용)
       await this.notificationDeliveryService.updateToSent(
