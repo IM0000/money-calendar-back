@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import {
-  NOTIFICATION_QUEUE_NAME,
+  EMAIL_QUEUE_NAME,
+  SLACK_QUEUE_NAME,
   NotificationJobType,
   NotificationJobData,
 } from './notification-queue.constants';
@@ -23,8 +24,10 @@ export class NotificationQueueService {
   private readonly logger = new Logger(NotificationQueueService.name);
 
   constructor(
-    @InjectQueue(NOTIFICATION_QUEUE_NAME)
-    private readonly notificationQueue: Queue<NotificationJobData>,
+    @InjectQueue(EMAIL_QUEUE_NAME)
+    private readonly emailQueue: Queue<NotificationJobData>,
+    @InjectQueue(SLACK_QUEUE_NAME)
+    private readonly slackQueue: Queue<NotificationJobData>,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -75,7 +78,7 @@ export class NotificationQueueService {
         },
       });
 
-      await this.notificationQueue.add(NotificationJobType.SEND_EMAIL, {
+      await this.emailQueue.add(NotificationJobType.SEND_EMAIL, {
         ...baseJobData,
         deliveryId: emailDelivery.id,
       });
@@ -96,7 +99,7 @@ export class NotificationQueueService {
         },
       });
 
-      await this.notificationQueue.add(NotificationJobType.SEND_SLACK, {
+      await this.slackQueue.add(NotificationJobType.SEND_SLACK, {
         ...baseJobData,
         deliveryId: slackDelivery.id,
       });
@@ -111,16 +114,43 @@ export class NotificationQueueService {
    * 큐 상태 조회
    */
   async getQueueStatus(): Promise<{
+    email: {
+      waiting: number;
+      active: number;
+      completed: number;
+      failed: number;
+    };
+    slack: {
+      waiting: number;
+      active: number;
+      completed: number;
+      failed: number;
+    };
+  }> {
+    const [emailStats, slackStats] = await Promise.all([
+      this.getChannelQueueStatus(this.emailQueue),
+      this.getChannelQueueStatus(this.slackQueue),
+    ]);
+
+    return {
+      email: emailStats,
+      slack: slackStats,
+    };
+  }
+
+  private async getChannelQueueStatus(
+    queue: Queue<NotificationJobData>,
+  ): Promise<{
     waiting: number;
     active: number;
     completed: number;
     failed: number;
   }> {
     const [waiting, active, completed, failed] = await Promise.all([
-      this.notificationQueue.getWaiting(),
-      this.notificationQueue.getActive(),
-      this.notificationQueue.getCompleted(),
-      this.notificationQueue.getFailed(),
+      queue.getWaiting(),
+      queue.getActive(),
+      queue.getCompleted(),
+      queue.getFailed(),
     ]);
 
     return {
@@ -134,8 +164,23 @@ export class NotificationQueueService {
   /**
    * 실패한 작업 재시도
    */
-  async retryFailedJobs(): Promise<number> {
-    const failedJobs = await this.notificationQueue.getFailed();
+  async retryFailedJobs(): Promise<{ email: number; slack: number }> {
+    const [emailRetryCount, slackRetryCount] = await Promise.all([
+      this.retryQueueFailedJobs(this.emailQueue, 'email'),
+      this.retryQueueFailedJobs(this.slackQueue, 'slack'),
+    ]);
+
+    return {
+      email: emailRetryCount,
+      slack: slackRetryCount,
+    };
+  }
+
+  private async retryQueueFailedJobs(
+    queue: Queue<NotificationJobData>,
+    queueName: string,
+  ): Promise<number> {
+    const failedJobs = await queue.getFailed();
     let retryCount = 0;
 
     for (const job of failedJobs) {
@@ -143,11 +188,13 @@ export class NotificationQueueService {
         await job.retry();
         retryCount++;
       } catch (error) {
-        this.logger.error(`작업 재시도 실패: ${job.id}`, error);
+        this.logger.error(`${queueName} 큐 작업 재시도 실패: ${job.id}`, error);
       }
     }
 
-    this.logger.log(`${retryCount}개의 실패한 작업을 재시도했습니다.`);
+    this.logger.log(
+      `${queueName} 큐: ${retryCount}개의 실패한 작업을 재시도했습니다.`,
+    );
     return retryCount;
   }
 }

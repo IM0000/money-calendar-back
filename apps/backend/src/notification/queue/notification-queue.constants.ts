@@ -1,9 +1,18 @@
 import { ContentType, NotificationType } from '@prisma/client';
 
 /**
+ * 이메일 서비스 타입 정의
+ */
+export enum EmailServiceType {
+  GMAIL = 'GMAIL',
+  AWS_SES = 'AWS_SES',
+}
+
+/**
  * 알림 큐 관련 상수
  */
-export const NOTIFICATION_QUEUE_NAME = 'notification-queue';
+export const EMAIL_QUEUE_NAME = 'email-notification-queue';
+export const SLACK_QUEUE_NAME = 'slack-notification-queue';
 
 /**
  * 알림 작업 타입
@@ -51,6 +60,57 @@ export interface NotificationJobData {
     notificationsEnabled: boolean;
   };
 }
+
+/**
+ * 서비스별 Rate Limit 설정
+ */
+export const EMAIL_SERVICE_LIMITS = {
+  [EmailServiceType.GMAIL]: {
+    max: 1, // Gmail SMTP 안전 설정 (초당 1개)
+    duration: 1000,
+    dailyLimit: 500,
+    hourlyLimit: 100,
+  },
+  [EmailServiceType.AWS_SES]: {
+    max: 10, // AWS SES 프로덕션 안전 설정 (초당 10개)
+    duration: 1000,
+    dailyLimit: 50000, // 충분한 여유
+    hourlyLimit: 2000,
+  },
+} as const;
+
+/**
+ * 서비스 감지 함수 (기존 EMAIL_USE_SES 환경변수 사용)
+ */
+export function getEmailServiceType(): EmailServiceType {
+  const useSes = process.env.EMAIL_USE_SES === 'true';
+
+  return useSes ? EmailServiceType.AWS_SES : EmailServiceType.GMAIL;
+}
+
+/**
+ * 동적 Rate Limit 함수
+ */
+export function getEmailRateLimit(): { max: number; duration: number } {
+  const serviceType = getEmailServiceType();
+  return EMAIL_SERVICE_LIMITS[serviceType];
+}
+
+/**
+ * 현재 사용 중인 서비스의 설정
+ */
+export const CURRENT_EMAIL_CONFIG = EMAIL_SERVICE_LIMITS[getEmailServiceType()];
+
+/**
+ * 동적 Rate Limit 설정
+ */
+export const RATE_LIMITS = {
+  email: getEmailRateLimit(), // 동적으로 설정
+  slack: {
+    max: 1, // Slack webhook 제한
+    duration: 1000, // 1초
+  },
+} as const;
 
 /**
  * 큐 설정

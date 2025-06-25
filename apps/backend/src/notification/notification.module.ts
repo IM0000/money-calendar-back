@@ -18,8 +18,10 @@ import { SlackWorker } from './workers/slack.worker';
 import { NotificationDeliveryService } from './notification-delivery.service';
 import { NotificationSSEService } from './sse/notification-sse.service';
 import {
-  NOTIFICATION_QUEUE_NAME,
+  EMAIL_QUEUE_NAME,
+  SLACK_QUEUE_NAME,
   QUEUE_CONFIG,
+  RATE_LIMITS,
 } from './queue/notification-queue.constants';
 
 @Module({
@@ -29,9 +31,16 @@ import {
     EmailModule,
     SlackModule,
     SubscriptionModule,
+
     BullModule.registerQueue({
-      name: NOTIFICATION_QUEUE_NAME,
+      name: EMAIL_QUEUE_NAME,
       defaultJobOptions: QUEUE_CONFIG.defaultJobOptions,
+      limiter: RATE_LIMITS.email,
+    }),
+    BullModule.registerQueue({
+      name: SLACK_QUEUE_NAME,
+      defaultJobOptions: QUEUE_CONFIG.defaultJobOptions,
+      limiter: RATE_LIMITS.slack,
     }),
   ],
   controllers: [
