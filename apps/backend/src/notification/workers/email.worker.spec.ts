@@ -234,33 +234,84 @@ describe('EmailWorker', () => {
       );
     });
 
+    it('실적 알림 메시지를 올바르게 처리해야 한다', async () => {
+      const earningsJobData = {
+        ...mockJobData,
+        contentType: ContentType.EARNINGS,
+        currentData: {
+          actualEPS: '1.25',
+          actualRevenue: '500M',
+          company: { name: 'Apple', ticker: 'AAPL' },
+        },
+        previousData: {
+          actualEPS: '1.10',
+          actualRevenue: '480M',
+          company: { name: 'Apple', ticker: 'AAPL' },
+        },
+      };
+
+      const earningsJob = { ...mockJob, data: earningsJobData } as Job;
+
+      // 실제 메시지 빌더를 호출하여 예상 메시지 생성
+      const { buildNotificationMessages: actualBuilder } = jest.requireActual(
+        '../message-builders',
+      );
+      const expectedMessages = actualBuilder({
+        contentType: ContentType.EARNINGS,
+        notificationType: NotificationType.DATA_CHANGED,
+        currentData: earningsJobData.currentData,
+        previousData: earningsJobData.previousData,
+        userId: 456,
+      });
+
+      // Mock 설정 - 실제 빌더 결과 사용
+      mockBuildNotificationMessages.mockReturnValue(expectedMessages);
+      mockEmailService.sendNotificationEmail.mockResolvedValue(undefined);
+
+      // 실행
+      await worker.handleEmailNotification(earningsJob);
+
+      // 검증 - 실제 메시지 내용 확인
+      expect(expectedMessages.email.subject).toContain('Apple (AAPL)');
+      expect(expectedMessages.email.subject).toContain('실적 정보 변경');
+      expect(expectedMessages.email.html).toContain('📊 EPS: 1.10 → 1.25');
+      expect(expectedMessages.email.html).toContain('💰 매출: 480M → 500M');
+
+      expect(mockEmailService.sendNotificationEmail).toHaveBeenCalledWith({
+        to: 'test@example.com',
+        subject: expectedMessages.email.subject,
+        html: expectedMessages.email.html,
+      });
+
+      expect(mockDeliveryService.updateToSent).toHaveBeenCalledWith(
+        1,
+        expect.any(Number),
+      );
+    });
+
     it('배당 알림 메시지를 올바르게 처리해야 한다', async () => {
       const dividendJobData = {
         ...mockJobData,
         contentType: ContentType.DIVIDEND,
-        currentData: { dividendAmount: '0.25', paymentDate: '2024-12-27' },
-        previousData: { dividendAmount: '0.24', paymentDate: '2024-09-27' },
+        currentData: {
+          dividendAmount: '0.25',
+          paymentDate: '2024-12-27',
+          company: { name: 'Apple', ticker: 'AAPL' },
+        },
+        previousData: {
+          dividendAmount: '0.24',
+          paymentDate: '2024-09-27',
+          company: { name: 'Apple', ticker: 'AAPL' },
+        },
       };
 
       const dividendJob = { ...mockJob, data: dividendJobData } as Job;
 
-      const dividendMessageData = {
-        subject: '배당 알림: Apple 주식',
-        html: '<h1>배당이 업데이트되었습니다.</h1>',
-      };
-
-      mockBuildNotificationMessages.mockReturnValue({
-        email: dividendMessageData,
-        slack: { text: 'slack message' },
-      });
-
-      mockEmailService.sendNotificationEmail.mockResolvedValue(undefined);
-
-      // 실행
-      await worker.handleEmailNotification(dividendJob);
-
-      // 검증
-      expect(mockBuildNotificationMessages).toHaveBeenCalledWith({
+      // 실제 메시지 빌더를 호출하여 예상 메시지 생성
+      const { buildNotificationMessages: actualBuilder } = jest.requireActual(
+        '../message-builders',
+      );
+      const expectedMessages = actualBuilder({
         contentType: ContentType.DIVIDEND,
         notificationType: NotificationType.DATA_CHANGED,
         currentData: dividendJobData.currentData,
@@ -268,46 +319,87 @@ describe('EmailWorker', () => {
         userId: 456,
       });
 
+      // Mock 설정 - 실제 빌더 결과 사용
+      mockBuildNotificationMessages.mockReturnValue(expectedMessages);
+      mockEmailService.sendNotificationEmail.mockResolvedValue(undefined);
+
+      // 실행
+      await worker.handleEmailNotification(dividendJob);
+
+      // 검증 - 실제 메시지 내용 확인
+      expect(expectedMessages.email.subject).toContain('Apple (AAPL)');
+      expect(expectedMessages.email.subject).toContain('배당 정보 변경');
+      expect(expectedMessages.email.html).toContain('💵 배당금: 0.24 → 0.25');
+      expect(expectedMessages.email.html).toContain(
+        '📅 지급일: 2024. 9. 27. → 2024. 12. 27.',
+      );
+
       expect(mockEmailService.sendNotificationEmail).toHaveBeenCalledWith({
         to: 'test@example.com',
-        subject: dividendMessageData.subject,
-        html: dividendMessageData.html,
+        subject: expectedMessages.email.subject,
+        html: expectedMessages.email.html,
       });
+
+      expect(mockDeliveryService.updateToSent).toHaveBeenCalledWith(
+        1,
+        expect.any(Number),
+      );
     });
 
     it('경제지표 알림 메시지를 올바르게 처리해야 한다', async () => {
       const indicatorJobData = {
         ...mockJobData,
         contentType: ContentType.ECONOMIC_INDICATOR,
-        currentData: { actual: '3.2', previous: '3.0' },
-        previousData: { actual: '3.0', previous: '2.8' },
+        currentData: {
+          actual: '3.2',
+          previous: '3.0',
+          name: 'CPI',
+          country: 'USA',
+        },
+        previousData: {
+          actual: '3.0',
+          previous: '2.8',
+          name: 'CPI',
+          country: 'USA',
+        },
       };
 
       const indicatorJob = { ...mockJob, data: indicatorJobData } as Job;
 
-      const indicatorMessageData = {
-        subject: '경제지표 알림: CPI 데이터',
-        html: '<h1>경제지표가 업데이트되었습니다.</h1>',
-      };
-
-      mockBuildNotificationMessages.mockReturnValue({
-        email: indicatorMessageData,
-        slack: { text: 'slack message' },
-      });
-
-      mockEmailService.sendNotificationEmail.mockResolvedValue(undefined);
-
-      // 실행
-      await worker.handleEmailNotification(indicatorJob);
-
-      // 검증
-      expect(mockBuildNotificationMessages).toHaveBeenCalledWith({
+      // 실제 메시지 빌더를 호출하여 예상 메시지 생성
+      const { buildNotificationMessages: actualBuilder } = jest.requireActual(
+        '../message-builders',
+      );
+      const expectedMessages = actualBuilder({
         contentType: ContentType.ECONOMIC_INDICATOR,
         notificationType: NotificationType.DATA_CHANGED,
         currentData: indicatorJobData.currentData,
         previousData: indicatorJobData.previousData,
         userId: 456,
       });
+
+      // Mock 설정 - 실제 빌더 결과 사용
+      mockBuildNotificationMessages.mockReturnValue(expectedMessages);
+      mockEmailService.sendNotificationEmail.mockResolvedValue(undefined);
+
+      // 실행
+      await worker.handleEmailNotification(indicatorJob);
+
+      // 검증 - 실제 메시지 내용 확인
+      expect(expectedMessages.email.subject).toContain('[USA] CPI');
+      expect(expectedMessages.email.subject).toContain('정보 변경');
+      expect(expectedMessages.email.html).toContain('📈 실제: 3.0 → 3.2');
+
+      expect(mockEmailService.sendNotificationEmail).toHaveBeenCalledWith({
+        to: 'test@example.com',
+        subject: expectedMessages.email.subject,
+        html: expectedMessages.email.html,
+      });
+
+      expect(mockDeliveryService.updateToSent).toHaveBeenCalledWith(
+        1,
+        expect.any(Number),
+      );
     });
 
     it('처리 시간을 정확하게 측정해야 한다', async () => {

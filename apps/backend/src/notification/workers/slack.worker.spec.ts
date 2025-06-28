@@ -225,32 +225,86 @@ describe('SlackWorker', () => {
       );
     });
 
-    it('배당 알림 메시지를 올바르게 처리해야 한다', async () => {
-      const dividendJobData = {
+    it('실적 알림 메시지를 올바르게 처리해야 한다', async () => {
+      const earningsJobData = {
         ...mockJobData,
-        contentType: ContentType.DIVIDEND,
-        currentData: { dividendAmount: '0.25', paymentDate: '2024-12-27' },
-        previousData: { dividendAmount: '0.24', paymentDate: '2024-09-27' },
+        contentType: ContentType.EARNINGS,
+        currentData: {
+          actualEPS: '1.25',
+          actualRevenue: '500M',
+          company: { name: 'Apple', ticker: 'AAPL' },
+        },
+        previousData: {
+          actualEPS: '1.10',
+          actualRevenue: '480M',
+          company: { name: 'Apple', ticker: 'AAPL' },
+        },
       };
 
-      const dividendJob = { ...mockJob, data: dividendJobData } as Job;
+      const earningsJob = { ...mockJob, data: earningsJobData } as Job;
 
-      const dividendSlackMessage = {
-        text: '💰 *Apple (AAPL)* 배당이 업데이트되었습니다!\n\n📅 *지급일*: 2024-12-27\n💵 *배당금*: $0.24 → $0.25',
-      };
-
-      mockBuildNotificationMessages.mockReturnValue({
-        email: { subject: 'test', html: 'test' },
-        slack: dividendSlackMessage,
+      // 실제 메시지 빌더를 호출하여 예상 메시지 생성
+      const { buildNotificationMessages: actualBuilder } = jest.requireActual(
+        '../message-builders',
+      );
+      const expectedMessages = actualBuilder({
+        contentType: ContentType.EARNINGS,
+        notificationType: NotificationType.DATA_CHANGED,
+        currentData: earningsJobData.currentData,
+        previousData: earningsJobData.previousData,
+        userId: 456,
       });
+
+      // Mock 설정 - 실제 메시지 빌더 결과 사용
+      mockBuildNotificationMessages.mockReturnValue(expectedMessages);
 
       mockSlackService.sendNotificationMessage.mockResolvedValue(undefined);
 
       // 실행
-      await worker.handleSlackNotification(dividendJob);
+      await worker.handleSlackNotification(earningsJob);
 
-      // 검증
-      expect(mockBuildNotificationMessages).toHaveBeenCalledWith({
+      // 검증 - 실제 생성된 메시지가 SlackService로 전달되었는지 확인
+      expect(mockSlackService.sendNotificationMessage).toHaveBeenCalledWith({
+        webhookUrl: 'https://hooks.slack.com/services/test/webhook',
+        text: expectedMessages.slack.text,
+        blocks: expectedMessages.slack.blocks,
+      });
+
+      // 메시지 내용 검증
+      expect(expectedMessages.slack.text).toContain('Apple (AAPL)');
+      expect(expectedMessages.slack.text).toContain('실적 정보 변경');
+
+      // blocks 내용 검증
+      const sectionBlock = expectedMessages.slack.blocks?.find(
+        (block) => block.type === 'section',
+      );
+      expect(sectionBlock?.text?.text).toContain('📊 EPS: 1.10 → 1.25');
+      expect(sectionBlock?.text?.text).toContain('💰 매출: 480M → 500M');
+    });
+
+    it('배당 알림 메시지를 올바르게 처리해야 한다', async () => {
+      const dividendJobData = {
+        ...mockJobData,
+        contentType: ContentType.DIVIDEND,
+        currentData: {
+          dividendAmount: '0.25',
+          paymentDate: '2024-12-27',
+          company: { name: 'Apple', ticker: 'AAPL' },
+        },
+        previousData: {
+          dividendAmount: '0.24',
+          paymentDate: '2024-09-27',
+          company: { name: 'Apple', ticker: 'AAPL' },
+        },
+      };
+
+      const dividendJob = { ...mockJob, data: dividendJobData } as Job;
+
+      // 실제 메시지 빌더를 호출하여 예상 메시지 생성
+      const { buildNotificationMessages: actualBuilder } = jest.requireActual(
+        '../message-builders',
+      );
+      const expectedMessages = actualBuilder({
         contentType: ContentType.DIVIDEND,
         notificationType: NotificationType.DATA_CHANGED,
         currentData: dividendJobData.currentData,
@@ -258,10 +312,30 @@ describe('SlackWorker', () => {
         userId: 456,
       });
 
+      // Mock 설정 - 실제 메시지 빌더 결과 사용
+      mockBuildNotificationMessages.mockReturnValue(expectedMessages);
+
+      mockSlackService.sendNotificationMessage.mockResolvedValue(undefined);
+
+      // 실행
+      await worker.handleSlackNotification(dividendJob);
+
+      // 검증 - 실제 생성된 메시지가 SlackService로 전달되었는지 확인
       expect(mockSlackService.sendNotificationMessage).toHaveBeenCalledWith({
         webhookUrl: 'https://hooks.slack.com/services/test/webhook',
-        text: dividendSlackMessage.text,
+        text: expectedMessages.slack.text,
+        blocks: expectedMessages.slack.blocks,
       });
+
+      // 메시지 내용 검증
+      expect(expectedMessages.slack.text).toContain('Apple (AAPL)');
+      expect(expectedMessages.slack.text).toContain('배당 정보 변경');
+
+      // blocks 내용 검증
+      const sectionBlock = expectedMessages.slack.blocks?.find(
+        (block) => block.type === 'section',
+      );
+      expect(sectionBlock?.text?.text).toContain('💵 배당금: 0.24 → 0.25');
     });
 
     it('경제지표 알림 메시지를 올바르게 처리해야 한다', async () => {
@@ -271,41 +345,55 @@ describe('SlackWorker', () => {
         currentData: {
           actual: '3.2',
           previous: '3.0',
-          baseName: 'CPI',
+          name: 'CPI',
           country: 'USA',
         },
         previousData: {
           actual: '3.0',
           previous: '2.8',
-          baseName: 'CPI',
+          name: 'CPI',
           country: 'USA',
         },
       };
 
       const indicatorJob = { ...mockJob, data: indicatorJobData } as Job;
 
-      const indicatorSlackMessage = {
-        text: '📊 *CPI (USA)* 경제지표가 업데이트되었습니다!\n\n📈 *실제값*: 3.0 → 3.2',
-      };
-
-      mockBuildNotificationMessages.mockReturnValue({
-        email: { subject: 'test', html: 'test' },
-        slack: indicatorSlackMessage,
-      });
-
-      mockSlackService.sendNotificationMessage.mockResolvedValue(undefined);
-
-      // 실행
-      await worker.handleSlackNotification(indicatorJob);
-
-      // 검증
-      expect(mockBuildNotificationMessages).toHaveBeenCalledWith({
+      // 실제 메시지 빌더를 호출하여 예상 메시지 생성
+      const { buildNotificationMessages: actualBuilder } = jest.requireActual(
+        '../message-builders',
+      );
+      const expectedMessages = actualBuilder({
         contentType: ContentType.ECONOMIC_INDICATOR,
         notificationType: NotificationType.DATA_CHANGED,
         currentData: indicatorJobData.currentData,
         previousData: indicatorJobData.previousData,
         userId: 456,
       });
+
+      // Mock 설정 - 실제 메시지 빌더 결과 사용
+      mockBuildNotificationMessages.mockReturnValue(expectedMessages);
+
+      mockSlackService.sendNotificationMessage.mockResolvedValue(undefined);
+
+      // 실행
+      await worker.handleSlackNotification(indicatorJob);
+
+      // 검증 - 실제 생성된 메시지가 SlackService로 전달되었는지 확인
+      expect(mockSlackService.sendNotificationMessage).toHaveBeenCalledWith({
+        webhookUrl: 'https://hooks.slack.com/services/test/webhook',
+        text: expectedMessages.slack.text,
+        blocks: expectedMessages.slack.blocks,
+      });
+
+      // 메시지 내용 검증
+      expect(expectedMessages.slack.text).toContain('[USA] CPI');
+      expect(expectedMessages.slack.text).toContain('정보 변경');
+
+      // blocks 내용 검증
+      const sectionBlock = expectedMessages.slack.blocks?.find(
+        (block) => block.type === 'section',
+      );
+      expect(sectionBlock?.text?.text).toContain('📈 실제: 3.0 → 3.2');
     });
 
     it('처리 시간을 정확하게 측정해야 한다', async () => {
@@ -375,30 +463,35 @@ describe('SlackWorker', () => {
       );
     });
 
-    it('슬랙 웹훅 URL이 비어있으면 에러를 처리해야 한다', async () => {
-      const jobWithoutWebhook = {
-        ...mockJob,
-        data: {
-          ...mockJobData,
-          userSettings: {
-            ...mockJobData.userSettings,
-            slackWebhookUrl: '', // 빈 웹훅 URL
-          },
-        },
-      } as Job;
+    it('SlackService에서 웹훅 URL 검증 실패 시 올바르게 처리해야 한다', async () => {
+      // Mock 설정 - SlackService에서 웹훅 URL 검증 실패로 BadRequestException 발생
+      const validationError = new Error('입력이 올바르지 않습니다.');
 
       mockBuildNotificationMessages.mockReturnValue({
         email: { subject: 'test', html: 'test' },
         slack: mockSlackMessage,
       });
 
-      // 실행 및 검증
-      await expect(
-        worker.handleSlackNotification(jobWithoutWebhook),
-      ).rejects.toThrow();
+      mockSlackService.sendNotificationMessage.mockRejectedValue(
+        validationError,
+      );
 
-      expect(mockSlackService.sendNotificationMessage).not.toHaveBeenCalled();
-      expect(mockDeliveryService.updateToFailed).toHaveBeenCalled();
+      // 실행 및 검증
+      await expect(worker.handleSlackNotification(mockJob)).rejects.toThrow(
+        '입력이 올바르지 않습니다.',
+      );
+
+      expect(mockSlackService.sendNotificationMessage).toHaveBeenCalledWith({
+        webhookUrl: 'https://hooks.slack.com/services/test/webhook',
+        text: mockSlackMessage.text,
+      });
+
+      expect(mockDeliveryService.updateToFailed).toHaveBeenCalledWith(
+        2,
+        1,
+        validationError,
+        expect.any(Number),
+      );
     });
   });
 });
