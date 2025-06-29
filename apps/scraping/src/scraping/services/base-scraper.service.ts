@@ -56,21 +56,6 @@ export abstract class BaseScraper<TInput, TOutput>
   }
 
   /**
-   * 공통 HTTP 헤더 생성
-   */
-  protected createCommonHeaders(): Record<string, string> {
-    return {
-      'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-      Accept: '*/*',
-      'Accept-encoding': 'gzip, deflate, br, zstd',
-      'Accept-Language': 'ko-KR,ko;q=0.9',
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'x-requested-with': 'XMLHttpRequest',
-    };
-  }
-
-  /**
    * 프록시 설정 적용
    */
   protected applyProxyConfig(

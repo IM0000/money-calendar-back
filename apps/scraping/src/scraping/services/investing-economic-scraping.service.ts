@@ -36,19 +36,40 @@ export class InvestingEconomicScrapingService
 
       while (page < 200 && bind_scroll_handler) {
         const currentPage = page++;
+        const url =
+          'https://kr.investing.com/economic-calendar/Service/getCalendarFilteredData';
+        const data = {
+          'country[]': countryCode,
+          dateFrom: formatDate(dateFrom),
+          dateTo: formatDate(dateTo),
+          timeZone: 88,
+          currentTab: 'custom',
+          limit_from: currentPage,
+        };
+
+        const urlEncodedData = Object.keys(data)
+          .map(
+            (key) =>
+              `${encodeURIComponent(key)}=${encodeURIComponent(
+                String(data[key]),
+              )}`,
+          )
+          .join('&');
+
         const requestConfig: AxiosRequestConfig = {
           method: 'post',
-          url: 'https://kr.investing.com/economic-calendar/Service/getCalendarFilteredData',
+          url,
           headers: {
-            ...this.createCommonHeaders(),
+            'User-Agent':
+              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+            Accept: '*/*',
+            'Accept-encoding': 'gzip, deflate, br, zstd',
+            'Accept-Language': 'ko-KR,ko;q=0.9',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'x-requested-with': 'XMLHttpRequest',
             Referer: 'https://kr.investing.com/',
           },
-          data: this.buildRequestData(
-            countryCode,
-            dateFrom,
-            dateTo,
-            currentPage,
-          ),
+          data: urlEncodedData,
           timeout: this.TIMEOUT_MS,
         };
 
@@ -80,29 +101,5 @@ export class InvestingEconomicScrapingService
     } catch (error) {
       this.handleScrapingError(error, 'Economic indicator scraping');
     }
-  }
-
-  private buildRequestData(
-    countryCode: number,
-    dateFrom: string,
-    dateTo: string,
-    page: number,
-  ): string {
-    const data: Record<string, string | number> = {
-      'country[]': countryCode,
-      dateFrom: formatDate(dateFrom),
-      dateTo: formatDate(dateTo),
-      timeZone: 88,
-      currentTab: 'custom',
-      // timeFilter: 'timeRemain',
-      limit_from: page,
-    };
-
-    return Object.keys(data)
-      .map(
-        (key) =>
-          `${encodeURIComponent(key)}=${encodeURIComponent(String(data[key]))}`,
-      )
-      .join('&');
   }
 }
