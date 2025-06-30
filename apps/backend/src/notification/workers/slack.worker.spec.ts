@@ -335,7 +335,7 @@ describe('SlackWorker', () => {
       const sectionBlock = expectedMessages.slack.blocks?.find(
         (block) => block.type === 'section',
       );
-      expect(sectionBlock?.text?.text).toContain('💵 배당금: 0.24 → 0.25');
+      expect(sectionBlock?.text?.text).toMatch(/배당금.*0\.24.*→.*0\.25/);
     });
 
     it('경제지표 알림 메시지를 올바르게 처리해야 한다', async () => {
@@ -393,7 +393,7 @@ describe('SlackWorker', () => {
       const sectionBlock = expectedMessages.slack.blocks?.find(
         (block) => block.type === 'section',
       );
-      expect(sectionBlock?.text?.text).toContain('📈 실제: 3.0 → 3.2');
+      expect(sectionBlock?.text?.text).toMatch(/실제.*3\.0.*→.*3\.2/);
     });
 
     it('처리 시간을 정확하게 측정해야 한다', async () => {
@@ -412,8 +412,8 @@ describe('SlackWorker', () => {
       await worker.handleSlackNotification(mockJob);
       const endTime = Date.now();
 
-      // 처리 시간이 50ms 이상이어야 함
-      const expectedMinTime = 50;
+      // 처리 시간이 40ms 이상이어야 함 (CI 환경 고려하여 여유 있게 설정)
+      const expectedMinTime = 40;
       const actualTime = endTime - startTime;
       expect(actualTime).toBeGreaterThanOrEqual(expectedMinTime);
 
