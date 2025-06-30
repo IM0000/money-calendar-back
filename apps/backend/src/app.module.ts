@@ -12,7 +12,7 @@ import { emailConfig } from './config/email.config';
 import { jwtConfig } from './config/jwt.config';
 import { googleConfig } from './config/google.config';
 import { kakaoConfig } from './config/kakao.config';
-import { appleConfig } from './config/apple.config';
+// import { appleConfig } from './config/apple.config';
 import { discordConfig } from './config/discord.config';
 import { join } from 'path';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
@@ -70,7 +70,7 @@ console.log('NODE_ENV:', NODE_ENV);
         jwtConfig,
         googleConfig,
         kakaoConfig,
-        appleConfig,
+        // appleConfig,
         discordConfig,
       ],
       validationSchema,
