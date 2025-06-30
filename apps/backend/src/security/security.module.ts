@@ -13,7 +13,7 @@ import { IngestJwtStrategy } from './strategies/ingest-jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { KakaoStrategy } from './strategies/kakao.strategy';
 import { DiscordStrategy } from './strategies/discord.strategy';
-import { AppleStrategy } from './strategies/apple.strategy';
+// import { AppleStrategy } from './strategies/apple.strategy';
 
 // Guards
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -45,7 +45,7 @@ import { UserModule } from '../user/user.module';
       inject: [jwtConfig.KEY],
     }),
     ConfigModule.forFeature(googleConfig),
-    ConfigModule.forFeature(appleConfig),
+    // ConfigModule.forFeature(appleConfig),
     ConfigModule.forFeature(kakaoConfig),
     ConfigModule.forFeature(discordConfig),
   ],
@@ -58,7 +58,7 @@ import { UserModule } from '../user/user.module';
     GoogleStrategy,
     KakaoStrategy,
     DiscordStrategy,
-    AppleStrategy,
+    // AppleStrategy,
 
     // Factories
     OAuthGuardFactory,
