@@ -3,6 +3,28 @@ set -e
 
 echo "Setting up Blue-Green deployment configuration..."
 
+# ─────────────────────────────────────────────────────
+# 1. SSM 파라미터로부터 최신 환경변수(.env) 갱신
+# ─────────────────────────────────────────────────────
+echo "Refreshing environment variables from SSM Parameter Store..."
+aws ssm get-parameters-by-path \
+    --path "/moneycalendar" \
+    --with-decryption \
+    --recursive \
+    --region ap-northeast-2 \
+    --query "Parameters[*].[Name,Value]" \
+    --output text \
+| sed -e 's|/moneycalendar/||' -e $'s|\t|=|' \
+> /home/ec2-user/app.env
+
+chown ec2-user:ec2-user /home/ec2-user/app.env
+chmod 600 /home/ec2-user/app.env
+echo "Environment variables refreshed successfully"
+
+# ─────────────────────────────────────────────────────
+# 2. Blue-Green 배포 설정 구성
+# ─────────────────────────────────────────────────────
+
 # AWS Systems Manager Parameter Store나 환경변수에서 설정 가져오기
 if [ -n "$TARGET_GROUP_3000_ARN" ] && [ -n "$TARGET_GROUP_3001_ARN" ] && [ -n "$ALB_LISTENER_ARN" ] && [ -n "$DOCKER_IMAGE_BASE" ]; then
     # 환경변수로 설정된 경우

@@ -34,14 +34,15 @@ elif [ "$ACTIVE_PORT" = "3001" ]; then
     INACTIVE_PORT=3000
     INACTIVE_CONTAINER="app-3000"
 else
-    # 첫 배포이거나 둘 다 죽어있는 경우, 3001을 비활성으로 간주
-    INACTIVE_PORT=3001
-    INACTIVE_CONTAINER="app-3001"
+    # 첫 배포이거나 둘 다 죽어있는 경우, 3000을 배포 대상으로 설정
+    INACTIVE_PORT=3000
+    INACTIVE_CONTAINER="app-3000"
 fi
 
-echo "Active port: $ACTIVE_PORT, Cleaning up inactive port: $INACTIVE_PORT"
+echo "Active port: $ACTIVE_PORT, Target port for new deployment: $INACTIVE_PORT"
 
-# 비활성 포트의 컨테이너만 정리
+# Blue-Green 배포를 위해 비활성 포트의 기존 컨테이너만 정리 (새 컨테이너 생성 준비)
+# 활성 컨테이너는 새 버전이 준비된 후 start_new.sh에서 제거됨
 sudo docker stop $INACTIVE_CONTAINER 2>/dev/null || true
 sudo docker rm $INACTIVE_CONTAINER 2>/dev/null || true
 
