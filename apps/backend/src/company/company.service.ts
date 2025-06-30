@@ -1,7 +1,7 @@
 import {
   convertDividendBigInt,
   convertEarningsBigInt,
-} from '../utils/convert-bigint';
+} from '../common/utils/convert-bigint';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 

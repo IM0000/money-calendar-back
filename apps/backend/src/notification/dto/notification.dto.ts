@@ -1,14 +1,3 @@
-export enum NotificationChannel {
-  EMAIL = 'EMAIL',
-  SLACK = 'SLACK',
-}
-
-export enum NotificationStatus {
-  PENDING = 'PENDING',
-  SENT = 'SENT',
-  FAILED = 'FAILED',
-}
-
 import {
   IsBoolean,
   IsEmail,
@@ -54,16 +43,16 @@ export class UpdateUserNotificationSettingsDto {
   @IsOptional()
   slackWebhookUrl?: string;
 
-  @ApiProperty({ description: '모든 알림 활성화 여부', required: false })
+  @ApiProperty({ description: '알림 전체 활성화 여부', required: false })
   @IsBoolean()
   @IsOptional()
-  allEnabled?: boolean;
+  notificationsEnabled?: boolean;
 }
 
 export class SendNotificationEmailDto {
   @ApiProperty({ description: '수신자 이메일', example: 'user@example.com' })
   @IsEmail()
-  email: string;
+  to: string;
 
   @ApiProperty({ description: '이메일 제목' })
   @IsString()
@@ -71,5 +60,5 @@ export class SendNotificationEmailDto {
 
   @ApiProperty({ description: '이메일 내용' })
   @IsString()
-  content: string;
+  html: string;
 }

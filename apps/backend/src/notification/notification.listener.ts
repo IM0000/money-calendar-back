@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationService } from './notification.service';
-import { ContentType } from '@prisma/client';
+import { ContentType, NotificationType } from '@prisma/client';
 import { SubscriptionService } from '../subscription/subscription.service';
 
 @Injectable()
@@ -23,7 +23,9 @@ export class NotificationListener {
         contentType: ContentType.ECONOMIC_INDICATOR,
         contentId: before.id,
         userId,
-        metadata: { before, after },
+        notificationType: NotificationType.DATA_CHANGED,
+        previousData: before,
+        currentData: after,
       });
     }
   }
@@ -38,7 +40,9 @@ export class NotificationListener {
         contentType: ContentType.EARNINGS,
         contentId: before.id,
         userId,
-        metadata: { before, after },
+        notificationType: NotificationType.DATA_CHANGED,
+        previousData: before,
+        currentData: after,
       });
     }
   }
@@ -53,11 +57,9 @@ export class NotificationListener {
         contentType: ContentType.DIVIDEND,
         contentId: before.id,
         userId,
-        metadata: {
-          before,
-          after,
-          notificationType: 'DATA_CHANGED', // 배당 데이터 변경 알림임을 표시
-        },
+        notificationType: NotificationType.DATA_CHANGED,
+        previousData: before,
+        currentData: after,
       });
     }
   }

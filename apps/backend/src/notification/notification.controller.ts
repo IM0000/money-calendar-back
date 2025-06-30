@@ -12,32 +12,30 @@ import {
   MessageEvent,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
+import { JwtAuthGuard } from '../security/guards/jwt-auth.guard';
 import { UpdateUserNotificationSettingsDto } from './dto/notification.dto';
-import { filter, map } from 'rxjs/operators';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ApiResponseWrapper } from '../common/decorators/api-response.decorator';
 import { RequestWithUser } from '../common/types/request-with-user';
+import { NotificationSSEService } from './sse/notification-sse.service';
 
 @ApiTags('알림')
 @Controller('/api/v1/notification')
 @UseGuards(JwtAuthGuard)
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(
+    private readonly notificationService: NotificationService,
+    private readonly sseService: NotificationSSEService,
+  ) {}
 
   @ApiOperation({
     summary: '알림 스트림 구독',
-    description: 'SSE를 통한 실시간 알림 스트림 구독',
+    description: 'Redis Pub/Sub 기반 SSE를 통한 실시간 알림 스트림 구독',
   })
   @Sse('stream')
   stream(@Req() req: RequestWithUser): import('rxjs').Observable<MessageEvent> {
     const userId = req.user.id;
-    return this.notificationService.notification$.pipe(
-      filter((n) => n.userId === userId),
-      map((n) => {
-        return { data: n };
-      }),
-    );
+    return this.sseService.getNotificationStream(userId);
   }
 
   @ApiOperation({ summary: '알림 목록 조회' })
@@ -136,5 +134,22 @@ export class NotificationController {
       userId,
       updateSettingsDto,
     );
+  }
+
+  @ApiOperation({ summary: 'SSE 연결 상태 확인' })
+  @ApiResponseWrapper(Object)
+  @Get('sse/health')
+  async checkSSEHealth() {
+    const isConnected = this.sseService.isConnected();
+    const connectionTest = await this.sseService.testConnection();
+
+    return {
+      status: isConnected && connectionTest ? 'healthy' : 'unhealthy',
+      redis: {
+        connected: isConnected,
+        pingTest: connectionTest,
+      },
+      timestamp: new Date().toISOString(),
+    };
   }
 }

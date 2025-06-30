@@ -14,8 +14,8 @@ import {
   GetIndicatorGroupHistoryDto,
 } from './dto/get-calendar.dto';
 import { CalendarService } from './calendar.service';
-import { OptionalJwtAuthGuard } from '../auth/jwt/optional-jwt-auth.guard';
-import { JwtAuthGuard } from '../auth/jwt/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../security/guards/optional-jwt-auth.guard';
+import { JwtAuthGuard } from '../security/guards/jwt-auth.guard';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ApiResponseWrapper } from '../common/decorators/api-response.decorator';
 import { RequestWithUser } from '../common/types/request-with-user';

@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
-import { NotificationService } from '../notification/notification.service';
 import { jwtConfig } from '../config/jwt.config';
 import { UpdatePasswordDto } from './dto/profile.dto';
 import {
@@ -10,12 +9,10 @@ import {
   UpdateUserPasswordDto,
   VerifyPasswordDto,
 } from './dto/profile.dto';
-import { UpdateUserNotificationSettingsDto } from '../notification/dto/notification.dto';
 
 describe('UserController', () => {
   let controller: UserController;
   let usersService: UserService;
-  let notificationService: NotificationService;
 
   const mockUsersService = {
     updateUserPassword: jest.fn(),
@@ -26,13 +23,6 @@ describe('UserController', () => {
     deleteUser: jest.fn(),
     disconnectOAuthAccount: jest.fn(),
     verifyUserPassword: jest.fn(),
-  };
-
-  const mockNotificationService = {
-    getUserNotifications: jest.fn(),
-    getUnreadNotificationsCount: jest.fn(),
-    getUserNotificationSettings: jest.fn(),
-    updateUserNotificationSettings: jest.fn(),
   };
 
   const mockJwtConfig = {
@@ -49,10 +39,6 @@ describe('UserController', () => {
           useValue: mockUsersService,
         },
         {
-          provide: NotificationService,
-          useValue: mockNotificationService,
-        },
-        {
           provide: jwtConfig.KEY,
           useValue: mockJwtConfig,
         },
@@ -61,17 +47,16 @@ describe('UserController', () => {
 
     controller = module.get<UserController>(UserController);
     usersService = module.get<UserService>(UserService);
-    notificationService = module.get<NotificationService>(NotificationService);
 
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it('정의되어야 합니다', () => {
     expect(controller).toBeDefined();
   });
 
   describe('updatePassword', () => {
-    it('should update password and return success message', async () => {
+    it('비밀번호를 업데이트하고 성공 메시지를 반환해야 합니다', async () => {
       const updatePasswordDto: UpdatePasswordDto = {
         email: 'test@example.com',
         password: 'newPassword123',
@@ -90,7 +75,7 @@ describe('UserController', () => {
   });
 
   describe('getProfile', () => {
-    it('should return user profile', async () => {
+    it('사용자 프로필을 반환해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
@@ -112,7 +97,7 @@ describe('UserController', () => {
   });
 
   describe('updateProfile', () => {
-    it('should update user profile', async () => {
+    it('사용자 프로필을 업데이트해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
@@ -143,7 +128,7 @@ describe('UserController', () => {
   });
 
   describe('changeUserPassword', () => {
-    it('should change user password', async () => {
+    it('사용자 비밀번호를 변경해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
@@ -173,7 +158,7 @@ describe('UserController', () => {
   });
 
   describe('deleteUser', () => {
-    it('should delete user account', async () => {
+    it('사용자 계정을 삭제해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
@@ -199,7 +184,7 @@ describe('UserController', () => {
   });
 
   describe('disconnectOAuthAccount', () => {
-    it('should disconnect OAuth account', async () => {
+    it('OAuth 계정 연결을 해제해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
@@ -223,123 +208,8 @@ describe('UserController', () => {
     });
   });
 
-  describe('getUserNotifications', () => {
-    it('should get user notifications with pagination', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      };
-
-      const page = '2';
-      const limit = '10';
-
-      const mockNotifications = {
-        notifications: [
-          { id: 1, userId: 1, contentType: 'EARNINGS', contentId: 1 },
-        ],
-        total: 15,
-      };
-
-      mockNotificationService.getUserNotifications.mockResolvedValue(
-        mockNotifications,
-      );
-
-      const result = await controller.getUserNotifications(
-        req as any,
-        page,
-        limit,
-      );
-
-      expect(notificationService.getUserNotifications).toHaveBeenCalledWith(
-        req.user.id,
-        parseInt(page),
-        parseInt(limit),
-      );
-      expect(result).toEqual(mockNotifications);
-    });
-  });
-
-  describe('getUnreadNotificationsCount', () => {
-    it('should get unread notifications count', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      };
-
-      const mockCount = { count: 5 };
-
-      mockNotificationService.getUnreadNotificationsCount.mockResolvedValue(
-        mockCount,
-      );
-
-      const result = await controller.getUnreadNotificationsCount(req as any);
-
-      expect(
-        notificationService.getUnreadNotificationsCount,
-      ).toHaveBeenCalledWith(req.user.id);
-      expect(result).toEqual(mockCount);
-    });
-  });
-
-  describe('getNotificationSettings', () => {
-    it('should get user notification settings', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      };
-
-      const mockSettings = {
-        emailEnabled: true,
-        pushEnabled: false,
-        preferredMethod: 'EMAIL',
-      };
-
-      mockNotificationService.getUserNotificationSettings.mockResolvedValue(
-        mockSettings,
-      );
-
-      const result = await controller.getNotificationSettings(req as any);
-
-      expect(
-        notificationService.getUserNotificationSettings,
-      ).toHaveBeenCalledWith(req.user.id);
-      expect(result).toEqual(mockSettings);
-    });
-  });
-
-  describe('updateNotificationSettings', () => {
-    it('should update user notification settings', async () => {
-      const req = {
-        user: { id: 1, email: 'test@example.com' },
-      };
-
-      const updateSettingsDto: UpdateUserNotificationSettingsDto = {
-        emailEnabled: false,
-        slackEnabled: false,
-        slackWebhookUrl:
-          'https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX',
-      };
-
-      const mockUpdatedSettings = {
-        userId: 1,
-        ...updateSettingsDto,
-      };
-
-      mockNotificationService.updateUserNotificationSettings.mockResolvedValue(
-        mockUpdatedSettings,
-      );
-
-      const result = await controller.updateNotificationSettings(
-        req as any,
-        updateSettingsDto,
-      );
-
-      expect(
-        notificationService.updateUserNotificationSettings,
-      ).toHaveBeenCalledWith(req.user.id, updateSettingsDto);
-      expect(result).toEqual(mockUpdatedSettings);
-    });
-  });
-
   describe('verifyPassword', () => {
-    it('should verify user password and return result', async () => {
+    it('사용자 비밀번호를 검증하고 결과를 반환해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
@@ -362,7 +232,7 @@ describe('UserController', () => {
       expect(result).toEqual({ isValid: true });
     });
 
-    it('should return false if password is invalid', async () => {
+    it('비밀번호가 유효하지 않으면 false를 반환해야 합니다', async () => {
       const req = {
         user: { id: 1, email: 'test@example.com' },
       };
