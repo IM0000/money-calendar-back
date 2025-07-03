@@ -234,14 +234,13 @@ describe('AuthService', () => {
         // Act
         const result = await service.loginWithEmail(loginDto);
 
+        // 비밀번호를 제거한 사용자 객체 생성
+        const { password, ...userWithoutPassword } = mockUser;
+
         // Assert
         expect(result).toEqual({
           ...expectedTokens,
-          user: {
-            id: mockUser.id,
-            email: mockUser.email,
-            nickname: mockUser.nickname,
-          },
+          user: userWithoutPassword,
         });
         expect(mockJwtService.sign).toHaveBeenCalledTimes(2);
         expect(mockPrismaService.user.update).toHaveBeenCalled();
@@ -389,7 +388,7 @@ describe('AuthService', () => {
       expect(mockJwtService.verify).toHaveBeenCalledWith(token);
     });
 
-    it('만료된 JWT 토큰을 검증하면 에러를 발생시킨다', () => {
+    it('만료된 JWT 토큰을 검증하면 UnauthorizedException을 발생시킨다', () => {
       // Arrange
       const token = 'expired-token';
       mockJwtService.verify.mockImplementation(() => {
@@ -397,7 +396,9 @@ describe('AuthService', () => {
       });
 
       // Act & Assert
-      expect(() => service.verifyJwtToken(token)).toThrow('Token expired');
+      expect(() => service.verifyJwtToken(token)).toThrow(
+        UnauthorizedException,
+      );
     });
   });
 

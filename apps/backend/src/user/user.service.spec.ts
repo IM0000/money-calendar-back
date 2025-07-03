@@ -391,18 +391,17 @@ describe('UserService', () => {
         ).rejects.toThrow(NotFoundException);
       });
 
-      it('OAuth 전용 계정은 비밀번호가 없어서 false를 반환한다', async () => {
+      it('OAuth 전용 계정은 비밀번호가 없어서 BadRequestException을 발생시킨다', async () => {
         // Arrange
         const userId = 1;
         const mockUser = createMockUser({ password: null });
 
         mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-        // Act
-        const result = await service.verifyUserPassword(userId, 'password');
-
-        // Assert
-        expect(result).toBe(false);
+        // Act & Assert
+        await expect(
+          service.verifyUserPassword(userId, 'password'),
+        ).rejects.toThrow(BadRequestException);
       });
     });
   });
