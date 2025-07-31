@@ -1,19 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { SubscriptionCompany } from '@prisma/client';
 import {
   ERROR_CODE_MAP,
   ERROR_MESSAGE_MAP,
 } from '../common/constants/error.constant';
+import { SubscriptionRepository } from './subscription.repository';
 
 @Injectable()
 export class SubscriptionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly subscriptionRepository: SubscriptionRepository,
+  ) {}
 
   async subscribeCompany(userId: number, companyId: number): Promise<void> {
-    const company = await this.prisma.company.findUnique({
-      where: { id: companyId },
-    });
+    const company = await this.subscriptionRepository.findCompanyById(
+      companyId,
+    );
 
     if (!company) {
       throw new NotFoundException({
@@ -21,17 +23,19 @@ export class SubscriptionService {
         errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
       });
     }
-    await this.prisma.subscriptionCompany.upsert({
-      where: { userId_companyId: { userId, companyId } },
-      update: { isActive: true },
-      create: { userId, companyId, isActive: true },
-    });
+    await this.subscriptionRepository.upsertCompanySubscription(
+      userId,
+      companyId,
+      true,
+    );
   }
 
   async unsubscribeCompany(userId: number, companyId: number): Promise<void> {
-    const subscription = await this.prisma.subscriptionCompany.findUnique({
-      where: { userId_companyId: { userId, companyId } },
-    });
+    const subscription =
+      await this.subscriptionRepository.findCompanySubscription(
+        userId,
+        companyId,
+      );
 
     if (!subscription || !subscription.isActive) {
       throw new NotFoundException({
@@ -40,40 +44,35 @@ export class SubscriptionService {
       });
     }
 
-    await this.prisma.subscriptionCompany.update({
-      where: { userId_companyId: { userId, companyId } },
-      data: { isActive: false },
-    });
+    await this.subscriptionRepository.updateCompanySubscription(
+      userId,
+      companyId,
+      false,
+    );
   }
 
   async getSubscriptionCompanies(
     userId: number,
   ): Promise<SubscriptionCompany[]> {
-    const subscriptions = await this.prisma.subscriptionCompany.findMany({
-      where: { userId, isActive: true },
-      include: { company: true },
-    });
-    return subscriptions;
+    return await this.subscriptionRepository.findUserCompanySubscriptions(
+      userId,
+    );
   }
 
   async isCompanySubscribed(
     userId: number,
     companyId: number,
   ): Promise<boolean> {
-    const subscription = await this.prisma.subscriptionCompany.findUnique({
-      where: {
-        userId_companyId: { userId, companyId },
-        isActive: true,
-      },
-    });
+    const subscription =
+      await this.subscriptionRepository.findActiveCompanySubscription(
+        userId,
+        companyId,
+      );
     return !!subscription;
   }
 
   async getCompanySubscribers(companyId: number) {
-    return await this.prisma.subscriptionCompany.findMany({
-      where: { companyId, isActive: true },
-      select: { userId: true },
-    });
+    return await this.subscriptionRepository.findCompanySubscribers(companyId);
   }
 
   async subscribeIndicatorGroup(
@@ -81,9 +80,11 @@ export class SubscriptionService {
     baseName: string,
     country: string,
   ): Promise<void> {
-    const indicatorGroup = await this.prisma.economicIndicator.findFirst({
-      where: { baseName: baseName, country: country },
-    });
+    const indicatorGroup =
+      await this.subscriptionRepository.findIndicatorGroupByBaseNameAndCountry(
+        baseName,
+        country,
+      );
 
     if (!indicatorGroup) {
       throw new NotFoundException({
@@ -92,11 +93,12 @@ export class SubscriptionService {
       });
     }
 
-    await this.prisma.subscriptionIndicatorGroup.upsert({
-      where: { userId_baseName_country: { userId, baseName, country } },
-      update: { isActive: true },
-      create: { userId, baseName, country, isActive: true },
-    });
+    await this.subscriptionRepository.upsertIndicatorGroupSubscription(
+      userId,
+      baseName,
+      country,
+      true,
+    );
   }
 
   async unsubscribeIndicatorGroup(
@@ -105,9 +107,11 @@ export class SubscriptionService {
     country: string,
   ): Promise<void> {
     const subscription =
-      await this.prisma.subscriptionIndicatorGroup.findUnique({
-        where: { userId_baseName_country: { userId, baseName, country } },
-      });
+      await this.subscriptionRepository.findIndicatorGroupSubscription(
+        userId,
+        baseName,
+        country,
+      );
 
     if (!subscription || !subscription.isActive) {
       throw new NotFoundException({
@@ -116,22 +120,20 @@ export class SubscriptionService {
       });
     }
 
-    await this.prisma.subscriptionIndicatorGroup.update({
-      where: { userId_baseName_country: { userId, baseName, country } },
-      data: { isActive: false },
-    });
+    await this.subscriptionRepository.updateIndicatorGroupSubscription(
+      userId,
+      baseName,
+      country,
+      false,
+    );
   }
 
   async getSubscriptionIndicatorGroups(
     userId: number,
   ): Promise<{ baseName: string; country?: string }[]> {
-    const subscriptions = await this.prisma.subscriptionIndicatorGroup.findMany(
-      {
-        where: { userId, isActive: true },
-      },
+    return await this.subscriptionRepository.findUserIndicatorGroupSubscriptions(
+      userId,
     );
-
-    return subscriptions;
   }
 
   async isIndicatorGroupSubscribed(
@@ -140,19 +142,18 @@ export class SubscriptionService {
     country: string,
   ): Promise<boolean> {
     const subscription =
-      await this.prisma.subscriptionIndicatorGroup.findUnique({
-        where: {
-          userId_baseName_country: { userId, baseName, country },
-          isActive: true,
-        },
-      });
+      await this.subscriptionRepository.findActiveIndicatorGroupSubscription(
+        userId,
+        baseName,
+        country,
+      );
     return !!subscription;
   }
 
   async getIndicatorGroupSubscribers(baseName: string, country: string) {
-    return await this.prisma.subscriptionIndicatorGroup.findMany({
-      where: { baseName, country, isActive: true },
-      select: { userId: true },
-    });
+    return await this.subscriptionRepository.findIndicatorGroupSubscribers(
+      baseName,
+      country,
+    );
   }
 }
