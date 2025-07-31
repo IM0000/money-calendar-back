@@ -1,26 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CompanyService } from './company.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { CompanyRepository } from './company.repository';
 
 describe('CompanyService', () => {
   let service: CompanyService;
-  let prismaService: PrismaService;
+  let companyRepository: CompanyRepository;
 
-  const mockPrismaService = {
-    earnings: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-    },
-    dividend: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-    },
-    favoriteCompany: {
-      findUnique: jest.fn(),
-    },
-    subscriptionCompany: {
-      findUnique: jest.fn(),
-    },
+  const mockCompanyRepository = {
+    getCompanyEarnings: jest.fn(),
+    getCompanyEarningsCount: jest.fn(),
+    getCompanyDividends: jest.fn(),
+    getCompanyDividendsCount: jest.fn(),
+    getFavoriteCompany: jest.fn(),
+    getCompanySubscription: jest.fn(),
   };
 
   const mockCompanyId = 1;
@@ -33,14 +25,14 @@ describe('CompanyService', () => {
       providers: [
         CompanyService,
         {
-          provide: PrismaService,
-          useValue: mockPrismaService,
+          provide: CompanyRepository,
+          useValue: mockCompanyRepository,
         },
       ],
     }).compile();
 
     service = module.get<CompanyService>(CompanyService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    companyRepository = module.get<CompanyRepository>(CompanyRepository);
 
     jest.clearAllMocks();
   });
@@ -85,9 +77,14 @@ describe('CompanyService', () => {
       ];
 
       const mockTotal = 2;
+      const skip = (mockPage - 1) * mockLimit;
 
-      mockPrismaService.earnings.findMany.mockResolvedValue(mockEarningsItems);
-      mockPrismaService.earnings.count.mockResolvedValue(mockTotal);
+      mockCompanyRepository.getCompanyEarnings.mockResolvedValue(
+        mockEarningsItems,
+      );
+      mockCompanyRepository.getCompanyEarningsCount.mockResolvedValue(
+        mockTotal,
+      );
 
       const result = await service.getCompanyEarnings(
         mockCompanyId,
@@ -95,16 +92,15 @@ describe('CompanyService', () => {
         mockLimit,
       );
 
-      expect(mockPrismaService.earnings.findMany).toHaveBeenCalledWith({
-        where: { companyId: mockCompanyId },
-        skip: 0,
-        take: mockLimit,
-        orderBy: { releaseDate: 'desc' },
-      });
+      expect(mockCompanyRepository.getCompanyEarnings).toHaveBeenCalledWith(
+        mockCompanyId,
+        skip,
+        mockLimit,
+      );
 
-      expect(mockPrismaService.earnings.count).toHaveBeenCalledWith({
-        where: { companyId: mockCompanyId },
-      });
+      expect(
+        mockCompanyRepository.getCompanyEarningsCount,
+      ).toHaveBeenCalledWith(mockCompanyId);
 
       expect(result).toHaveProperty('items');
       expect(result).toHaveProperty('pagination');
@@ -139,13 +135,18 @@ describe('CompanyService', () => {
       const mockFavoriteCompany = { id: 1, isActive: true };
       const mockSubscriptionCompany = { id: 1, isActive: true };
       const mockTotal = 1;
+      const skip = (mockPage - 1) * mockLimit;
 
-      mockPrismaService.earnings.findMany.mockResolvedValue(mockEarningsItems);
-      mockPrismaService.earnings.count.mockResolvedValue(mockTotal);
-      mockPrismaService.favoriteCompany.findUnique.mockResolvedValue(
+      mockCompanyRepository.getCompanyEarnings.mockResolvedValue(
+        mockEarningsItems,
+      );
+      mockCompanyRepository.getCompanyEarningsCount.mockResolvedValue(
+        mockTotal,
+      );
+      mockCompanyRepository.getFavoriteCompany.mockResolvedValue(
         mockFavoriteCompany,
       );
-      mockPrismaService.subscriptionCompany.findUnique.mockResolvedValue(
+      mockCompanyRepository.getCompanySubscription.mockResolvedValue(
         mockSubscriptionCompany,
       );
 
@@ -156,21 +157,15 @@ describe('CompanyService', () => {
         mockUserId,
       );
 
-      expect(mockPrismaService.favoriteCompany.findUnique).toHaveBeenCalledWith(
-        {
-          where: {
-            userId_companyId: { userId: mockUserId, companyId: mockCompanyId },
-          },
-        },
+      expect(mockCompanyRepository.getFavoriteCompany).toHaveBeenCalledWith(
+        mockUserId,
+        mockCompanyId,
       );
 
-      expect(
-        mockPrismaService.subscriptionCompany.findUnique,
-      ).toHaveBeenCalledWith({
-        where: {
-          userId_companyId: { userId: mockUserId, companyId: mockCompanyId },
-        },
-      });
+      expect(mockCompanyRepository.getCompanySubscription).toHaveBeenCalledWith(
+        mockUserId,
+        mockCompanyId,
+      );
 
       expect(result.items[0]).toHaveProperty('isFavorite', true);
       expect(result.items[0]).toHaveProperty('hasNotification', true);
@@ -207,9 +202,14 @@ describe('CompanyService', () => {
       ];
 
       const mockTotal = 2;
+      const skip = (mockPage - 1) * mockLimit;
 
-      mockPrismaService.dividend.findMany.mockResolvedValue(mockDividendItems);
-      mockPrismaService.dividend.count.mockResolvedValue(mockTotal);
+      mockCompanyRepository.getCompanyDividends.mockResolvedValue(
+        mockDividendItems,
+      );
+      mockCompanyRepository.getCompanyDividendsCount.mockResolvedValue(
+        mockTotal,
+      );
 
       const result = await service.getCompanyDividends(
         mockCompanyId,
@@ -217,16 +217,15 @@ describe('CompanyService', () => {
         mockLimit,
       );
 
-      expect(mockPrismaService.dividend.findMany).toHaveBeenCalledWith({
-        where: { companyId: mockCompanyId },
-        skip: 0,
-        take: mockLimit,
-        orderBy: { exDividendDate: 'desc' },
-      });
+      expect(mockCompanyRepository.getCompanyDividends).toHaveBeenCalledWith(
+        mockCompanyId,
+        skip,
+        mockLimit,
+      );
 
-      expect(mockPrismaService.dividend.count).toHaveBeenCalledWith({
-        where: { companyId: mockCompanyId },
-      });
+      expect(
+        mockCompanyRepository.getCompanyDividendsCount,
+      ).toHaveBeenCalledWith(mockCompanyId);
 
       expect(result).toHaveProperty('items');
       expect(result).toHaveProperty('pagination');
@@ -258,13 +257,18 @@ describe('CompanyService', () => {
       const mockFavoriteCompany = { id: 1, isActive: true };
       const mockSubscriptionCompany = { id: 1, isActive: true };
       const mockTotal = 1;
+      const skip = (mockPage - 1) * mockLimit;
 
-      mockPrismaService.dividend.findMany.mockResolvedValue(mockDividendItems);
-      mockPrismaService.dividend.count.mockResolvedValue(mockTotal);
-      mockPrismaService.favoriteCompany.findUnique.mockResolvedValue(
+      mockCompanyRepository.getCompanyDividends.mockResolvedValue(
+        mockDividendItems,
+      );
+      mockCompanyRepository.getCompanyDividendsCount.mockResolvedValue(
+        mockTotal,
+      );
+      mockCompanyRepository.getFavoriteCompany.mockResolvedValue(
         mockFavoriteCompany,
       );
-      mockPrismaService.subscriptionCompany.findUnique.mockResolvedValue(
+      mockCompanyRepository.getCompanySubscription.mockResolvedValue(
         mockSubscriptionCompany,
       );
 
@@ -275,21 +279,15 @@ describe('CompanyService', () => {
         mockUserId,
       );
 
-      expect(mockPrismaService.favoriteCompany.findUnique).toHaveBeenCalledWith(
-        {
-          where: {
-            userId_companyId: { userId: mockUserId, companyId: mockCompanyId },
-          },
-        },
+      expect(mockCompanyRepository.getFavoriteCompany).toHaveBeenCalledWith(
+        mockUserId,
+        mockCompanyId,
       );
 
-      expect(
-        mockPrismaService.subscriptionCompany.findUnique,
-      ).toHaveBeenCalledWith({
-        where: {
-          userId_companyId: { userId: mockUserId, companyId: mockCompanyId },
-        },
-      });
+      expect(mockCompanyRepository.getCompanySubscription).toHaveBeenCalledWith(
+        mockUserId,
+        mockCompanyId,
+      );
 
       expect(result.items[0]).toHaveProperty('isFavorite', true);
       expect(result.items[0]).toHaveProperty('hasNotification', true);
