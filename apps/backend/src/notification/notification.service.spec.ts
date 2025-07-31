@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationService } from './notification.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { NotificationRepository } from './notification.repository';
 import { NotificationQueueService } from './queue/notification-queue.service';
 import { NotificationSSEService } from './sse/notification-sse.service';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
@@ -9,7 +9,7 @@ import { ContentType, NotificationType } from '@prisma/client';
 
 describe('NotificationService', () => {
   let service: NotificationService;
-  let prismaService: PrismaService;
+  let notificationRepository: NotificationRepository;
   let queueService: NotificationQueueService;
   let sseService: NotificationSSEService;
 
@@ -64,41 +64,27 @@ describe('NotificationService', () => {
     ...overrides,
   });
 
-  const mockPrismaService = {
-    notification: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      count: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      delete: jest.fn(),
-      deleteMany: jest.fn(),
-    },
-    userNotificationSettings: {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-      create: jest.fn(),
-    },
-    economicIndicator: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-    },
-    earnings: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-    },
-    dividend: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-    },
-    subscriptionCompany: {
-      findFirst: jest.fn(),
-    },
-    subscriptionIndicatorGroup: {
-      findFirst: jest.fn(),
-    },
-    $transaction: jest.fn((callback) => callback(mockPrismaService)),
+  const mockNotificationRepository = {
+    createNotification: jest.fn(),
+    findNotificationById: jest.fn(),
+    findUserNotifications: jest.fn(),
+    countUserNotifications: jest.fn(),
+    countUnreadNotifications: jest.fn(),
+    markNotificationAsRead: jest.fn(),
+    markAllUserNotificationsAsRead: jest.fn(),
+    deleteNotification: jest.fn(),
+    deleteAllUserNotifications: jest.fn(),
+    findEarningsById: jest.fn(),
+    findDividendById: jest.fn(),
+    findEconomicIndicatorById: jest.fn(),
+    findCompanySubscription: jest.fn(),
+    findIndicatorGroupSubscription: jest.fn(),
+    findUserNotificationSettings: jest.fn(),
+    createUserNotificationSettings: jest.fn(),
+    upsertUserNotificationSettings: jest.fn(),
+    findEarningsByIds: jest.fn(),
+    findDividendsByIds: jest.fn(),
+    findEconomicIndicatorsByIds: jest.fn(),
   };
 
   const mockQueueService = {
@@ -120,8 +106,8 @@ describe('NotificationService', () => {
       providers: [
         NotificationService,
         {
-          provide: PrismaService,
-          useValue: mockPrismaService,
+          provide: NotificationRepository,
+          useValue: mockNotificationRepository,
         },
         {
           provide: NotificationQueueService,
@@ -135,7 +121,9 @@ describe('NotificationService', () => {
     }).compile();
 
     service = module.get<NotificationService>(NotificationService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    notificationRepository = module.get<NotificationRepository>(
+      NotificationRepository,
+    );
     queueService = module.get<NotificationQueueService>(
       NotificationQueueService,
     );
@@ -163,14 +151,18 @@ describe('NotificationService', () => {
         const mockUserSettings = createMockUserSettings();
         const unreadCount = 5;
 
-        mockPrismaService.earnings.findUnique.mockResolvedValue(mockEarnings);
-        mockPrismaService.subscriptionCompany.findFirst.mockResolvedValue(
+        mockNotificationRepository.findEarningsById.mockResolvedValue(
+          mockEarnings,
+        );
+        mockNotificationRepository.findCompanySubscription.mockResolvedValue(
           mockSubscription,
         );
-        mockPrismaService.notification.create.mockResolvedValue(
+        mockNotificationRepository.createNotification.mockResolvedValue(
           mockNotification,
         );
-        mockPrismaService.notification.count.mockResolvedValue(unreadCount);
+        mockNotificationRepository.countUnreadNotifications.mockResolvedValue(
+          unreadCount,
+        );
         jest
           .spyOn(service, 'getUserNotificationSettings')
           .mockResolvedValue(mockUserSettings);
@@ -201,16 +193,18 @@ describe('NotificationService', () => {
         const mockNotification = createMockNotification();
         const unreadCount = 5;
 
-        mockPrismaService.earnings.findUnique.mockResolvedValue(
+        mockNotificationRepository.findEarningsById.mockResolvedValue(
           createMockEarnings(),
         );
-        mockPrismaService.subscriptionCompany.findFirst.mockResolvedValue(
+        mockNotificationRepository.findCompanySubscription.mockResolvedValue(
           createMockSubscription(),
         );
-        mockPrismaService.notification.create.mockResolvedValue(
+        mockNotificationRepository.createNotification.mockResolvedValue(
           mockNotification,
         );
-        mockPrismaService.notification.count.mockResolvedValue(unreadCount);
+        mockNotificationRepository.countUnreadNotifications.mockResolvedValue(
+          unreadCount,
+        );
         jest
           .spyOn(service, 'getUserNotificationSettings')
           .mockResolvedValue(createMockUserSettings());
@@ -233,10 +227,12 @@ describe('NotificationService', () => {
       it('구독하지 않은 회사의 실적 변경시 NotFoundException을 발생시킨다', async () => {
         // Arrange
         const dto = createNotificationDto();
-        mockPrismaService.earnings.findUnique.mockResolvedValue(
+        mockNotificationRepository.findEarningsById.mockResolvedValue(
           createMockEarnings(),
         );
-        mockPrismaService.subscriptionCompany.findFirst.mockResolvedValue(null);
+        mockNotificationRepository.findCompanySubscription.mockResolvedValue(
+          null,
+        );
 
         // Act & Assert
         await expect(service.createNotification(dto)).rejects.toThrow(
@@ -270,16 +266,18 @@ describe('NotificationService', () => {
           contentId: 2,
         });
 
-        mockPrismaService.economicIndicator.findUnique.mockResolvedValue(
+        mockNotificationRepository.findEconomicIndicatorById.mockResolvedValue(
           mockIndicator,
         );
-        mockPrismaService.subscriptionIndicatorGroup.findFirst.mockResolvedValue(
+        mockNotificationRepository.findIndicatorGroupSubscription.mockResolvedValue(
           mockIndicatorSubscription,
         );
-        mockPrismaService.notification.create.mockResolvedValue(
+        mockNotificationRepository.createNotification.mockResolvedValue(
           mockNotification,
         );
-        mockPrismaService.notification.count.mockResolvedValue(3);
+        mockNotificationRepository.countUnreadNotifications.mockResolvedValue(
+          3,
+        );
         jest
           .spyOn(service, 'getUserNotificationSettings')
           .mockResolvedValue(createMockUserSettings());
@@ -290,16 +288,12 @@ describe('NotificationService', () => {
         // Assert
         expect(result).toEqual(mockNotification);
         expect(
-          mockPrismaService.subscriptionIndicatorGroup.findFirst,
-        ).toHaveBeenCalledWith({
-          where: {
-            userId: dto.userId,
-            baseName: mockIndicator.baseName,
-            country: mockIndicator.country,
-            isActive: true,
-          },
-          include: { user: true },
-        });
+          mockNotificationRepository.findIndicatorGroupSubscription,
+        ).toHaveBeenCalledWith(
+          dto.userId,
+          mockIndicator.baseName,
+          mockIndicator.country,
+        );
       });
     });
 
@@ -320,14 +314,18 @@ describe('NotificationService', () => {
           contentId: 3,
         });
 
-        mockPrismaService.dividend.findUnique.mockResolvedValue(mockDividend);
-        mockPrismaService.subscriptionCompany.findFirst.mockResolvedValue(
+        mockNotificationRepository.findDividendById.mockResolvedValue(
+          mockDividend,
+        );
+        mockNotificationRepository.findCompanySubscription.mockResolvedValue(
           createMockSubscription(),
         );
-        mockPrismaService.notification.create.mockResolvedValue(
+        mockNotificationRepository.createNotification.mockResolvedValue(
           mockNotification,
         );
-        mockPrismaService.notification.count.mockResolvedValue(2);
+        mockNotificationRepository.countUnreadNotifications.mockResolvedValue(
+          2,
+        );
         jest
           .spyOn(service, 'getUserNotificationSettings')
           .mockResolvedValue(createMockUserSettings());
@@ -337,10 +335,9 @@ describe('NotificationService', () => {
 
         // Assert
         expect(result).toEqual(mockNotification);
-        expect(mockPrismaService.dividend.findUnique).toHaveBeenCalledWith({
-          where: { id: dto.contentId },
-          include: { company: true },
-        });
+        expect(
+          mockNotificationRepository.findDividendById,
+        ).toHaveBeenCalledWith(dto.contentId);
       });
     });
   });
@@ -351,7 +348,7 @@ describe('NotificationService', () => {
         // Arrange
         const userId = 1;
         const mockSettings = createMockUserSettings();
-        mockPrismaService.userNotificationSettings.findUnique.mockResolvedValue(
+        mockNotificationRepository.findUserNotificationSettings.mockResolvedValue(
           mockSettings,
         );
 
@@ -361,10 +358,8 @@ describe('NotificationService', () => {
         // Assert
         expect(result).toEqual(mockSettings);
         expect(
-          mockPrismaService.userNotificationSettings.findUnique,
-        ).toHaveBeenCalledWith({
-          where: { userId },
-        });
+          mockNotificationRepository.findUserNotificationSettings,
+        ).toHaveBeenCalledWith(userId);
       });
     });
 
@@ -377,10 +372,10 @@ describe('NotificationService', () => {
           slackEnabled: false,
         });
 
-        mockPrismaService.userNotificationSettings.findUnique.mockResolvedValue(
+        mockNotificationRepository.findUserNotificationSettings.mockResolvedValue(
           null,
         );
-        mockPrismaService.userNotificationSettings.create.mockResolvedValue(
+        mockNotificationRepository.createUserNotificationSettings.mockResolvedValue(
           mockCreatedSettings,
         );
 
@@ -390,15 +385,13 @@ describe('NotificationService', () => {
         // Assert
         expect(result).toEqual(mockCreatedSettings);
         expect(
-          mockPrismaService.userNotificationSettings.create,
+          mockNotificationRepository.createUserNotificationSettings,
         ).toHaveBeenCalledWith({
-          data: {
-            userId,
-            emailEnabled: false,
-            slackEnabled: false,
-            slackWebhookUrl: null,
-            notificationsEnabled: true,
-          },
+          userId,
+          emailEnabled: false,
+          slackEnabled: false,
+          slackWebhookUrl: null,
+          notificationsEnabled: true,
         });
       });
     });
@@ -414,13 +407,15 @@ describe('NotificationService', () => {
         const mockUpdatedNotification = { ...mockNotification, isRead: true };
         const unreadCount = 4;
 
-        mockPrismaService.notification.findUnique.mockResolvedValue(
+        mockNotificationRepository.findNotificationById.mockResolvedValue(
           mockNotification,
         );
-        mockPrismaService.notification.update.mockResolvedValue(
+        mockNotificationRepository.markNotificationAsRead.mockResolvedValue(
           mockUpdatedNotification,
         );
-        mockPrismaService.notification.count.mockResolvedValue(unreadCount);
+        mockNotificationRepository.countUnreadNotifications.mockResolvedValue(
+          unreadCount,
+        );
 
         // Act
         const result = await service.markAsRead(userId, notificationId);
@@ -440,13 +435,15 @@ describe('NotificationService', () => {
         const mockNotification = createMockNotification({ isRead: true });
         const unreadCount = 5;
 
-        mockPrismaService.notification.findUnique.mockResolvedValue(
+        mockNotificationRepository.findNotificationById.mockResolvedValue(
           mockNotification,
         );
-        mockPrismaService.notification.update.mockResolvedValue(
+        mockNotificationRepository.markNotificationAsRead.mockResolvedValue(
           mockNotification,
         );
-        mockPrismaService.notification.count.mockResolvedValue(unreadCount);
+        mockNotificationRepository.countUnreadNotifications.mockResolvedValue(
+          unreadCount,
+        );
 
         // Act
         const result = await service.markAsRead(userId, notificationId);
@@ -461,7 +458,7 @@ describe('NotificationService', () => {
         // Arrange
         const userId = 1;
         const notificationId = 999;
-        mockPrismaService.notification.findUnique.mockResolvedValue(null);
+        mockNotificationRepository.findNotificationById.mockResolvedValue(null);
 
         // Act & Assert
         await expect(
@@ -475,7 +472,7 @@ describe('NotificationService', () => {
         const notificationId = 1;
         const mockNotification = createMockNotification({ userId: 2 });
 
-        mockPrismaService.notification.findUnique.mockResolvedValue(
+        mockNotificationRepository.findNotificationById.mockResolvedValue(
           mockNotification,
         );
 
@@ -492,19 +489,20 @@ describe('NotificationService', () => {
       // Arrange
       const userId = 1;
       const updateCount = 3;
-      mockPrismaService.notification.updateMany.mockResolvedValue({
-        count: updateCount,
-      });
+      mockNotificationRepository.markAllUserNotificationsAsRead.mockResolvedValue(
+        {
+          count: updateCount,
+        },
+      );
 
       // Act
       const result = await service.markAllAsRead(userId);
 
       // Assert
       expect(result.message).toContain('모든 알림을 읽음으로 표시');
-      expect(mockPrismaService.notification.updateMany).toHaveBeenCalledWith({
-        where: { userId, isRead: false },
-        data: { isRead: true },
-      });
+      expect(
+        mockNotificationRepository.markAllUserNotificationsAsRead,
+      ).toHaveBeenCalledWith(userId);
       expect(mockSSEService.publishUnreadCountUpdate).toHaveBeenCalledWith(
         userId,
         0,
@@ -514,7 +512,9 @@ describe('NotificationService', () => {
     it('읽지 않은 알림이 없어도 정상적으로 동작한다', async () => {
       // Arrange
       const userId = 1;
-      mockPrismaService.notification.updateMany.mockResolvedValue({ count: 0 });
+      mockNotificationRepository.markAllUserNotificationsAsRead.mockResolvedValue(
+        { count: 0 },
+      );
 
       // Act
       const result = await service.markAllAsRead(userId);
@@ -529,22 +529,24 @@ describe('NotificationService', () => {
       // Arrange
       const userId = 1;
       const unreadCount = 7;
-      mockPrismaService.notification.count.mockResolvedValue(unreadCount);
+      mockNotificationRepository.countUnreadNotifications.mockResolvedValue(
+        unreadCount,
+      );
 
       // Act
       const result = await service.getUnreadNotificationsCount(userId);
 
       // Assert
       expect(result).toEqual({ count: unreadCount });
-      expect(mockPrismaService.notification.count).toHaveBeenCalledWith({
-        where: { userId, isRead: false },
-      });
+      expect(
+        mockNotificationRepository.countUnreadNotifications,
+      ).toHaveBeenCalledWith(userId);
     });
 
     it('읽지 않은 알림이 없으면 0을 반환한다', async () => {
       // Arrange
       const userId = 1;
-      mockPrismaService.notification.count.mockResolvedValue(0);
+      mockNotificationRepository.countUnreadNotifications.mockResolvedValue(0);
 
       // Act
       const result = await service.getUnreadNotificationsCount(userId);
@@ -567,7 +569,7 @@ describe('NotificationService', () => {
         };
         const mockUpdatedSettings = createMockUserSettings(dto);
 
-        mockPrismaService.userNotificationSettings.upsert.mockResolvedValue(
+        mockNotificationRepository.upsertUserNotificationSettings.mockResolvedValue(
           mockUpdatedSettings,
         );
 
@@ -580,12 +582,23 @@ describe('NotificationService', () => {
         // Assert
         expect(result).toEqual(mockUpdatedSettings);
         expect(
-          mockPrismaService.userNotificationSettings.upsert,
-        ).toHaveBeenCalledWith({
-          where: { userId },
-          update: dto,
-          create: { userId, ...dto },
-        });
+          mockNotificationRepository.upsertUserNotificationSettings,
+        ).toHaveBeenCalledWith(
+          userId,
+          {
+            emailEnabled: true,
+            slackEnabled: true,
+            slackWebhookUrl: 'https://hooks.slack.com/test',
+            notificationsEnabled: true,
+          },
+          {
+            userId,
+            emailEnabled: true,
+            slackEnabled: true,
+            slackWebhookUrl: 'https://hooks.slack.com/test',
+            notificationsEnabled: true,
+          },
+        );
       });
 
       it('알림을 완전히 비활성화한다', async () => {
@@ -599,7 +612,7 @@ describe('NotificationService', () => {
         };
         const mockUpdatedSettings = createMockUserSettings(dto);
 
-        mockPrismaService.userNotificationSettings.upsert.mockResolvedValue(
+        mockNotificationRepository.upsertUserNotificationSettings.mockResolvedValue(
           mockUpdatedSettings,
         );
 
@@ -623,10 +636,10 @@ describe('NotificationService', () => {
         const notificationId = 1;
         const mockNotification = createMockNotification();
 
-        mockPrismaService.notification.findUnique.mockResolvedValue(
+        mockNotificationRepository.findNotificationById.mockResolvedValue(
           mockNotification,
         );
-        mockPrismaService.notification.delete.mockResolvedValue(
+        mockNotificationRepository.deleteNotification.mockResolvedValue(
           mockNotification,
         );
 
@@ -635,9 +648,9 @@ describe('NotificationService', () => {
 
         // Assert
         expect(result.message).toContain('알림이 삭제');
-        expect(mockPrismaService.notification.delete).toHaveBeenCalledWith({
-          where: { id: notificationId },
-        });
+        expect(
+          mockNotificationRepository.deleteNotification,
+        ).toHaveBeenCalledWith(notificationId);
       });
     });
   });
@@ -647,7 +660,7 @@ describe('NotificationService', () => {
       // Arrange
       const userId = 1;
       const deleteCount = 5;
-      mockPrismaService.notification.deleteMany.mockResolvedValue({
+      mockNotificationRepository.deleteAllUserNotifications.mockResolvedValue({
         count: deleteCount,
       });
 
@@ -657,15 +670,17 @@ describe('NotificationService', () => {
       // Assert
       expect(result.count).toBe(deleteCount);
       expect(result.message).toContain('모든 알림이 삭제');
-      expect(mockPrismaService.notification.deleteMany).toHaveBeenCalledWith({
-        where: { userId },
-      });
+      expect(
+        mockNotificationRepository.deleteAllUserNotifications,
+      ).toHaveBeenCalledWith(userId);
     });
 
     it('삭제할 알림이 없어도 정상적으로 동작한다', async () => {
       // Arrange
       const userId = 1;
-      mockPrismaService.notification.deleteMany.mockResolvedValue({ count: 0 });
+      mockNotificationRepository.deleteAllUserNotifications.mockResolvedValue({
+        count: 0,
+      });
 
       // Act
       const result = await service.deleteAllUserNotifications(userId);

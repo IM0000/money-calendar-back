@@ -3,7 +3,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { ContentType, NotificationType } from '@prisma/client';
 import { UpdateUserNotificationSettingsDto } from './dto/notification.dto';
 import {
@@ -12,11 +11,12 @@ import {
 } from '../common/constants/error.constant';
 import { NotificationQueueService } from './queue/notification-queue.service';
 import { NotificationSSEService } from './sse/notification-sse.service';
+import { NotificationRepository } from './notification.repository';
 
 @Injectable()
 export class NotificationService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly notificationRepository: NotificationRepository,
     private readonly queueService: NotificationQueueService,
     private readonly sseService: NotificationSSEService,
   ) {}
@@ -56,14 +56,12 @@ export class NotificationService {
     }
 
     // 2. 알림 DB 생성
-    const notification = await this.prisma.notification.create({
-      data: {
-        userId,
-        contentType,
-        contentId,
-        notificationType,
-        isRead: false,
-      },
+    const notification = await this.notificationRepository.createNotification({
+      userId,
+      contentType,
+      contentId,
+      notificationType,
+      isRead: false,
     });
 
     // 3. 사용자 알림 설정 조회
@@ -112,44 +110,32 @@ export class NotificationService {
   ) {
     switch (contentType) {
       case ContentType.EARNINGS:
-        const earnings = await this.prisma.earnings.findUnique({
-          where: { id: contentId },
-          include: { company: true },
-        });
+        const earnings = await this.notificationRepository.findEarningsById(contentId);
         if (!earnings) return null;
 
-        return this.prisma.subscriptionCompany.findFirst({
-          where: { userId, companyId: earnings.companyId, isActive: true },
-          include: { user: true },
-        });
+        return this.notificationRepository.findCompanySubscription(
+          userId,
+          earnings.companyId,
+        );
 
       case ContentType.DIVIDEND:
-        const dividend = await this.prisma.dividend.findUnique({
-          where: { id: contentId },
-          include: { company: true },
-        });
+        const dividend = await this.notificationRepository.findDividendById(contentId);
         if (!dividend) return null;
 
-        return this.prisma.subscriptionCompany.findFirst({
-          where: { userId, companyId: dividend.companyId, isActive: true },
-          include: { user: true },
-        });
+        return this.notificationRepository.findCompanySubscription(
+          userId,
+          dividend.companyId,
+        );
 
       case ContentType.ECONOMIC_INDICATOR:
-        const indicator = await this.prisma.economicIndicator.findUnique({
-          where: { id: contentId },
-        });
+        const indicator = await this.notificationRepository.findEconomicIndicatorById(contentId);
         if (!indicator) return null;
 
-        return this.prisma.subscriptionIndicatorGroup.findFirst({
-          where: {
-            userId,
-            baseName: indicator.baseName,
-            country: indicator.country,
-            isActive: true,
-          },
-          include: { user: true },
-        });
+        return this.notificationRepository.findIndicatorGroupSubscription(
+          userId,
+          indicator.baseName,
+          indicator.country,
+        );
 
       default:
         throw new Error(`지원하지 않는 콘텐츠 타입: ${contentType}`);
@@ -160,22 +146,18 @@ export class NotificationService {
    * 유저 알림 설정 조회 및 기본값 제공
    */
   async getUserNotificationSettings(userId: number) {
-    const settings = await this.prisma.userNotificationSettings.findUnique({
-      where: { userId },
-    });
+    const settings = await this.notificationRepository.findUserNotificationSettings(userId);
 
     if (settings) {
       return settings;
     }
 
-    return this.prisma.userNotificationSettings.create({
-      data: {
-        userId,
-        emailEnabled: false,
-        slackEnabled: false,
-        slackWebhookUrl: null,
-        notificationsEnabled: true,
-      },
+    return this.notificationRepository.createUserNotificationSettings({
+      userId,
+      emailEnabled: false,
+      slackEnabled: false,
+      slackWebhookUrl: null,
+      notificationsEnabled: true,
     });
   }
 
@@ -193,9 +175,9 @@ export class NotificationService {
       notificationsEnabled,
     } = dto;
 
-    return this.prisma.userNotificationSettings.upsert({
-      where: { userId },
-      update: {
+    return this.notificationRepository.upsertUserNotificationSettings(
+      userId,
+      {
         ...(emailEnabled !== undefined && { emailEnabled }),
         ...(slackEnabled !== undefined && { slackEnabled }),
         ...(slackWebhookUrl !== undefined && {
@@ -203,14 +185,14 @@ export class NotificationService {
         }),
         ...(notificationsEnabled !== undefined && { notificationsEnabled }),
       },
-      create: {
+      {
         userId,
         emailEnabled: emailEnabled ?? false,
         slackEnabled: slackEnabled ?? false,
         slackWebhookUrl,
         notificationsEnabled: notificationsEnabled ?? true,
       },
-    });
+    );
   }
 
   /**
@@ -220,13 +202,8 @@ export class NotificationService {
     // 1) 기본 Notification만 먼저 가져오기
     const skip = (page - 1) * limit;
     const [notifications, totalCount] = await Promise.all([
-      this.prisma.notification.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.notification.count({ where: { userId } }),
+      this.notificationRepository.findUserNotifications(userId, skip, limit),
+      this.notificationRepository.countUserNotifications(userId),
     ]);
 
     // 2) contentType 별로 ID 배열 뽑기
@@ -246,28 +223,17 @@ export class NotificationService {
     // 3) 실제 Earnings / Dividend / EconomicIndicator 데이터를 각각 한 번씩만 조회
     const [earningsMap, dividendMap, indicatorMap] = await Promise.all([
       (async () => {
-        if (earningsIds.length === 0) return {};
-        const earningsList = await this.prisma.earnings.findMany({
-          where: { id: { in: earningsIds } },
-          include: { company: true }, // 필요에 따라 include
-        });
+        const earningsList = await this.notificationRepository.findEarningsByIds(earningsIds);
         return Object.fromEntries(earningsList.map((e) => [e.id, e]));
       })(),
 
       (async () => {
-        if (dividendIds.length === 0) return {};
-        const dividendList = await this.prisma.dividend.findMany({
-          where: { id: { in: dividendIds } },
-          include: { company: true }, // 필요에 따라 include
-        });
+        const dividendList = await this.notificationRepository.findDividendsByIds(dividendIds);
         return Object.fromEntries(dividendList.map((d) => [d.id, d]));
       })(),
 
       (async () => {
-        if (indicatorIds.length === 0) return {};
-        const indicatorList = await this.prisma.economicIndicator.findMany({
-          where: { id: { in: indicatorIds } },
-        });
+        const indicatorList = await this.notificationRepository.findEconomicIndicatorsByIds(indicatorIds);
         return Object.fromEntries(indicatorList.map((i) => [i.id, i]));
       })(),
     ]);
@@ -340,12 +306,7 @@ export class NotificationService {
   async getUnreadNotificationsCount(
     userId: number,
   ): Promise<{ count: number }> {
-    const count = await this.prisma.notification.count({
-      where: {
-        userId,
-        isRead: false,
-      },
-    });
+    const count = await this.notificationRepository.countUnreadNotifications(userId);
 
     return { count };
   }
@@ -355,9 +316,7 @@ export class NotificationService {
    */
   async markAsRead(userId: number, notificationId: number) {
     // 통합된 Notification 모델에서 알림 찾기
-    const notification = await this.prisma.notification.findUnique({
-      where: { id: notificationId },
-    });
+    const notification = await this.notificationRepository.findNotificationById(notificationId);
 
     if (!notification) {
       throw new NotFoundException({
@@ -375,15 +334,10 @@ export class NotificationService {
     }
 
     // 알림 읽음 상태로 업데이트
-    await this.prisma.notification.update({
-      where: { id: notificationId },
-      data: { isRead: true },
-    });
+    await this.notificationRepository.markNotificationAsRead(notificationId);
 
     // 읽지 않은 알림 개수 업데이트 이벤트 발행
-    const unreadCount = await this.prisma.notification.count({
-      where: { userId, isRead: false },
-    });
+    const unreadCount = await this.notificationRepository.countUnreadNotifications(userId);
 
     await this.sseService.publishUnreadCountUpdate(userId, unreadCount);
 
@@ -394,13 +348,7 @@ export class NotificationService {
    * 모든 알림 읽음 처리
    */
   async markAllAsRead(userId: number) {
-    const result = await this.prisma.notification.updateMany({
-      where: {
-        userId,
-        isRead: false,
-      },
-      data: { isRead: true },
-    });
+    const result = await this.notificationRepository.markAllUserNotificationsAsRead(userId);
 
     // 읽지 않은 알림 개수 0으로 업데이트 이벤트 발행
     await this.sseService.publishUnreadCountUpdate(userId, 0);
@@ -415,9 +363,7 @@ export class NotificationService {
    * 알림 삭제
    */
   async deleteNotification(userId: number, notificationId: number) {
-    const notification = await this.prisma.notification.findUnique({
-      where: { id: notificationId },
-    });
+    const notification = await this.notificationRepository.findNotificationById(notificationId);
 
     if (!notification) {
       throw new NotFoundException({
@@ -433,9 +379,7 @@ export class NotificationService {
       });
     }
 
-    await this.prisma.notification.delete({
-      where: { id: notificationId },
-    });
+    await this.notificationRepository.deleteNotification(notificationId);
 
     return { message: '알림이 삭제되었습니다.' };
   }
@@ -444,9 +388,7 @@ export class NotificationService {
    * 사용자의 모든 알림 삭제
    */
   async deleteAllUserNotifications(userId: number) {
-    const result = await this.prisma.notification.deleteMany({
-      where: { userId },
-    });
+    const result = await this.notificationRepository.deleteAllUserNotifications(userId);
 
     return {
       message: '모든 알림이 삭제되었습니다.',
