@@ -24,7 +24,7 @@ import {
 } from '../common/constants/error.constant';
 import { RandomNickList } from '../common/random-nick.constants';
 import { generateSixDigitCode } from '../common/utils/code-generator';
-import { PrismaService } from '../prisma/prisma.service';
+import { AuthRepository } from './auth.repository';
 
 @Injectable()
 export class AuthService {
@@ -37,7 +37,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly usersService: UserService,
     private readonly emailService: EmailService,
-    private readonly prismaService: PrismaService,
+    private readonly authRepository: AuthRepository,
   ) {}
 
   getFrontendUrl(): string {
@@ -350,16 +350,16 @@ export class AuthService {
    * @returns 이메일 주소
    */
   async findEmailFromVerificationToken(token: string): Promise<string> {
-    const verification = await this.prismaService.verificationToken.findUnique({
-      where: { token },
-    });
-    if (!verification || verification.expiresAt < new Date()) {
+    const email = await this.authRepository.findEmailFromVerificationToken(
+      token,
+    );
+    if (!email) {
       throw new BadRequestException({
         errorCode: ERROR_CODE_MAP.AUTH_001,
         errorMessage: ERROR_MESSAGE_MAP.AUTH_001,
       });
     }
-    return verification.email;
+    return email;
   }
 
   /**
@@ -370,21 +370,15 @@ export class AuthService {
   async createUserFromOAuth(oauthUser: any): Promise<User> {
     const nickname =
       RandomNickList[Math.floor(Math.random() * RandomNickList.length)];
-    return await this.prismaService.user.create({
-      data: {
-        email: oauthUser.email,
-        nickname: nickname + Date.now(),
-        verified: true,
-        oauthAccounts: {
-          create: [
-            {
-              provider: oauthUser.provider,
-              providerId: oauthUser.providerId,
-            },
-          ],
-        },
+    return await this.authRepository.createUserWithOAuth({
+      email: oauthUser.email,
+      nickname: nickname + Date.now(),
+      verified: true,
+      oauthAccount: {
+        provider: oauthUser.provider,
+        providerId: oauthUser.providerId,
+        oauthEmail: oauthUser.email,
       },
-      include: { oauthAccounts: true },
     });
   }
 
@@ -395,14 +389,10 @@ export class AuthService {
    * @returns 업데이트된 사용자
    */
   async linkOAuthAccount(userId: number, oauthUser: any): Promise<User> {
-    const existing = await this.prismaService.oAuthAccount.findUnique({
-      where: {
-        provider_providerId: {
-          provider: oauthUser.provider,
-          providerId: oauthUser.providerId,
-        },
-      },
-    });
+    const existing = await this.authRepository.findOAuthAccount(
+      oauthUser.provider,
+      oauthUser.providerId,
+    );
     if (existing) {
       throw new ConflictException({
         errorCode: ERROR_CODE_MAP.CONFLICT_001,
@@ -417,19 +407,10 @@ export class AuthService {
         errorMessage: ERROR_MESSAGE_MAP.RESOURCE_001,
       });
     }
-    return await this.prismaService.user.update({
-      where: { id: userId },
-      data: {
-        verified: true,
-        oauthAccounts: {
-          create: {
-            provider: oauthUser.provider,
-            providerId: oauthUser.providerId,
-            oauthEmail: oauthUser.email,
-          },
-        },
-      },
-      include: { oauthAccounts: true },
+    return await this.authRepository.linkOAuthAccount(userId, {
+      provider: oauthUser.provider,
+      providerId: oauthUser.providerId,
+      oauthEmail: oauthUser.email,
     });
   }
 
@@ -439,15 +420,7 @@ export class AuthService {
    */
   async sendVerificationCode(email: string): Promise<void> {
     const code = generateSixDigitCode();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    await this.prismaService.$transaction(async (tx) => {
-      await tx.verificationCode.deleteMany({ where: { email } });
-      await tx.verificationCode.create({ data: { email, code, expiresAt } });
-      const existing = await tx.user.findUnique({ where: { email } });
-      if (!existing) {
-        await tx.user.create({ data: { email, verified: false } });
-      }
-    });
+    await this.authRepository.sendVerificationCodeTransaction(email, code);
     await this.emailService.sendMemberJoinVerification(email, code);
   }
 
@@ -461,31 +434,24 @@ export class AuthService {
     email: string,
     code: string,
   ): Promise<Omit<User, 'password'>> {
-    return await this.prismaService.$transaction(async (tx) => {
-      const verification = await tx.verificationCode.findUnique({
-        where: { email },
+    const { isValid } = await this.authRepository.verifyEmailCodeTransaction(
+      email,
+      code,
+    );
+    if (!isValid) {
+      throw new BadRequestException({
+        errorCode: ERROR_CODE_MAP.AUTH_002,
+        errorMessage: ERROR_MESSAGE_MAP.AUTH_002,
       });
-      if (!verification || verification.code !== code) {
-        throw new BadRequestException({
-          errorCode: ERROR_CODE_MAP.AUTH_002,
-          errorMessage: ERROR_MESSAGE_MAP.AUTH_002,
-        });
-      }
-      if (verification.expiresAt < new Date()) {
-        throw new BadRequestException({
-          errorCode: ERROR_CODE_MAP.AUTH_001,
-          errorMessage: ERROR_MESSAGE_MAP.AUTH_001,
-        });
-      }
-      const user = await this.usersService.createUserByEmail(email);
-      if (user) {
-        await tx.user.update({ where: { email }, data: { verified: true } });
-      }
+    }
 
-      const { password, ...safeUser } = user;
+    const user = await this.usersService.createUserByEmail(email);
+    if (user) {
+      await this.authRepository.markUserAsVerified(email);
+    }
 
-      return safeUser;
-    });
+    const { password, ...safeUser } = user;
+    return safeUser;
   }
 
   /**
@@ -494,10 +460,7 @@ export class AuthService {
    * @param email 이메일 주소
    */
   async storeVerificationToken(token: string, email: string): Promise<void> {
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    await this.prismaService.verificationToken.create({
-      data: { token, email, expiresAt },
-    });
+    await this.authRepository.storeVerificationToken(token, email);
   }
 
   /**
@@ -510,11 +473,7 @@ export class AuthService {
     refreshToken: string,
   ): Promise<void> {
     const hash = await bcrypt.hash(refreshToken, 10);
-
-    await this.prismaService.user.update({
-      where: { id: userId },
-      data: { currentHashedRefreshToken: hash },
-    });
+    await this.authRepository.setRefreshTokenHash(userId, hash);
   }
 
   /**
@@ -523,9 +482,7 @@ export class AuthService {
    * @returns 해시된 리프레시 토큰
    */
   async getCurrentRefreshTokenHash(userId: number): Promise<string | null> {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-    });
+    const user = await this.authRepository.findUserWithRefreshToken(userId);
     return user?.currentHashedRefreshToken ?? null;
   }
 
@@ -534,10 +491,7 @@ export class AuthService {
    * @param userId 사용자 ID
    */
   async removeRefreshTokenHash(userId: number): Promise<void> {
-    await this.prismaService.user.update({
-      where: { id: userId },
-      data: { currentHashedRefreshToken: null },
-    });
+    await this.authRepository.removeRefreshTokenHash(userId);
   }
 
   /**
@@ -546,9 +500,7 @@ export class AuthService {
    * @param token 리프레시 토큰
    */
   async verifyRefreshToken(userId: number, token: string): Promise<void> {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-    });
+    const user = await this.authRepository.findUserWithRefreshToken(userId);
     if (!user?.currentHashedRefreshToken) {
       throw new UnauthorizedException({
         errorCode: ERROR_CODE_MAP.AUTH_002,

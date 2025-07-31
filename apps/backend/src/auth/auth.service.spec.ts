@@ -13,6 +13,7 @@ import { EmailService } from '../email/email.service';
 import { frontendConfig } from '../config/frontend.config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthRepository } from './auth.repository';
 
 jest.mock('bcryptjs');
 
@@ -92,6 +93,20 @@ describe('AuthService', () => {
     baseUrl: 'http://localhost:3000',
   };
 
+  const mockAuthRepository = {
+    findEmailFromVerificationToken: jest.fn(),
+    createUserWithOAuth: jest.fn(),
+    findOAuthAccount: jest.fn(),
+    linkOAuthAccount: jest.fn(),
+    sendVerificationCodeTransaction: jest.fn(),
+    verifyEmailCodeTransaction: jest.fn(),
+    markUserAsVerified: jest.fn(),
+    storeVerificationToken: jest.fn(),
+    setRefreshTokenHash: jest.fn(),
+    findUserWithRefreshToken: jest.fn(),
+    removeRefreshTokenHash: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -119,6 +134,10 @@ describe('AuthService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: AuthRepository,
+          useValue: mockAuthRepository,
         },
       ],
     }).compile();
@@ -229,7 +248,7 @@ describe('AuthService', () => {
         mockJwtService.sign
           .mockReturnValueOnce(expectedTokens.accessToken)
           .mockReturnValueOnce(expectedTokens.refreshToken);
-        mockPrismaService.user.update.mockResolvedValue(mockUser);
+        mockAuthRepository.setRefreshTokenHash.mockResolvedValue(undefined);
 
         // Act
         const result = await service.loginWithEmail(loginDto);
@@ -243,7 +262,7 @@ describe('AuthService', () => {
           user: userWithoutPassword,
         });
         expect(mockJwtService.sign).toHaveBeenCalledTimes(2);
-        expect(mockPrismaService.user.update).toHaveBeenCalled();
+        expect(mockAuthRepository.setRefreshTokenHash).toHaveBeenCalled();
       });
     });
 
@@ -300,7 +319,7 @@ describe('AuthService', () => {
       mockJwtService.sign
         .mockReturnValueOnce(expectedTokens.accessToken)
         .mockReturnValueOnce(expectedTokens.refreshToken);
-      mockPrismaService.user.update.mockResolvedValue(mockUser);
+      mockAuthRepository.setRefreshTokenHash.mockResolvedValue(undefined);
 
       // Act
       const result = await service.loginWithOAuth(mockUser as any);
@@ -308,7 +327,7 @@ describe('AuthService', () => {
       // Assert
       expect(result).toEqual(expectedTokens);
       expect(mockJwtService.sign).toHaveBeenCalledTimes(2);
-      expect(mockPrismaService.user.update).toHaveBeenCalled();
+      expect(mockAuthRepository.setRefreshTokenHash).toHaveBeenCalled();
     });
   });
 
@@ -321,7 +340,7 @@ describe('AuthService', () => {
         email,
       };
 
-      mockPrismaService.verificationToken.create.mockResolvedValue(mockToken);
+      mockAuthRepository.storeVerificationToken.mockResolvedValue(undefined);
 
       // Act
       const token = await service.generateVerificationToken(email);
@@ -329,7 +348,7 @@ describe('AuthService', () => {
       // Assert
       expect(token).toBeTruthy();
       expect(typeof token).toBe('string');
-      expect(mockPrismaService.verificationToken.create).toHaveBeenCalled();
+      expect(mockAuthRepository.storeVerificationToken).toHaveBeenCalled();
     });
   });
 

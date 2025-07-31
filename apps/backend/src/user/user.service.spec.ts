@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from './user.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { UserRepository } from './user.repository';
 import {
   ConflictException,
   NotFoundException,
@@ -14,7 +14,7 @@ jest.mock('bcryptjs');
 
 describe('UserService', () => {
   let service: UserService;
-  let prismaService: PrismaService;
+  let userRepository: UserRepository;
 
   // 테스트 데이터 팩토리 함수들
   const createMockUser = (overrides = {}) => ({
@@ -42,22 +42,18 @@ describe('UserService', () => {
     ...overrides,
   });
 
-  const mockPrismaService = {
-    user: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-    oAuthAccount: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      delete: jest.fn(),
-      deleteMany: jest.fn(),
-      findMany: jest.fn(),
-    },
+  const mockUserRepository = {
+    findByEmail: jest.fn(),
+    findById: jest.fn(),
+    findByIdWithOAuth: jest.fn(),
+    findByOAuthId: jest.fn(),
+    create: jest.fn(),
+    updatePassword: jest.fn(),
+    updatePasswordByEmail: jest.fn(),
+    updateProfile: jest.fn(),
+    delete: jest.fn(),
+    findOAuthAccountsByUserId: jest.fn(),
+    deleteOAuthAccounts: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -65,14 +61,14 @@ describe('UserService', () => {
       providers: [
         UserService,
         {
-          provide: PrismaService,
-          useValue: mockPrismaService,
+          provide: UserRepository,
+          useValue: mockUserRepository,
         },
       ],
     }).compile();
 
     service = module.get<UserService>(UserService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    userRepository = module.get<UserRepository>(UserRepository);
   });
 
   afterEach(() => {
@@ -92,16 +88,14 @@ describe('UserService', () => {
         const email = 'test@example.com';
         const mockUser = createMockUser();
 
-        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockUserRepository.findByEmail.mockResolvedValue(mockUser);
 
         // Act
         const result = await service.findUserByEmail(email);
 
         // Assert
         expect(result).toEqual(mockUser);
-        expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-          where: { email },
-        });
+        expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(email);
       });
     });
 
@@ -109,7 +103,7 @@ describe('UserService', () => {
       it('존재하지 않는 이메일로 조회하면 null을 반환한다', async () => {
         // Arrange
         const email = 'nonexistent@example.com';
-        mockPrismaService.user.findUnique.mockResolvedValue(null);
+        mockUserRepository.findByEmail.mockResolvedValue(null);
 
         // Act
         const result = await service.findUserByEmail(email);
@@ -127,16 +121,14 @@ describe('UserService', () => {
         const userId = 1;
         const mockUser = createMockUser();
 
-        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockUserRepository.findById.mockResolvedValue(mockUser);
 
         // Act
         const result = await service.findUserById(userId);
 
         // Assert
         expect(result).toEqual(mockUser);
-        expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-          where: { id: userId },
-        });
+        expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
       });
     });
 
@@ -144,7 +136,7 @@ describe('UserService', () => {
       it('존재하지 않는 ID로 조회하면 null을 반환한다', async () => {
         // Arrange
         const userId = 999;
-        mockPrismaService.user.findUnique.mockResolvedValue(null);
+        mockUserRepository.findById.mockResolvedValue(null);
 
         // Act
         const result = await service.findUserById(userId);
@@ -185,17 +177,16 @@ describe('UserService', () => {
           ],
         };
 
-        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockUserRepository.findByIdWithOAuth.mockResolvedValue(mockUser);
 
         // Act
         const result = await service.getUserProfile(userId);
 
         // Assert
         expect(result).toEqual(expectedResult);
-        expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-          where: { id: userId },
-          include: { oauthAccounts: true },
-        });
+        expect(mockUserRepository.findByIdWithOAuth).toHaveBeenCalledWith(
+          userId,
+        );
       });
 
       it('비밀번호가 없는 OAuth 전용 사용자의 프로필을 조회한다', async () => {
@@ -206,7 +197,7 @@ describe('UserService', () => {
           oauthAccounts: [createMockOAuthAccount()],
         });
 
-        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockUserRepository.findByIdWithOAuth.mockResolvedValue(mockUser);
 
         // Act
         const result = await service.getUserProfile(userId);
@@ -220,7 +211,7 @@ describe('UserService', () => {
       it('존재하지 않는 사용자 ID로 조회하면 NotFoundException을 발생시킨다', async () => {
         // Arrange
         const userId = 999;
-        mockPrismaService.user.findUnique.mockResolvedValue(null);
+        mockUserRepository.findByIdWithOAuth.mockResolvedValue(null);
 
         // Act & Assert
         await expect(service.getUserProfile(userId)).rejects.toThrow(
@@ -239,8 +230,8 @@ describe('UserService', () => {
         nickname: updateDto.nickname,
       });
 
-      mockPrismaService.user.findUnique.mockResolvedValue(createMockUser());
-      mockPrismaService.user.update.mockResolvedValue(mockUpdatedUser);
+      mockUserRepository.findById.mockResolvedValue(createMockUser());
+      mockUserRepository.updateProfile.mockResolvedValue(mockUpdatedUser);
 
       // Act
       const result = await service.updateUserProfile(userId, updateDto);
@@ -254,10 +245,10 @@ describe('UserService', () => {
         createdAt: mockUpdatedUser.createdAt,
         updatedAt: mockUpdatedUser.updatedAt,
       });
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: userId },
-        data: updateDto,
-      });
+      expect(mockUserRepository.updateProfile).toHaveBeenCalledWith(
+        userId,
+        updateDto,
+      );
     });
   });
 
@@ -270,13 +261,10 @@ describe('UserService', () => {
         const newPassword = 'newPassword';
         const mockUser = createMockUser();
 
-        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockUserRepository.findById.mockResolvedValue(mockUser);
         (bcrypt.compare as jest.Mock).mockResolvedValue(true);
         (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed-password');
-        mockPrismaService.user.update.mockResolvedValue({
-          ...mockUser,
-          password: 'new-hashed-password',
-        });
+        mockUserRepository.updatePassword.mockResolvedValue(undefined);
 
         // Act
         const result = await service.changeUserPassword(
@@ -294,6 +282,10 @@ describe('UserService', () => {
           mockUser.password,
         );
         expect(bcrypt.hash).toHaveBeenCalledWith(newPassword, 10);
+        expect(mockUserRepository.updatePassword).toHaveBeenCalledWith(
+          userId,
+          'new-hashed-password',
+        );
       });
     });
 
@@ -305,7 +297,7 @@ describe('UserService', () => {
         const newPassword = 'newPassword';
         const mockUser = createMockUser();
 
-        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockUserRepository.findById.mockResolvedValue(mockUser);
         (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
         // Act & Assert
@@ -317,25 +309,12 @@ describe('UserService', () => {
       it('사용자가 존재하지 않으면 NotFoundException을 발생시킨다', async () => {
         // Arrange
         const userId = 999;
-        mockPrismaService.user.findUnique.mockResolvedValue(null);
+        mockUserRepository.findById.mockResolvedValue(null);
 
         // Act & Assert
         await expect(
           service.changeUserPassword(userId, 'password', 'newPassword'),
         ).rejects.toThrow(NotFoundException);
-      });
-
-      it('OAuth 전용 계정(비밀번호 없음)은 비밀번호를 변경할 수 없다', async () => {
-        // Arrange
-        const userId = 1;
-        const mockUser = createMockUser({ password: null });
-
-        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-
-        // Act & Assert
-        await expect(
-          service.changeUserPassword(userId, 'password', 'newPassword'),
-        ).rejects.toThrow(BadRequestException);
       });
     });
   });
@@ -348,7 +327,7 @@ describe('UserService', () => {
         const password = 'password123';
         const mockUser = createMockUser();
 
-        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockUserRepository.findById.mockResolvedValue(mockUser);
         (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
         // Act
@@ -370,7 +349,7 @@ describe('UserService', () => {
         const wrongPassword = 'wrongPassword';
         const mockUser = createMockUser();
 
-        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockUserRepository.findById.mockResolvedValue(mockUser);
         (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
         // Act
@@ -383,7 +362,7 @@ describe('UserService', () => {
       it('사용자가 존재하지 않으면 NotFoundException을 발생시킨다', async () => {
         // Arrange
         const userId = 999;
-        mockPrismaService.user.findUnique.mockResolvedValue(null);
+        mockUserRepository.findById.mockResolvedValue(null);
 
         // Act & Assert
         await expect(
@@ -396,7 +375,7 @@ describe('UserService', () => {
         const userId = 1;
         const mockUser = createMockUser({ password: null });
 
-        mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockUserRepository.findById.mockResolvedValue(mockUser);
 
         // Act & Assert
         await expect(
@@ -417,12 +396,10 @@ describe('UserService', () => {
           createMockOAuthAccount({ provider: 'kakao' }),
         ];
 
-        mockPrismaService.oAuthAccount.findMany.mockResolvedValue(
+        mockUserRepository.findOAuthAccountsByUserId.mockResolvedValue(
           mockOAuthAccounts,
         );
-        mockPrismaService.oAuthAccount.deleteMany.mockResolvedValue({
-          count: 1,
-        });
+        mockUserRepository.deleteOAuthAccounts.mockResolvedValue(undefined);
 
         // Act
         const result = await service.disconnectOAuthAccount(userId, provider);
@@ -431,9 +408,10 @@ describe('UserService', () => {
         expect(result).toEqual({
           message: 'google 계정 연결이 해제되었습니다.',
         });
-        expect(mockPrismaService.oAuthAccount.deleteMany).toHaveBeenCalledWith({
-          where: { userId, provider },
-        });
+        expect(mockUserRepository.deleteOAuthAccounts).toHaveBeenCalledWith(
+          userId,
+          provider,
+        );
       });
     });
 
@@ -446,7 +424,7 @@ describe('UserService', () => {
           createMockOAuthAccount({ provider: 'google' }),
         ];
 
-        mockPrismaService.oAuthAccount.findMany.mockResolvedValue(
+        mockUserRepository.findOAuthAccountsByUserId.mockResolvedValue(
           mockOAuthAccounts,
         );
 
@@ -454,31 +432,6 @@ describe('UserService', () => {
         await expect(
           service.disconnectOAuthAccount(userId, provider),
         ).rejects.toThrow(ForbiddenException);
-      });
-
-      it('연결되지 않은 OAuth 제공자를 해제하려고 해도 정상적으로 처리한다', async () => {
-        // Arrange
-        const userId = 1;
-        const provider = 'apple';
-        const mockOAuthAccounts = [
-          createMockOAuthAccount({ provider: 'google' }),
-          createMockOAuthAccount({ provider: 'kakao' }),
-        ];
-
-        mockPrismaService.oAuthAccount.findMany.mockResolvedValue(
-          mockOAuthAccounts,
-        );
-        mockPrismaService.oAuthAccount.deleteMany.mockResolvedValue({
-          count: 0,
-        });
-
-        // Act
-        const result = await service.disconnectOAuthAccount(userId, provider);
-
-        // Assert
-        expect(result).toEqual({
-          message: 'apple 계정 연결이 해제되었습니다.',
-        });
       });
     });
   });

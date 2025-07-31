@@ -1,32 +1,28 @@
 import { COUNTRY_CODE_MAP } from './../common/constants/country-code.constant';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SubscriptionService } from './subscription.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { SubscriptionRepository } from './subscription.repository';
 import { NotFoundException } from '@nestjs/common';
 
 describe('SubscriptionService', () => {
   let service: SubscriptionService;
-  let prismaService: PrismaService;
+  let subscriptionRepository: SubscriptionRepository;
 
-  const mockPrismaService = {
-    company: {
-      findUnique: jest.fn(),
-    },
-    subscriptionCompany: {
-      upsert: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      findMany: jest.fn(),
-    },
-    economicIndicator: {
-      findFirst: jest.fn(),
-    },
-    subscriptionIndicatorGroup: {
-      upsert: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      findMany: jest.fn(),
-    },
+  const mockSubscriptionRepository = {
+    findCompanyById: jest.fn(),
+    upsertCompanySubscription: jest.fn(),
+    findCompanySubscription: jest.fn(),
+    updateCompanySubscription: jest.fn(),
+    findUserCompanySubscriptions: jest.fn(),
+    findActiveCompanySubscription: jest.fn(),
+    findCompanySubscribers: jest.fn(),
+    findIndicatorGroupByBaseNameAndCountry: jest.fn(),
+    upsertIndicatorGroupSubscription: jest.fn(),
+    findIndicatorGroupSubscription: jest.fn(),
+    updateIndicatorGroupSubscription: jest.fn(),
+    findUserIndicatorGroupSubscriptions: jest.fn(),
+    findActiveIndicatorGroupSubscription: jest.fn(),
+    findIndicatorGroupSubscribers: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -34,35 +30,38 @@ describe('SubscriptionService', () => {
       providers: [
         SubscriptionService,
         {
-          provide: PrismaService,
-          useValue: mockPrismaService,
+          provide: SubscriptionRepository,
+          useValue: mockSubscriptionRepository,
         },
       ],
     }).compile();
 
     service = module.get<SubscriptionService>(SubscriptionService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    subscriptionRepository = module.get<SubscriptionRepository>(
+      SubscriptionRepository,
+    );
     jest.clearAllMocks();
   });
 
   describe('subscribeCompany', () => {
     it('정상적으로 회사 구독', async () => {
-      mockPrismaService.company.findUnique.mockResolvedValue({ id: 1 });
-      mockPrismaService.subscriptionCompany.upsert.mockResolvedValue({});
+      mockSubscriptionRepository.findCompanyById.mockResolvedValue({ id: 1 });
+      mockSubscriptionRepository.upsertCompanySubscription.mockResolvedValue(
+        {},
+      );
 
       await expect(service.subscribeCompany(1, 1)).resolves.toBeUndefined();
 
-      expect(mockPrismaService.subscriptionCompany.upsert).toHaveBeenCalledWith(
-        {
-          where: { userId_companyId: { userId: 1, companyId: 1 } },
-          update: { isActive: true },
-          create: { userId: 1, companyId: 1, isActive: true },
-        },
+      expect(mockSubscriptionRepository.findCompanyById).toHaveBeenCalledWith(
+        1,
       );
+      expect(
+        mockSubscriptionRepository.upsertCompanySubscription,
+      ).toHaveBeenCalledWith(1, 1, true);
     });
 
     it('존재하지 않는 회사 구독 시 404', async () => {
-      mockPrismaService.company.findUnique.mockResolvedValue(null);
+      mockSubscriptionRepository.findCompanyById.mockResolvedValue(null);
 
       await expect(service.subscribeCompany(1, 999)).rejects.toThrow(
         NotFoundException,
@@ -72,29 +71,33 @@ describe('SubscriptionService', () => {
 
   describe('unsubscribeCompany', () => {
     it('정상적으로 회사 구독 해제', async () => {
-      mockPrismaService.subscriptionCompany.findUnique.mockResolvedValue({
+      mockSubscriptionRepository.findCompanySubscription.mockResolvedValue({
         isActive: true,
       });
-      mockPrismaService.subscriptionCompany.update.mockResolvedValue({});
+      mockSubscriptionRepository.updateCompanySubscription.mockResolvedValue(
+        {},
+      );
 
       await expect(service.unsubscribeCompany(1, 1)).resolves.toBeUndefined();
 
-      expect(mockPrismaService.subscriptionCompany.update).toHaveBeenCalledWith(
-        {
-          where: { userId_companyId: { userId: 1, companyId: 1 } },
-          data: { isActive: false },
-        },
-      );
+      expect(
+        mockSubscriptionRepository.findCompanySubscription,
+      ).toHaveBeenCalledWith(1, 1);
+      expect(
+        mockSubscriptionRepository.updateCompanySubscription,
+      ).toHaveBeenCalledWith(1, 1, false);
     });
 
     it('구독 정보가 없거나 이미 해제된 경우 404', async () => {
-      mockPrismaService.subscriptionCompany.findUnique.mockResolvedValue(null);
+      mockSubscriptionRepository.findCompanySubscription.mockResolvedValue(
+        null,
+      );
 
       await expect(service.unsubscribeCompany(1, 1)).rejects.toThrow(
         NotFoundException,
       );
 
-      mockPrismaService.subscriptionCompany.findUnique.mockResolvedValue({
+      mockSubscriptionRepository.findCompanySubscription.mockResolvedValue({
         isActive: false,
       });
 
@@ -107,25 +110,35 @@ describe('SubscriptionService', () => {
   describe('getSubscriptionCompanies', () => {
     it('구독 중인 회사 목록 반환', async () => {
       const mockList = [{ id: 1 }, { id: 2 }];
-      mockPrismaService.subscriptionCompany.findMany.mockResolvedValue(
+      mockSubscriptionRepository.findUserCompanySubscriptions.mockResolvedValue(
         mockList,
       );
 
       const result = await service.getSubscriptionCompanies(1);
       expect(result).toEqual(mockList);
+      expect(
+        mockSubscriptionRepository.findUserCompanySubscriptions,
+      ).toHaveBeenCalledWith(1);
     });
   });
 
   describe('isCompanySubscribed', () => {
     it('구독 중이면 true 반환', async () => {
-      mockPrismaService.subscriptionCompany.findUnique.mockResolvedValue({});
+      mockSubscriptionRepository.findActiveCompanySubscription.mockResolvedValue(
+        {},
+      );
 
       const result = await service.isCompanySubscribed(1, 1);
       expect(result).toBe(true);
+      expect(
+        mockSubscriptionRepository.findActiveCompanySubscription,
+      ).toHaveBeenCalledWith(1, 1);
     });
 
     it('구독 중이 아니면 false 반환', async () => {
-      mockPrismaService.subscriptionCompany.findUnique.mockResolvedValue(null);
+      mockSubscriptionRepository.findActiveCompanySubscription.mockResolvedValue(
+        null,
+      );
 
       const result = await service.isCompanySubscribed(1, 1);
       expect(result).toBe(false);
@@ -134,30 +147,29 @@ describe('SubscriptionService', () => {
 
   describe('subscribeIndicatorGroup', () => {
     it('정상적으로 지표 그룹 구독', async () => {
-      mockPrismaService.economicIndicator.findFirst.mockResolvedValue({});
-      mockPrismaService.subscriptionIndicatorGroup.upsert.mockResolvedValue({});
+      mockSubscriptionRepository.findIndicatorGroupByBaseNameAndCountry.mockResolvedValue(
+        {},
+      );
+      mockSubscriptionRepository.upsertIndicatorGroupSubscription.mockResolvedValue(
+        {},
+      );
 
       await expect(
         service.subscribeIndicatorGroup(1, 'CPI', COUNTRY_CODE_MAP.USA),
       ).resolves.toBeUndefined();
 
       expect(
-        mockPrismaService.subscriptionIndicatorGroup.upsert,
-      ).toHaveBeenCalledWith({
-        where: {
-          userId_baseName_country: {
-            userId: 1,
-            baseName: 'CPI',
-            country: 'USA',
-          },
-        },
-        update: { isActive: true },
-        create: { userId: 1, baseName: 'CPI', country: 'USA', isActive: true },
-      });
+        mockSubscriptionRepository.findIndicatorGroupByBaseNameAndCountry,
+      ).toHaveBeenCalledWith('CPI', 'USA');
+      expect(
+        mockSubscriptionRepository.upsertIndicatorGroupSubscription,
+      ).toHaveBeenCalledWith(1, 'CPI', 'USA', true);
     });
 
     it('존재하지 않는 지표 그룹 구독 시 404', async () => {
-      mockPrismaService.economicIndicator.findFirst.mockResolvedValue(null);
+      mockSubscriptionRepository.findIndicatorGroupByBaseNameAndCountry.mockResolvedValue(
+        null,
+      );
 
       await expect(
         service.subscribeIndicatorGroup(1, 'CPI', COUNTRY_CODE_MAP.USA),
@@ -167,33 +179,29 @@ describe('SubscriptionService', () => {
 
   describe('unsubscribeIndicatorGroup', () => {
     it('정상적으로 지표 그룹 구독 해제', async () => {
-      mockPrismaService.subscriptionIndicatorGroup.findUnique.mockResolvedValue(
+      mockSubscriptionRepository.findIndicatorGroupSubscription.mockResolvedValue(
         {
           isActive: true,
         },
       );
-      mockPrismaService.subscriptionIndicatorGroup.update.mockResolvedValue({});
+      mockSubscriptionRepository.updateIndicatorGroupSubscription.mockResolvedValue(
+        {},
+      );
 
       await expect(
         service.unsubscribeIndicatorGroup(1, 'CPI', COUNTRY_CODE_MAP.USA),
       ).resolves.toBeUndefined();
 
       expect(
-        mockPrismaService.subscriptionIndicatorGroup.update,
-      ).toHaveBeenCalledWith({
-        where: {
-          userId_baseName_country: {
-            userId: 1,
-            baseName: 'CPI',
-            country: 'USA',
-          },
-        },
-        data: { isActive: false },
-      });
+        mockSubscriptionRepository.findIndicatorGroupSubscription,
+      ).toHaveBeenCalledWith(1, 'CPI', 'USA');
+      expect(
+        mockSubscriptionRepository.updateIndicatorGroupSubscription,
+      ).toHaveBeenCalledWith(1, 'CPI', 'USA', false);
     });
 
     it('구독 정보가 없거나 이미 해제된 경우 404', async () => {
-      mockPrismaService.subscriptionIndicatorGroup.findUnique.mockResolvedValue(
+      mockSubscriptionRepository.findIndicatorGroupSubscription.mockResolvedValue(
         null,
       );
 
@@ -201,7 +209,7 @@ describe('SubscriptionService', () => {
         service.unsubscribeIndicatorGroup(1, 'CPI', COUNTRY_CODE_MAP.USA),
       ).rejects.toThrow(NotFoundException);
 
-      mockPrismaService.subscriptionIndicatorGroup.findUnique.mockResolvedValue(
+      mockSubscriptionRepository.findIndicatorGroupSubscription.mockResolvedValue(
         {
           isActive: false,
         },
@@ -216,18 +224,21 @@ describe('SubscriptionService', () => {
   describe('getSubscriptionIndicatorGroups', () => {
     it('구독 중인 지표 그룹 목록 반환', async () => {
       const mockList = [{ baseName: 'CPI', country: 'USA' }];
-      mockPrismaService.subscriptionIndicatorGroup.findMany.mockResolvedValue(
+      mockSubscriptionRepository.findUserIndicatorGroupSubscriptions.mockResolvedValue(
         mockList,
       );
 
       const result = await service.getSubscriptionIndicatorGroups(1);
       expect(result).toEqual(mockList);
+      expect(
+        mockSubscriptionRepository.findUserIndicatorGroupSubscriptions,
+      ).toHaveBeenCalledWith(1);
     });
   });
 
   describe('isIndicatorGroupSubscribed', () => {
     it('구독 중이면 true 반환', async () => {
-      mockPrismaService.subscriptionIndicatorGroup.findUnique.mockResolvedValue(
+      mockSubscriptionRepository.findActiveIndicatorGroupSubscription.mockResolvedValue(
         {},
       );
 
@@ -237,10 +248,13 @@ describe('SubscriptionService', () => {
         COUNTRY_CODE_MAP.USA,
       );
       expect(result).toBe(true);
+      expect(
+        mockSubscriptionRepository.findActiveIndicatorGroupSubscription,
+      ).toHaveBeenCalledWith(1, 'CPI', 'USA');
     });
 
     it('구독 중이 아니면 false 반환', async () => {
-      mockPrismaService.subscriptionIndicatorGroup.findUnique.mockResolvedValue(
+      mockSubscriptionRepository.findActiveIndicatorGroupSubscription.mockResolvedValue(
         null,
       );
 

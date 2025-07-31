@@ -17,6 +17,7 @@ import { EmailWorker } from './workers/email.worker';
 import { SlackWorker } from './workers/slack.worker';
 import { NotificationDeliveryService } from './notification-delivery.service';
 import { NotificationSSEService } from './sse/notification-sse.service';
+import { NotificationRepository } from './notification.repository';
 import {
   EMAIL_QUEUE_NAME,
   SLACK_QUEUE_NAME,
@@ -50,6 +51,7 @@ import {
   ],
   providers: [
     NotificationService,
+    NotificationRepository,
     NotificationDeliveryService,
     NotificationSSEService,
     NotificationListener,
