@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SearchService } from './search.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { SearchRepository } from './search.repository';
 import { SearchCompanyDto, SearchIndicatorDto } from './dto/search.dto';
 import { Prisma } from '@prisma/client';
 
 describe('SearchService', () => {
   let service: SearchService;
-  let prismaService: PrismaService;
+  let searchRepository: SearchRepository;
 
   // 목 데이터 정의
   const mockCompanies = [
@@ -67,56 +67,45 @@ describe('SearchService', () => {
     },
   ];
 
-  // 목 Prisma 서비스 (새로운 스키마에 맞게 수정)
-  const mockPrismaService = {
-    company: {
-      count: jest.fn(),
-    },
-    economicIndicator: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-      groupBy: jest.fn(),
-    },
-    favoriteCompany: {
-      findMany: jest.fn(),
-    },
-    subscriptionCompany: {
-      findMany: jest.fn(),
-    },
-    favoriteIndicatorGroup: {
-      findMany: jest.fn(),
-    },
-    subscriptionIndicatorGroup: {
-      findMany: jest.fn(),
-    },
-    $queryRaw: jest.fn().mockResolvedValue(mockCompanies),
-    $queryRawUnsafe: jest.fn().mockResolvedValue(mockCompanies),
+  // 목 SearchRepository 서비스
+  const mockSearchRepository = {
+    searchCompaniesRaw: jest.fn(),
+    countCompanies: jest.fn(),
+    findFavoriteCompanies: jest.fn(),
+    findSubscriptionCompanies: jest.fn(),
+    groupIndicatorsByBaseName: jest.fn(),
+    countIndicatorGroups: jest.fn(),
+    findIndicatorsByGroups: jest.fn(),
+    findFavoriteIndicatorGroups: jest.fn(),
+    findSubscriptionIndicatorGroups: jest.fn(),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
     // 각 메서드를 jest.fn()으로 재할당
-    mockPrismaService.$queryRaw = jest.fn().mockResolvedValue(mockCompanies);
-    mockPrismaService.company.count = jest
+    mockSearchRepository.searchCompaniesRaw = jest
+      .fn()
+      .mockResolvedValue(mockCompanies);
+    mockSearchRepository.countCompanies = jest
       .fn()
       .mockResolvedValue(mockCompanies.length);
-    mockPrismaService.favoriteCompany.findMany = jest
+    mockSearchRepository.findFavoriteCompanies = jest
       .fn()
       .mockResolvedValue([]);
-    mockPrismaService.subscriptionCompany.findMany = jest
+    mockSearchRepository.findSubscriptionCompanies = jest
       .fn()
       .mockResolvedValue([]);
-    mockPrismaService.economicIndicator.findMany = jest
+    mockSearchRepository.groupIndicatorsByBaseName = jest
       .fn()
       .mockResolvedValue([]);
-    mockPrismaService.economicIndicator.count = jest.fn().mockResolvedValue(0);
-    mockPrismaService.economicIndicator.groupBy = jest
+    mockSearchRepository.countIndicatorGroups = jest.fn().mockResolvedValue([]);
+    mockSearchRepository.findIndicatorsByGroups = jest
       .fn()
       .mockResolvedValue([]);
-    mockPrismaService.favoriteIndicatorGroup.findMany = jest
+    mockSearchRepository.findFavoriteIndicatorGroups = jest
       .fn()
       .mockResolvedValue([]);
-    mockPrismaService.subscriptionIndicatorGroup.findMany = jest
+    mockSearchRepository.findSubscriptionIndicatorGroups = jest
       .fn()
       .mockResolvedValue([]);
 
@@ -124,14 +113,14 @@ describe('SearchService', () => {
       providers: [
         SearchService,
         {
-          provide: PrismaService,
-          useValue: mockPrismaService,
+          provide: SearchRepository,
+          useValue: mockSearchRepository,
         },
       ],
     }).compile();
 
     service = module.get<SearchService>(SearchService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    searchRepository = module.get<SearchRepository>(SearchRepository);
   });
 
   it('서비스가 정의되어 있어야 합니다', () => {
@@ -143,16 +132,21 @@ describe('SearchService', () => {
       const searchDto: SearchCompanyDto = {};
       const mockTotal = mockCompanies.length;
 
-      mockPrismaService.$queryRaw.mockResolvedValue(mockCompanies);
-      mockPrismaService.company.count.mockResolvedValue(mockTotal);
+      mockSearchRepository.searchCompaniesRaw.mockResolvedValue(mockCompanies);
+      mockSearchRepository.countCompanies.mockResolvedValue(mockTotal);
 
       const result = await service.searchCompanies(searchDto);
 
-      const called =
-        mockPrismaService.$queryRaw.mock.calls.length > 0 ||
-        mockPrismaService.$queryRawUnsafe.mock.calls.length > 0;
-      expect(called).toBe(true);
-      expect(mockPrismaService.company.count).toHaveBeenCalled();
+      expect(mockSearchRepository.searchCompaniesRaw).toHaveBeenCalledWith(
+        '',
+        '',
+        10,
+        0,
+      );
+      expect(mockSearchRepository.countCompanies).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+      );
 
       expect(result).toEqual({
         items: expect.any(Array),
@@ -190,37 +184,24 @@ describe('SearchService', () => {
           c.ticker.includes(searchDto.query),
       );
 
-      mockPrismaService.$queryRaw.mockResolvedValue(filteredCompanies);
-      mockPrismaService.company.count.mockResolvedValue(mockTotal);
+      mockSearchRepository.searchCompaniesRaw.mockResolvedValue(
+        filteredCompanies,
+      );
+      mockSearchRepository.countCompanies.mockResolvedValue(mockTotal);
 
       const result = await service.searchCompanies(searchDto);
 
-      const called =
-        mockPrismaService.$queryRaw.mock.calls.length > 0 ||
-        mockPrismaService.$queryRawUnsafe.mock.calls.length > 0;
-      expect(called).toBe(true);
+      expect(mockSearchRepository.searchCompaniesRaw).toHaveBeenCalledWith(
+        searchDto.query,
+        searchDto.country,
+        searchDto.limit,
+        0,
+      );
 
-      // WHERE 조건이 올바르게 생성되었는지 확인
-      const queryRawCall =
-        mockPrismaService.$queryRaw.mock.calls[0] ||
-        mockPrismaService.$queryRawUnsafe.mock.calls[0];
-      let queryStr = '';
-      if (Array.isArray(queryRawCall[0])) {
-        queryStr = queryRawCall[0].join('');
-      } else {
-        queryStr = String(queryRawCall[0]);
-      }
-      expect(queryStr).toContain('SELECT *');
-      expect(queryStr).toContain('ORDER BY');
-      expect(queryStr).toContain('LIMIT');
-      expect(queryStr).toContain('OFFSET');
-
-      expect(mockPrismaService.company.count).toHaveBeenCalledWith({
-        where: expect.objectContaining({
-          OR: expect.any(Array),
-          country: searchDto.country,
-        }),
-      });
+      expect(mockSearchRepository.countCompanies).toHaveBeenCalledWith(
+        searchDto.query,
+        searchDto.country,
+      );
 
       expect(result).toEqual({
         items: expect.any(Array),
@@ -242,36 +223,28 @@ describe('SearchService', () => {
       const mockFavoriteCompanies = [{ companyId: 1 }];
       const mockSubscriptionCompanies = [{ companyId: 2 }];
 
-      mockPrismaService.$queryRaw.mockResolvedValue(mockCompanies);
-      mockPrismaService.company.count.mockResolvedValue(mockTotal);
-      mockPrismaService.favoriteCompany.findMany.mockResolvedValue(
+      mockSearchRepository.searchCompaniesRaw.mockResolvedValue(mockCompanies);
+      mockSearchRepository.countCompanies.mockResolvedValue(mockTotal);
+      mockSearchRepository.findFavoriteCompanies.mockResolvedValue(
         mockFavoriteCompanies,
       );
-      mockPrismaService.subscriptionCompany.findMany.mockResolvedValue(
+      mockSearchRepository.findSubscriptionCompanies.mockResolvedValue(
         mockSubscriptionCompanies,
       );
 
       const result = await service.searchCompanies(searchDto, userId);
 
-      expect(mockPrismaService.favoriteCompany.findMany).toHaveBeenCalledWith({
-        where: {
-          userId,
-          companyId: { in: mockCompanies.map((c) => c.id) },
-          isActive: true,
-        },
-        select: { companyId: true },
-      });
+      expect(mockSearchRepository.findFavoriteCompanies).toHaveBeenCalledWith(
+        userId,
+        mockCompanies.map((c) => c.id),
+      );
 
       expect(
-        mockPrismaService.subscriptionCompany.findMany,
-      ).toHaveBeenCalledWith({
-        where: {
-          userId,
-          companyId: { in: mockCompanies.map((c) => c.id) },
-          isActive: true,
-        },
-        select: { companyId: true },
-      });
+        mockSearchRepository.findSubscriptionCompanies,
+      ).toHaveBeenCalledWith(
+        userId,
+        mockCompanies.map((c) => c.id),
+      );
 
       expect(result.items[0].isFavorite).toBe(true);
       expect(result.items[0].hasSubscription).toBe(false);
@@ -294,28 +267,26 @@ describe('SearchService', () => {
         { baseName: 'CPI', country: 'USA' },
       ];
 
-      mockPrismaService.economicIndicator.groupBy
-        .mockResolvedValueOnce(mockGroupsWithCount)
-        .mockResolvedValueOnce(mockTotalGroups);
+      mockSearchRepository.groupIndicatorsByBaseName.mockResolvedValue(
+        mockGroupsWithCount,
+      );
+      mockSearchRepository.countIndicatorGroups.mockResolvedValue(
+        mockTotalGroups,
+      );
 
-      mockPrismaService.economicIndicator.findMany.mockResolvedValue(
+      mockSearchRepository.findIndicatorsByGroups.mockResolvedValue(
         mockEconomicIndicators,
       );
 
       const result = await service.searchIndicators(searchDto);
 
-      expect(mockPrismaService.economicIndicator.groupBy).toHaveBeenCalledWith({
-        by: ['baseName', 'country'],
-        where: {},
-        orderBy: [{ baseName: 'asc' }, { country: 'asc' }],
-        skip: 0,
-        take: 10,
-      });
+      expect(
+        mockSearchRepository.groupIndicatorsByBaseName,
+      ).toHaveBeenCalledWith({}, 0, 10);
 
-      expect(mockPrismaService.economicIndicator.groupBy).toHaveBeenCalledWith({
-        by: ['baseName', 'country'],
-        where: {},
-      });
+      expect(mockSearchRepository.countIndicatorGroups).toHaveBeenCalledWith(
+        {},
+      );
 
       expect(result).toEqual({
         items: expect.any(Array),
@@ -355,29 +326,32 @@ describe('SearchService', () => {
       const mockGroupsWithCount = [{ baseName: 'CPI', country: 'USA' }];
       const mockTotalGroups = [{ baseName: 'CPI', country: 'USA' }];
 
-      mockPrismaService.economicIndicator.groupBy
-        .mockResolvedValueOnce(mockGroupsWithCount)
-        .mockResolvedValueOnce(mockTotalGroups);
+      mockSearchRepository.groupIndicatorsByBaseName.mockResolvedValue(
+        mockGroupsWithCount,
+      );
+      mockSearchRepository.countIndicatorGroups.mockResolvedValue(
+        mockTotalGroups,
+      );
 
-      mockPrismaService.economicIndicator.findMany.mockResolvedValue(
+      mockSearchRepository.findIndicatorsByGroups.mockResolvedValue(
         filteredIndicators,
       );
 
       const result = await service.searchIndicators(searchDto);
 
-      expect(mockPrismaService.economicIndicator.groupBy).toHaveBeenCalledWith({
-        by: ['baseName', 'country'],
-        where: {
+      expect(
+        mockSearchRepository.groupIndicatorsByBaseName,
+      ).toHaveBeenCalledWith(
+        {
           name: {
             contains: searchDto.query,
             mode: Prisma.QueryMode.insensitive,
           },
           country: searchDto.country,
         },
-        orderBy: [{ baseName: 'asc' }, { country: 'asc' }],
-        skip: 0,
-        take: searchDto.limit,
-      });
+        0,
+        searchDto.limit,
+      );
 
       expect(result).toEqual({
         items: expect.any(Array),
@@ -412,35 +386,32 @@ describe('SearchService', () => {
         { baseName: 'CPI', country: 'USA' },
       ];
 
-      mockPrismaService.economicIndicator.groupBy
-        .mockResolvedValueOnce(mockGroupsWithCount)
-        .mockResolvedValueOnce(mockTotalGroups);
+      mockSearchRepository.groupIndicatorsByBaseName.mockResolvedValue(
+        mockGroupsWithCount,
+      );
+      mockSearchRepository.countIndicatorGroups.mockResolvedValue(
+        mockTotalGroups,
+      );
 
-      mockPrismaService.economicIndicator.findMany.mockResolvedValue(
+      mockSearchRepository.findIndicatorsByGroups.mockResolvedValue(
         mockEconomicIndicators,
       );
-      mockPrismaService.favoriteIndicatorGroup.findMany.mockResolvedValue(
+      mockSearchRepository.findFavoriteIndicatorGroups.mockResolvedValue(
         mockFavoriteIndicatorGroups,
       );
-      mockPrismaService.subscriptionIndicatorGroup.findMany.mockResolvedValue(
+      mockSearchRepository.findSubscriptionIndicatorGroups.mockResolvedValue(
         mockSubscriptionIndicatorGroups,
       );
 
       const result = await service.searchIndicators(searchDto, userId);
 
       expect(
-        mockPrismaService.favoriteIndicatorGroup.findMany,
-      ).toHaveBeenCalledWith({
-        where: { userId, isActive: true },
-        select: { baseName: true, country: true },
-      });
+        mockSearchRepository.findFavoriteIndicatorGroups,
+      ).toHaveBeenCalledWith(userId);
 
       expect(
-        mockPrismaService.subscriptionIndicatorGroup.findMany,
-      ).toHaveBeenCalledWith({
-        where: { userId, isActive: true },
-        select: { baseName: true, country: true },
-      });
+        mockSearchRepository.findSubscriptionIndicatorGroups,
+      ).toHaveBeenCalledWith(userId);
 
       expect(result.items[0].isFavorite).toBe(true);
       expect(result.items[0].hasNotification).toBe(false);

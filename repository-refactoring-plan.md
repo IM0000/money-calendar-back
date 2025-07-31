@@ -573,6 +573,8 @@ export class UserModule {}
 - [x] CalendarService 리팩토링 완료 ✅ **2025-01-31 완료**
 - [x] `src/notification/notification.repository.ts` 구현 ✅ **2025-01-31 완료**
 - [x] NotificationService 리팩토링 완료 ✅ **2025-01-31 완료**
+- [x] `src/search/search.repository.ts` 구현 ✅ **2025-01-31 완료**
+- [x] SearchService 리팩토링 완료 ✅ **2025-01-31 완료**
 
 ### Phase 4 완료 기준 (1일)
 
