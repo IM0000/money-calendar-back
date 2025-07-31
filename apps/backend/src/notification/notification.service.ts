@@ -110,7 +110,9 @@ export class NotificationService {
   ) {
     switch (contentType) {
       case ContentType.EARNINGS:
-        const earnings = await this.notificationRepository.findEarningsById(contentId);
+        const earnings = await this.notificationRepository.findEarningsById(
+          contentId,
+        );
         if (!earnings) return null;
 
         return this.notificationRepository.findCompanySubscription(
@@ -119,7 +121,9 @@ export class NotificationService {
         );
 
       case ContentType.DIVIDEND:
-        const dividend = await this.notificationRepository.findDividendById(contentId);
+        const dividend = await this.notificationRepository.findDividendById(
+          contentId,
+        );
         if (!dividend) return null;
 
         return this.notificationRepository.findCompanySubscription(
@@ -128,7 +132,10 @@ export class NotificationService {
         );
 
       case ContentType.ECONOMIC_INDICATOR:
-        const indicator = await this.notificationRepository.findEconomicIndicatorById(contentId);
+        const indicator =
+          await this.notificationRepository.findEconomicIndicatorById(
+            contentId,
+          );
         if (!indicator) return null;
 
         return this.notificationRepository.findIndicatorGroupSubscription(
@@ -146,7 +153,8 @@ export class NotificationService {
    * 유저 알림 설정 조회 및 기본값 제공
    */
   async getUserNotificationSettings(userId: number) {
-    const settings = await this.notificationRepository.findUserNotificationSettings(userId);
+    const settings =
+      await this.notificationRepository.findUserNotificationSettings(userId);
 
     if (settings) {
       return settings;
@@ -223,17 +231,22 @@ export class NotificationService {
     // 3) 실제 Earnings / Dividend / EconomicIndicator 데이터를 각각 한 번씩만 조회
     const [earningsMap, dividendMap, indicatorMap] = await Promise.all([
       (async () => {
-        const earningsList = await this.notificationRepository.findEarningsByIds(earningsIds);
+        const earningsList =
+          await this.notificationRepository.findEarningsByIds(earningsIds);
         return Object.fromEntries(earningsList.map((e) => [e.id, e]));
       })(),
 
       (async () => {
-        const dividendList = await this.notificationRepository.findDividendsByIds(dividendIds);
+        const dividendList =
+          await this.notificationRepository.findDividendsByIds(dividendIds);
         return Object.fromEntries(dividendList.map((d) => [d.id, d]));
       })(),
 
       (async () => {
-        const indicatorList = await this.notificationRepository.findEconomicIndicatorsByIds(indicatorIds);
+        const indicatorList =
+          await this.notificationRepository.findEconomicIndicatorsByIds(
+            indicatorIds,
+          );
         return Object.fromEntries(indicatorList.map((i) => [i.id, i]));
       })(),
     ]);
@@ -306,7 +319,9 @@ export class NotificationService {
   async getUnreadNotificationsCount(
     userId: number,
   ): Promise<{ count: number }> {
-    const count = await this.notificationRepository.countUnreadNotifications(userId);
+    const count = await this.notificationRepository.countUnreadNotifications(
+      userId,
+    );
 
     return { count };
   }
@@ -316,7 +331,9 @@ export class NotificationService {
    */
   async markAsRead(userId: number, notificationId: number) {
     // 통합된 Notification 모델에서 알림 찾기
-    const notification = await this.notificationRepository.findNotificationById(notificationId);
+    const notification = await this.notificationRepository.findNotificationById(
+      notificationId,
+    );
 
     if (!notification) {
       throw new NotFoundException({
@@ -337,7 +354,8 @@ export class NotificationService {
     await this.notificationRepository.markNotificationAsRead(notificationId);
 
     // 읽지 않은 알림 개수 업데이트 이벤트 발행
-    const unreadCount = await this.notificationRepository.countUnreadNotifications(userId);
+    const unreadCount =
+      await this.notificationRepository.countUnreadNotifications(userId);
 
     await this.sseService.publishUnreadCountUpdate(userId, unreadCount);
 
@@ -348,7 +366,8 @@ export class NotificationService {
    * 모든 알림 읽음 처리
    */
   async markAllAsRead(userId: number) {
-    const result = await this.notificationRepository.markAllUserNotificationsAsRead(userId);
+    const result =
+      await this.notificationRepository.markAllUserNotificationsAsRead(userId);
 
     // 읽지 않은 알림 개수 0으로 업데이트 이벤트 발행
     await this.sseService.publishUnreadCountUpdate(userId, 0);
@@ -363,7 +382,9 @@ export class NotificationService {
    * 알림 삭제
    */
   async deleteNotification(userId: number, notificationId: number) {
-    const notification = await this.notificationRepository.findNotificationById(notificationId);
+    const notification = await this.notificationRepository.findNotificationById(
+      notificationId,
+    );
 
     if (!notification) {
       throw new NotFoundException({
@@ -388,7 +409,9 @@ export class NotificationService {
    * 사용자의 모든 알림 삭제
    */
   async deleteAllUserNotifications(userId: number) {
-    const result = await this.notificationRepository.deleteAllUserNotifications(userId);
+    const result = await this.notificationRepository.deleteAllUserNotifications(
+      userId,
+    );
 
     return {
       message: '모든 알림이 삭제되었습니다.',
