@@ -6,6 +6,7 @@ import { NotificationController } from './notification.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EmailModule } from '../email/email.module';
 import { SlackModule } from '../slack/slack.module';
+import { DiscordModule } from '../discord/discord.module';
 import { NotificationListener } from './notification.listener';
 import { NotificationScheduler } from './notification.scheduler';
 import { NotificationTestController } from './notification-test.controller';
@@ -15,12 +16,14 @@ import { NotificationQueueService } from './queue/notification-queue.service';
 import { NotificationQueueController } from './queue/notification-queue.controller';
 import { EmailWorker } from './workers/email.worker';
 import { SlackWorker } from './workers/slack.worker';
+import { DiscordWorker } from './workers/discord.worker';
 import { NotificationDeliveryService } from './notification-delivery.service';
 import { NotificationSSEService } from './sse/notification-sse.service';
 import { NotificationRepository } from './notification.repository';
 import {
   EMAIL_QUEUE_NAME,
   SLACK_QUEUE_NAME,
+  DISCORD_QUEUE_NAME,
   QUEUE_CONFIG,
   RATE_LIMITS,
 } from './queue/notification-queue.constants';
@@ -31,6 +34,7 @@ import {
     PrismaModule,
     EmailModule,
     SlackModule,
+    DiscordModule,
     SubscriptionModule,
 
     BullModule.registerQueue({
@@ -42,6 +46,11 @@ import {
       name: SLACK_QUEUE_NAME,
       defaultJobOptions: QUEUE_CONFIG.defaultJobOptions,
       limiter: RATE_LIMITS.slack,
+    }),
+    BullModule.registerQueue({
+      name: DISCORD_QUEUE_NAME,
+      defaultJobOptions: QUEUE_CONFIG.defaultJobOptions,
+      limiter: RATE_LIMITS.discord,
     }),
   ],
   controllers: [
@@ -60,6 +69,7 @@ import {
     NotificationQueueService,
     EmailWorker,
     SlackWorker,
+    DiscordWorker,
   ],
   exports: [NotificationService, NotificationQueueService],
 })

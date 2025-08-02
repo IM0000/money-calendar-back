@@ -14,6 +14,10 @@ import { ApiProperty } from '@nestjs/swagger';
 const SLACK_WEBHOOK_URL_REGEX =
   /^https:\/\/hooks\.slack\.com\/services\/[A-Z0-9]+\/[A-Z0-9]+\/[A-Za-z0-9]+$/;
 
+// Discord 웹훅 URL 정규식
+const DISCORD_WEBHOOK_URL_REGEX =
+  /^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\/[0-9]+\/[A-Za-z0-9\-_]+$/;
+
 export class UpdateUserNotificationSettingsDto {
   @ApiProperty({ description: '이메일 알림 활성화 여부', required: false })
   @IsBoolean()
@@ -42,6 +46,29 @@ export class UpdateUserNotificationSettingsDto {
   })
   @IsOptional()
   slackWebhookUrl?: string;
+
+  @ApiProperty({ description: 'Discord 알림 활성화 여부', required: false })
+  @IsBoolean()
+  @IsOptional()
+  discordEnabled?: boolean;
+
+  @ApiProperty({
+    description: 'Discord Webhook URL (discordEnabled가 true일 때 필수)',
+    required: false,
+    example:
+      'https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz123456789012345678901234567890',
+  })
+  @ValidateIf((o) => o.discordEnabled === true)
+  @IsNotEmpty({
+    message: 'Discord 알림을 활성화할 때는 discordWebhookUrl이 필요합니다.',
+  })
+  @IsUrl({}, { message: '올바른 URL 형식이 아닙니다.' })
+  @Matches(DISCORD_WEBHOOK_URL_REGEX, {
+    message:
+      '올바른 Discord 웹훅 URL 형식이 아닙니다. (예: https://discord.com/api/webhooks/...)',
+  })
+  @IsOptional()
+  discordWebhookUrl?: string;
 
   @ApiProperty({ description: '알림 전체 활성화 여부', required: false })
   @IsBoolean()

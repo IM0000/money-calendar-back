@@ -32,6 +32,8 @@ model UserNotificationSettings {
   emailEnabled         Boolean  @default(false)
   slackEnabled         Boolean  @default(false)
   slackWebhookUrl      String?
+  discordEnabled       Boolean  @default(false)
+  discordWebhookUrl    String?
   notificationsEnabled Boolean  @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -240,6 +242,7 @@ enum ContentType {
 enum NotificationChannel {
   EMAIL
   SLACK
+  DISCORD
 }
 
 enum NotificationStatus {

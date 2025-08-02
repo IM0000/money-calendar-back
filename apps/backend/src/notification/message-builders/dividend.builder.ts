@@ -55,6 +55,60 @@ export function buildDividendNotification(
     content = `${companyName} 배당 관련 알림입니다.`;
   }
 
+  // Discord embed 생성
+  let embedColor = 0x16a34a; // 초록색 (배당)
+  let embedTitle = `💰 ${companyName}${ticker} 배당 알림`;
+
+  if (notificationType === NotificationType.PAYMENT_DATE) {
+    embedColor = 0x10b981; // 밝은 초록색 (지급일)
+    embedTitle = `💵 ${companyName}${ticker} 배당 지급일`;
+  } else if (notificationType === NotificationType.DATA_CHANGED) {
+    embedColor = 0xf59e0b; // 주황색 (변경사항)
+    embedTitle = `🔄 ${companyName}${ticker} 배당 정보 변경`;
+  }
+
+  const discordFields: any[] = [];
+
+  if (notificationType === NotificationType.PAYMENT_DATE) {
+    if (currentData?.dividendAmount) {
+      discordFields.push({
+        name: '💵 배당금',
+        value: currentData.dividendAmount,
+        inline: true,
+      });
+    }
+    if (currentData?.paymentDate) {
+      discordFields.push({
+        name: '📅 지급일',
+        value: new Date(Number(currentData.paymentDate)).toLocaleDateString(),
+        inline: true,
+      });
+    }
+  } else if (notificationType === NotificationType.DATA_CHANGED) {
+    if (previousData?.dividendAmount !== currentData?.dividendAmount) {
+      discordFields.push({
+        name: '💵 배당금 변경',
+        value: `${previousData?.dividendAmount || '-'} → ${
+          currentData?.dividendAmount || '-'
+        }`,
+        inline: true,
+      });
+    }
+    if (previousData?.paymentDate !== currentData?.paymentDate) {
+      const prevDate = previousData?.paymentDate
+        ? new Date(Number(previousData.paymentDate)).toLocaleDateString()
+        : '-';
+      const currDate = currentData?.paymentDate
+        ? new Date(Number(currentData.paymentDate)).toLocaleDateString()
+        : '-';
+      discordFields.push({
+        name: '📅 지급일 변경',
+        value: `${prevDate} → ${currDate}`,
+        inline: true,
+      });
+    }
+  }
+
   return {
     email: {
       subject,
@@ -100,6 +154,18 @@ export function buildDividendNotification(
           ],
         },
       ],
+    },
+    discord: {
+      embed: {
+        title: embedTitle,
+        description: content.replace(/💵|📅/g, '').trim(),
+        color: embedColor,
+        timestamp: new Date().toISOString(),
+        fields: discordFields,
+        footer: {
+          text: `구독 중인 ${companyName} 관련 알림 • Money Calendar`,
+        },
+      },
     },
   };
 }

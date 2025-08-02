@@ -165,6 +165,8 @@ export class NotificationService {
       emailEnabled: false,
       slackEnabled: false,
       slackWebhookUrl: null,
+      discordEnabled: false,
+      discordWebhookUrl: null,
       notificationsEnabled: true,
     });
   }
@@ -180,6 +182,8 @@ export class NotificationService {
       emailEnabled,
       slackEnabled,
       slackWebhookUrl,
+      discordEnabled,
+      discordWebhookUrl,
       notificationsEnabled,
     } = dto;
 
@@ -191,6 +195,10 @@ export class NotificationService {
         ...(slackWebhookUrl !== undefined && {
           slackWebhookUrl,
         }),
+        ...(discordEnabled !== undefined && { discordEnabled }),
+        ...(discordWebhookUrl !== undefined && {
+          discordWebhookUrl,
+        }),
         ...(notificationsEnabled !== undefined && { notificationsEnabled }),
       },
       {
@@ -198,6 +206,8 @@ export class NotificationService {
         emailEnabled: emailEnabled ?? false,
         slackEnabled: slackEnabled ?? false,
         slackWebhookUrl,
+        discordEnabled: discordEnabled ?? false,
+        discordWebhookUrl,
         notificationsEnabled: notificationsEnabled ?? true,
       },
     );

@@ -13,6 +13,7 @@ export enum EmailServiceType {
  */
 export const EMAIL_QUEUE_NAME = 'email-notification-queue';
 export const SLACK_QUEUE_NAME = 'slack-notification-queue';
+export const DISCORD_QUEUE_NAME = 'discord-notification-queue';
 
 /**
  * 알림 작업 타입
@@ -20,6 +21,7 @@ export const SLACK_QUEUE_NAME = 'slack-notification-queue';
 export const NotificationJobType = {
   SEND_EMAIL: 'send-email',
   SEND_SLACK: 'send-slack',
+  SEND_DISCORD: 'send-discord',
 } as const;
 
 export type NotificationJobType =
@@ -31,6 +33,7 @@ export type NotificationJobType =
 export const CHANNEL_TO_JOB_TYPE_MAP = {
   EMAIL: NotificationJobType.SEND_EMAIL,
   SLACK: NotificationJobType.SEND_SLACK,
+  DISCORD: NotificationJobType.SEND_DISCORD,
 } as const;
 
 /**
@@ -57,6 +60,8 @@ export interface NotificationJobData {
     emailEnabled: boolean;
     slackEnabled: boolean;
     slackWebhookUrl?: string;
+    discordEnabled: boolean;
+    discordWebhookUrl?: string;
     notificationsEnabled: boolean;
   };
 }
@@ -108,6 +113,10 @@ export const RATE_LIMITS = {
   email: getEmailRateLimit(), // 동적으로 설정
   slack: {
     max: 1, // Slack webhook 제한
+    duration: 1000, // 1초
+  },
+  discord: {
+    max: 5, // Discord webhook 제한 (Slack보다 관대함)
     duration: 1000, // 1초
   },
 } as const;
