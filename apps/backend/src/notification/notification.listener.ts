@@ -4,6 +4,33 @@ import { NotificationService } from './notification.service';
 import { ContentType, NotificationType } from '@prisma/client';
 import { SubscriptionService } from '../subscription/subscription.service';
 
+/**
+ * BigInt를 문자열로 변환하여 JSON 직렬화 가능하게 만드는 헬퍼 함수
+ */
+function serializeBigInt(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (typeof obj === 'bigint') {
+    return obj.toString();
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(serializeBigInt);
+  }
+
+  if (typeof obj === 'object') {
+    const serialized = {};
+    for (const [key, value] of Object.entries(obj)) {
+      serialized[key] = serializeBigInt(value);
+    }
+    return serialized;
+  }
+
+  return obj;
+}
+
 @Injectable()
 export class NotificationListener {
   constructor(
@@ -24,8 +51,8 @@ export class NotificationListener {
         contentId: before.id,
         userId,
         notificationType: NotificationType.DATA_CHANGED,
-        previousData: before,
-        currentData: after,
+        previousData: serializeBigInt(before),
+        currentData: serializeBigInt(after),
       });
     }
   }
@@ -41,8 +68,8 @@ export class NotificationListener {
         contentId: before.id,
         userId,
         notificationType: NotificationType.DATA_CHANGED,
-        previousData: before,
-        currentData: after,
+        previousData: serializeBigInt(before),
+        currentData: serializeBigInt(after),
       });
     }
   }
@@ -58,8 +85,8 @@ export class NotificationListener {
         contentId: before.id,
         userId,
         notificationType: NotificationType.DATA_CHANGED,
-        previousData: before,
-        currentData: after,
+        previousData: serializeBigInt(before),
+        currentData: serializeBigInt(after),
       });
     }
   }
