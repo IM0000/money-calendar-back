@@ -3,11 +3,11 @@ import {
   convertEarningsBigInt,
 } from '../common/utils/convert-bigint';
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { CompanyRepository } from './company.repository';
 
 @Injectable()
 export class CompanyService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly companyRepository: CompanyRepository) {}
 
   async getCompanyEarnings(
     companyId: number,
@@ -18,34 +18,22 @@ export class CompanyService {
     const skip = (page - 1) * limit;
 
     const [earningsItems, total] = await Promise.all([
-      this.prisma.earnings.findMany({
-        where: { companyId },
-        skip,
-        take: limit,
-        orderBy: { releaseDate: 'desc' },
-      }),
-      this.prisma.earnings.count({
-        where: { companyId },
-      }),
+      this.companyRepository.getCompanyEarnings(companyId, skip, limit),
+      this.companyRepository.getCompanyEarningsCount(companyId),
     ]);
 
     let isFavoriteCompany = false;
     let hasCompanySubscription = false;
 
     if (userId) {
-      const favoriteCompany = await this.prisma.favoriteCompany.findUnique({
-        where: {
-          userId_companyId: { userId, companyId },
-        },
-      });
+      const favoriteCompany = await this.companyRepository.getFavoriteCompany(
+        userId,
+        companyId,
+      );
       isFavoriteCompany = favoriteCompany?.isActive ?? false;
 
       const companySubscription =
-        await this.prisma.subscriptionCompany.findUnique({
-          where: {
-            userId_companyId: { userId, companyId },
-          },
-        });
+        await this.companyRepository.getCompanySubscription(userId, companyId);
       hasCompanySubscription = companySubscription?.isActive ?? false;
     }
 
@@ -79,34 +67,22 @@ export class CompanyService {
     const skip = (page - 1) * limit;
 
     const [dividendItems, total] = await Promise.all([
-      this.prisma.dividend.findMany({
-        where: { companyId },
-        skip,
-        take: limit,
-        orderBy: { exDividendDate: 'desc' },
-      }),
-      this.prisma.dividend.count({
-        where: { companyId },
-      }),
+      this.companyRepository.getCompanyDividends(companyId, skip, limit),
+      this.companyRepository.getCompanyDividendsCount(companyId),
     ]);
 
     let isFavoriteCompany = false;
     let hasCompanySubscription = false;
 
     if (userId) {
-      const favoriteCompany = await this.prisma.favoriteCompany.findUnique({
-        where: {
-          userId_companyId: { userId, companyId },
-        },
-      });
+      const favoriteCompany = await this.companyRepository.getFavoriteCompany(
+        userId,
+        companyId,
+      );
       isFavoriteCompany = favoriteCompany?.isActive ?? false;
 
       const companySubscription =
-        await this.prisma.subscriptionCompany.findUnique({
-          where: {
-            userId_companyId: { userId, companyId },
-          },
-        });
+        await this.companyRepository.getCompanySubscription(userId, companyId);
       hasCompanySubscription = companySubscription?.isActive ?? false;
     }
 

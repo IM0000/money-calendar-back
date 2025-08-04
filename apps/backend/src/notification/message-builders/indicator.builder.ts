@@ -54,6 +54,63 @@ export function buildIndicatorNotification(
     content = `${countryPrefix}${indicatorName} 관련 알림입니다.`;
   }
 
+  // Discord embed 생성
+  let embedColor = 0xdc2626; // 빨간색 (경제지표)
+  let embedTitle = `📊 ${countryPrefix}${indicatorName} 알림`;
+  
+  if (notificationType === NotificationType.RELEASE_DATE) {
+    embedColor = 0xef4444; // 밝은 빨간색 (발표일)
+    embedTitle = `📈 ${countryPrefix}${indicatorName} 발표일`;
+  } else if (notificationType === NotificationType.DATA_CHANGED) {
+    embedColor = 0xf59e0b; // 주황색 (변경사항)
+    embedTitle = `🔄 ${countryPrefix}${indicatorName} 정보 변경`;
+  }
+
+  const discordFields: any[] = [];
+  
+  if (notificationType === NotificationType.RELEASE_DATE) {
+    if (currentData?.forecast !== undefined) {
+      discordFields.push({
+        name: '🎯 예상값',
+        value: String(currentData.forecast),
+        inline: true,
+      });
+    }
+    if (currentData?.previous !== undefined) {
+      discordFields.push({
+        name: '📋 이전값',
+        value: String(currentData.previous),
+        inline: true,
+      });
+    }
+    if (currentData?.releaseDate) {
+      discordFields.push({
+        name: '📅 발표일',
+        value: new Date(Number(currentData.releaseDate)).toLocaleDateString(),
+        inline: false,
+      });
+    }
+  } else if (notificationType === NotificationType.DATA_CHANGED) {
+    if (previousData?.actual !== currentData?.actual) {
+      discordFields.push({
+        name: '📈 실제값 변경',
+        value: `${previousData?.actual || '-'} → ${
+          currentData?.actual || '-'
+        }`,
+        inline: true,
+      });
+    }
+    if (previousData?.forecast !== currentData?.forecast) {
+      discordFields.push({
+        name: '🎯 예상값 변경',
+        value: `${previousData?.forecast || '-'} → ${
+          currentData?.forecast || '-'
+        }`,
+        inline: true,
+      });
+    }
+  }
+
   return {
     email: {
       subject,
@@ -99,6 +156,18 @@ export function buildIndicatorNotification(
           ],
         },
       ],
+    },
+    discord: {
+      embed: {
+        title: embedTitle,
+        description: content.replace(/🎯|📋|📈|📅/g, '').trim(),
+        color: embedColor,
+        timestamp: new Date().toISOString(),
+        fields: discordFields,
+        footer: {
+          text: `구독 중인 ${indicatorName} 관련 알림 • Money Calendar`,
+        },
+      },
     },
   };
 }

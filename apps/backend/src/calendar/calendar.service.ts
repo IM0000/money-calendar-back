@@ -1,12 +1,12 @@
 // src/calendar/calendar.service.ts
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { FavoriteService } from '../favorite/favorite.service';
+import { CalendarRepository } from './calendar.repository';
 
 @Injectable()
 export class CalendarService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly calendarRepository: CalendarRepository,
     private readonly favoriteService: FavoriteService,
   ) {}
 
@@ -30,69 +30,28 @@ export class CalendarService {
     // 관심 지표 그룹 목록
     const favoriteIndicatorGroups = favorites.indicatorGroups;
 
-    // 관심 회사의 실적 이벤트 조회
-    const earnings =
-      favoriteCompanyIds.length > 0
-        ? await this.prisma.earnings.findMany({
-            where: {
-              companyId: { in: favoriteCompanyIds },
-              releaseDate: {
-                gte: startTimestamp,
-                lte: endTimestamp,
-              },
-            },
-            include: { company: true },
-            orderBy: { releaseDate: 'asc' },
-          })
-        : [];
+    // Repository를 통해 데이터 조회
+    const [earnings, dividends, economicIndicators, userFavoriteData] =
+      await Promise.all([
+        this.calendarRepository.findEarningsByCompanyIds(
+          favoriteCompanyIds,
+          startTimestamp,
+          endTimestamp,
+        ),
+        this.calendarRepository.findDividendsByCompanyIds(
+          favoriteCompanyIds,
+          startTimestamp,
+          endTimestamp,
+        ),
+        this.calendarRepository.findEconomicIndicatorsByGroups(
+          favoriteIndicatorGroups,
+          startTimestamp,
+          endTimestamp,
+        ),
+        this.calendarRepository.findUserFavoriteData(userId),
+      ]);
 
-    // 관심 회사의 배당 이벤트 조회
-    const dividends =
-      favoriteCompanyIds.length > 0
-        ? await this.prisma.dividend.findMany({
-            where: {
-              companyId: { in: favoriteCompanyIds },
-              exDividendDate: {
-                gte: startTimestamp,
-                lte: endTimestamp,
-              },
-            },
-            include: { company: true },
-            orderBy: { exDividendDate: 'asc' },
-          })
-        : [];
-
-    // 관심 지표 그룹의 경제지표 이벤트 조회
-    const economicIndicators =
-      favoriteIndicatorGroups.length > 0
-        ? await this.prisma.economicIndicator.findMany({
-            where: {
-              OR: favoriteIndicatorGroups.map((group) => ({
-                baseName: group.baseName,
-                country: group.country,
-              })),
-              releaseDate: {
-                gte: startTimestamp,
-                lte: endTimestamp,
-              },
-            },
-            orderBy: { releaseDate: 'asc' },
-          })
-        : [];
-
-    // 사용자의 구독 정보 조회 (hasNotification 필드용)
-    const [subscribedCompanies, subscribedIndicatorGroups] = await Promise.all([
-      this.prisma.subscriptionCompany.findMany({
-        where: { userId, isActive: true },
-        select: { companyId: true },
-      }),
-      this.prisma.subscriptionIndicatorGroup.findMany({
-        where: { userId, isActive: true },
-        select: { baseName: true, country: true },
-      }),
-    ]);
-
-    const subscribedCompanyIds = subscribedCompanies.map((s) => s.companyId);
+    const subscribedCompanyIds = userFavoriteData.subscribedCompanyIds;
 
     // 결과 포맷팅
     const formattedEarnings = earnings.map((e) => ({
@@ -141,7 +100,7 @@ export class CalendarService {
     }));
 
     const formattedEconomicIndicators = economicIndicators.map((e) => {
-      const isSubscribed = subscribedIndicatorGroups.some(
+      const isSubscribed = userFavoriteData.subscribedIndicatorGroups.some(
         (group) => group.baseName === e.baseName && group.country === e.country,
       );
 
@@ -180,40 +139,17 @@ export class CalendarService {
     endTimestamp: number,
     userId?: number,
   ) {
-    const earnings = await this.prisma.earnings.findMany({
-      where: {
-        releaseDate: {
-          gte: startTimestamp,
-          lte: endTimestamp,
-        },
-      },
-      include: {
-        company: true,
-      },
-      orderBy: {
-        releaseDate: 'asc',
-      },
-    });
+    // Repository를 통해 데이터 조회
+    const [earnings, userFavoriteData] = await Promise.all([
+      this.calendarRepository.findEarningsByDateRange(
+        startTimestamp,
+        endTimestamp,
+      ),
+      userId ? this.calendarRepository.findUserFavoriteData(userId) : null,
+    ]);
 
-    // 사용자의 회사 단위 즐겨찾기/구독 정보 조회
-    let favoriteCompanyIds: number[] = [];
-    let subscribedCompanyIds: number[] = [];
-
-    if (userId) {
-      const [favoriteCompanies, subscribedCompanies] = await Promise.all([
-        this.prisma.favoriteCompany.findMany({
-          where: { userId, isActive: true },
-          select: { companyId: true },
-        }),
-        this.prisma.subscriptionCompany.findMany({
-          where: { userId, isActive: true },
-          select: { companyId: true },
-        }),
-      ]);
-
-      favoriteCompanyIds = favoriteCompanies.map((f) => f.companyId);
-      subscribedCompanyIds = subscribedCompanies.map((s) => s.companyId);
-    }
+    const favoriteCompanyIds = userFavoriteData?.favoriteCompanyIds || [];
+    const subscribedCompanyIds = userFavoriteData?.subscribedCompanyIds || [];
 
     // 결과 가공: EarningsEvent 인터페이스에 맞게 필드 이름 재지정 + 관심 정보 추가
     return earnings.map((e) => ({
@@ -254,40 +190,17 @@ export class CalendarService {
     endTimestamp: number,
     userId?: number,
   ) {
-    const dividends = await this.prisma.dividend.findMany({
-      where: {
-        exDividendDate: {
-          gte: startTimestamp,
-          lte: endTimestamp,
-        },
-      },
-      include: {
-        company: true,
-      },
-      orderBy: {
-        exDividendDate: 'asc',
-      },
-    });
+    // Repository를 통해 데이터 조회
+    const [dividends, userFavoriteData] = await Promise.all([
+      this.calendarRepository.findDividendsByDateRange(
+        startTimestamp,
+        endTimestamp,
+      ),
+      userId ? this.calendarRepository.findUserFavoriteData(userId) : null,
+    ]);
 
-    // 사용자의 회사 단위 즐겨찾기/구독 정보 조회
-    let favoriteCompanyIds: number[] = [];
-    let subscribedCompanyIds: number[] = [];
-
-    if (userId) {
-      const [favoriteCompanies, subscribedCompanies] = await Promise.all([
-        this.prisma.favoriteCompany.findMany({
-          where: { userId, isActive: true },
-          select: { companyId: true },
-        }),
-        this.prisma.subscriptionCompany.findMany({
-          where: { userId, isActive: true },
-          select: { companyId: true },
-        }),
-      ]);
-
-      favoriteCompanyIds = favoriteCompanies.map((f) => f.companyId);
-      subscribedCompanyIds = subscribedCompanies.map((s) => s.companyId);
-    }
+    const favoriteCompanyIds = userFavoriteData?.favoriteCompanyIds || [];
+    const subscribedCompanyIds = userFavoriteData?.subscribedCompanyIds || [];
 
     // 결과 가공: 프론트엔드 DividendEvent 타입에 맞게 필드 이름 재지정 + 관심 정보 추가
     return dividends.map((d) => ({
@@ -325,37 +238,19 @@ export class CalendarService {
     endTimestamp: number,
     userId?: number,
   ) {
-    const economicIndicators = await this.prisma.economicIndicator.findMany({
-      where: {
-        releaseDate: {
-          gte: startTimestamp,
-          lte: endTimestamp,
-        },
-      },
-      orderBy: {
-        releaseDate: 'asc',
-      },
-    });
+    // Repository를 통해 데이터 조회
+    const [economicIndicators, userFavoriteData] = await Promise.all([
+      this.calendarRepository.findEconomicIndicatorsByDateRange(
+        startTimestamp,
+        endTimestamp,
+      ),
+      userId ? this.calendarRepository.findUserFavoriteData(userId) : null,
+    ]);
 
-    // 사용자의 지표 그룹 단위 즐겨찾기/구독 정보 조회
-    let favoriteIndicatorGroups: { baseName: string; country: string }[] = [];
-    let subscribedIndicatorGroups: { baseName: string; country: string }[] = [];
-
-    if (userId) {
-      const [favoriteGroups, subscribedGroups] = await Promise.all([
-        this.prisma.favoriteIndicatorGroup.findMany({
-          where: { userId, isActive: true },
-          select: { baseName: true, country: true },
-        }),
-        this.prisma.subscriptionIndicatorGroup.findMany({
-          where: { userId, isActive: true },
-          select: { baseName: true, country: true },
-        }),
-      ]);
-
-      favoriteIndicatorGroups = favoriteGroups;
-      subscribedIndicatorGroups = subscribedGroups;
-    }
+    const favoriteIndicatorGroups =
+      userFavoriteData?.favoriteIndicatorGroups || [];
+    const subscribedIndicatorGroups =
+      userFavoriteData?.subscribedIndicatorGroups || [];
 
     // 경제지표 구독 정보 가공
     const formattedIndicators = economicIndicators.map((e) => {
@@ -428,54 +323,26 @@ export class CalendarService {
     limit: number,
     userId?: number,
   ) {
-    const skip = (page - 1) * limit;
-
-    // 기본 데이터 조회
-    const [earnings, total] = await Promise.all([
-      this.prisma.earnings.findMany({
-        where: {
-          companyId,
-        },
-        include: {
-          company: true,
-        },
-        orderBy: {
-          releaseDate: 'desc', // 최신 실적부터 표시
-        },
-        skip,
-        take: limit,
-      }),
-      this.prisma.earnings.count({
-        where: {
-          companyId,
-        },
-      }),
-    ]);
-
-    // 회사 전체 즐겨찾기/구독 여부 확인
-    let isFavoriteCompany = false;
-    let isSubscribedCompany = false;
-
-    if (userId) {
-      const [favoriteCheck, subscriptionCheck] = await Promise.all([
-        this.prisma.favoriteCompany.findFirst({
-          where: {
+    // Repository를 통해 데이터 조회
+    const [paginatedEarnings, companyFavoriteData] = await Promise.all([
+      this.calendarRepository.findCompanyEarningsHistory(
+        companyId,
+        page,
+        limit,
+      ),
+      userId
+        ? this.calendarRepository.checkCompanyFavoriteAndSubscription(
             userId,
             companyId,
-            isActive: true,
-          },
-        }),
-        this.prisma.subscriptionCompany.findFirst({
-          where: { userId, companyId, isActive: true },
-        }),
-      ]);
+          )
+        : null,
+    ]);
 
-      isFavoriteCompany = !!favoriteCheck;
-      isSubscribedCompany = !!subscriptionCheck;
-    }
+    const isFavoriteCompany = companyFavoriteData?.isFavorite || false;
+    const isSubscribedCompany = companyFavoriteData?.isSubscribed || false;
 
     // 결과 가공: 관심 정보 추가
-    const formattedEarnings = earnings.map((e) => ({
+    const formattedEarnings = paginatedEarnings.items.map((e) => ({
       id: e.id,
       country: e.country,
       releaseDate: Number(e.releaseDate),
@@ -501,12 +368,7 @@ export class CalendarService {
 
     return {
       items: formattedEarnings,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: paginatedEarnings.pagination,
     };
   }
 
@@ -523,53 +385,26 @@ export class CalendarService {
     limit: number,
     userId?: number,
   ) {
-    const skip = (page - 1) * limit;
-
-    const [dividends, total] = await Promise.all([
-      this.prisma.dividend.findMany({
-        where: {
-          companyId,
-        },
-        include: {
-          company: true,
-        },
-        orderBy: {
-          exDividendDate: 'desc', // 최신 배당 정보부터 표시
-        },
-        skip,
-        take: limit,
-      }),
-      this.prisma.dividend.count({
-        where: {
-          companyId,
-        },
-      }),
-    ]);
-
-    // 회사 전체 즐겨찾기/구독 여부 확인
-    let isFavoriteCompany = false;
-    let isSubscribedCompany = false;
-
-    if (userId) {
-      const [favoriteCheck, subscriptionCheck] = await Promise.all([
-        this.prisma.favoriteCompany.findFirst({
-          where: {
+    // Repository를 통해 데이터 조회
+    const [paginatedDividends, companyFavoriteData] = await Promise.all([
+      this.calendarRepository.findCompanyDividendHistory(
+        companyId,
+        page,
+        limit,
+      ),
+      userId
+        ? this.calendarRepository.checkCompanyFavoriteAndSubscription(
             userId,
             companyId,
-            isActive: true,
-          },
-        }),
-        this.prisma.subscriptionCompany.findFirst({
-          where: { userId, companyId, isActive: true },
-        }),
-      ]);
+          )
+        : null,
+    ]);
 
-      isFavoriteCompany = !!favoriteCheck;
-      isSubscribedCompany = !!subscriptionCheck;
-    }
+    const isFavoriteCompany = companyFavoriteData?.isFavorite || false;
+    const isSubscribedCompany = companyFavoriteData?.isSubscribed || false;
 
     // 결과 가공: 관심 정보 추가
-    const formattedDividends = dividends.map((d) => ({
+    const formattedDividends = paginatedDividends.items.map((d) => ({
       id: d.id,
       country: d.country,
       exDividendDate: Number(d.exDividendDate),
@@ -592,12 +427,7 @@ export class CalendarService {
 
     return {
       items: formattedDividends,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: paginatedDividends.pagination,
     };
   }
 
@@ -616,50 +446,30 @@ export class CalendarService {
     limit: number,
     userId?: number,
   ) {
-    const skip = (page - 1) * limit;
+    // Repository를 통해 데이터 조회
+    const [paginatedIndicators, indicatorGroupFavoriteData] = await Promise.all(
+      [
+        this.calendarRepository.findIndicatorGroupHistory(
+          baseName,
+          country,
+          page,
+          limit,
+        ),
+        userId && country
+          ? this.calendarRepository.checkIndicatorGroupFavoriteAndSubscription(
+              userId,
+              baseName,
+              country,
+            )
+          : null,
+      ],
+    );
 
-    // 조건 생성: country가 있으면 정확히 매칭, 없으면 baseName만 매칭
-    const whereCondition = country ? { baseName, country } : { baseName };
-
-    const [indicators, total] = await Promise.all([
-      this.prisma.economicIndicator.findMany({
-        where: whereCondition,
-        orderBy: {
-          releaseDate: 'desc', // 최신 지표부터 표시
-        },
-        skip,
-        take: limit,
-      }),
-      this.prisma.economicIndicator.count({
-        where: whereCondition,
-      }),
-    ]);
-
-    // 지표 그룹 즐겨찾기/구독 여부 확인
-    let isFavoriteGroup = false;
-    let isSubscribedGroup = false;
-
-    if (userId) {
-      const [favoriteCheck, subscriptionCheck] = await Promise.all([
-        this.prisma.favoriteIndicatorGroup.findFirst({
-          where: {
-            userId,
-            baseName,
-            country,
-            isActive: true,
-          },
-        }),
-        this.prisma.subscriptionIndicatorGroup.findFirst({
-          where: { userId, baseName, country, isActive: true },
-        }),
-      ]);
-
-      isFavoriteGroup = !!favoriteCheck;
-      isSubscribedGroup = !!subscriptionCheck;
-    }
+    const isFavoriteGroup = indicatorGroupFavoriteData?.isFavorite || false;
+    const isSubscribedGroup = indicatorGroupFavoriteData?.isSubscribed || false;
 
     // 결과 가공: 관심 정보 추가
-    const formattedIndicators = indicators.map((indicator) => ({
+    const formattedIndicators = paginatedIndicators.items.map((indicator) => ({
       id: indicator.id,
       country: indicator.country,
       releaseDate: Number(indicator.releaseDate),
@@ -677,12 +487,7 @@ export class CalendarService {
 
     return {
       items: formattedIndicators,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: paginatedIndicators.pagination,
     };
   }
 }

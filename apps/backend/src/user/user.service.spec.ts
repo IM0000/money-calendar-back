@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from './user.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { UserRepository } from './user.repository';
 import {
   ConflictException,
   NotFoundException,
@@ -14,24 +14,46 @@ jest.mock('bcryptjs');
 
 describe('UserService', () => {
   let service: UserService;
-  let prismaService: PrismaService;
+  let userRepository: UserRepository;
 
-  const mockPrismaService = {
-    user: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-    oAuthAccount: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      delete: jest.fn(),
-      deleteMany: jest.fn(),
-      findMany: jest.fn(),
-    },
+  // 테스트 데이터 팩토리 함수들
+  const createMockUser = (overrides = {}) => ({
+    id: 1,
+    email: 'test@example.com',
+    nickname: 'tester',
+    password: 'hashed-password',
+    verified: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    oauthAccounts: [],
+    ...overrides,
+  });
+
+  const createMockOAuthAccount = (overrides = {}) => ({
+    provider: 'google',
+    providerId: '123456',
+    oauthEmail: 'test@gmail.com',
+    userId: 1,
+    ...overrides,
+  });
+
+  const createUpdateProfileDto = (overrides = {}) => ({
+    nickname: 'newNickname',
+    ...overrides,
+  });
+
+  const mockUserRepository = {
+    findByEmail: jest.fn(),
+    findById: jest.fn(),
+    findByIdWithOAuth: jest.fn(),
+    findByOAuthId: jest.fn(),
+    create: jest.fn(),
+    updatePassword: jest.fn(),
+    updatePasswordByEmail: jest.fn(),
+    updateProfile: jest.fn(),
+    delete: jest.fn(),
+    findOAuthAccountsByUserId: jest.fn(),
+    deleteOAuthAccounts: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -39,291 +61,378 @@ describe('UserService', () => {
       providers: [
         UserService,
         {
-          provide: PrismaService,
-          useValue: mockPrismaService,
+          provide: UserRepository,
+          useValue: mockUserRepository,
         },
       ],
     }).compile();
 
     service = module.get<UserService>(UserService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    userRepository = module.get<UserRepository>(UserRepository);
+  });
 
+  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('정의되어야 합니다', () => {
-    expect(service).toBeDefined();
+  describe('UserService', () => {
+    it('서비스 인스턴스가 정상적으로 생성되어야 한다', () => {
+      expect(service).toBeDefined();
+    });
   });
 
   describe('findUserByEmail', () => {
-    it('사용자를 찾으면 사용자를 반환해야 합니다', async () => {
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        nickname: 'tester',
-        password: 'hashed-password',
-        oauthAccounts: [],
-      };
+    describe('사용자 조회 성공', () => {
+      it('이메일로 사용자를 찾으면 사용자 정보를 반환한다', async () => {
+        // Arrange
+        const email = 'test@example.com';
+        const mockUser = createMockUser();
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockUserRepository.findByEmail.mockResolvedValue(mockUser);
 
-      const result = await service.findUserByEmail('test@example.com');
+        // Act
+        const result = await service.findUserByEmail(email);
 
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { email: 'test@example.com' },
+        // Assert
+        expect(result).toEqual(mockUser);
+        expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(email);
       });
-      expect(result).toEqual(mockUser);
     });
 
-    it('사용자를 찾을 수 없으면 null을 반환해야 합니다', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+    describe('사용자 조회 실패', () => {
+      it('존재하지 않는 이메일로 조회하면 null을 반환한다', async () => {
+        // Arrange
+        const email = 'nonexistent@example.com';
+        mockUserRepository.findByEmail.mockResolvedValue(null);
 
-      const result = await service.findUserByEmail('nonexistent@example.com');
+        // Act
+        const result = await service.findUserByEmail(email);
 
-      expect(result).toBeNull();
+        // Assert
+        expect(result).toBeNull();
+      });
     });
   });
 
   describe('findUserById', () => {
-    it('사용자를 찾으면 사용자를 반환해야 합니다', async () => {
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        nickname: 'tester',
-        password: 'hashed-password',
-        oauthAccounts: [],
-      };
+    describe('사용자 조회 성공', () => {
+      it('ID로 사용자를 찾으면 사용자 정보를 반환한다', async () => {
+        // Arrange
+        const userId = 1;
+        const mockUser = createMockUser();
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockUserRepository.findById.mockResolvedValue(mockUser);
 
-      const result = await service.findUserById(1);
+        // Act
+        const result = await service.findUserById(userId);
 
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 1 },
+        // Assert
+        expect(result).toEqual(mockUser);
+        expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
       });
-      expect(result).toEqual(mockUser);
     });
 
-    it('사용자를 찾을 수 없으면 null을 반환해야 합니다', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+    describe('사용자 조회 실패', () => {
+      it('존재하지 않는 ID로 조회하면 null을 반환한다', async () => {
+        // Arrange
+        const userId = 999;
+        mockUserRepository.findById.mockResolvedValue(null);
 
-      const result = await service.findUserById(999);
+        // Act
+        const result = await service.findUserById(userId);
 
-      expect(result).toBeNull();
+        // Assert
+        expect(result).toBeNull();
+      });
     });
   });
 
   describe('getUserProfile', () => {
-    it('사용자 프로필을 반환해야 합니다', async () => {
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        nickname: 'tester',
-        password: 'hashed-password',
-        verified: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        oauthAccounts: [
-          {
-            provider: 'google',
-            providerId: '123456',
-            oauthEmail: 'test@gmail.com',
-          },
-        ],
-      };
+    describe('프로필 조회 성공', () => {
+      it('사용자 프로필과 연결된 OAuth 계정 정보를 함께 반환한다', async () => {
+        // Arrange
+        const userId = 1;
+        const mockOAuthAccount = createMockOAuthAccount();
+        const mockUser = createMockUser({
+          oauthAccounts: [mockOAuthAccount],
+        });
 
-      const expectedResult = {
-        id: 1,
-        email: 'test@example.com',
-        hasPassword: true,
-        nickname: 'tester',
-        verified: true,
-        createdAt: mockUser.createdAt,
-        updatedAt: mockUser.updatedAt,
-        oauthConnections: [
-          { provider: 'google', connected: true, oauthEmail: 'test@gmail.com' },
-          { provider: 'kakao', connected: false, oauthEmail: undefined },
-          { provider: 'apple', connected: false, oauthEmail: undefined },
-          { provider: 'discord', connected: false, oauthEmail: undefined },
-        ],
-      };
+        const expectedResult = {
+          id: mockUser.id,
+          email: mockUser.email,
+          hasPassword: true,
+          nickname: mockUser.nickname,
+          verified: mockUser.verified,
+          createdAt: mockUser.createdAt,
+          updatedAt: mockUser.updatedAt,
+          oauthConnections: [
+            {
+              provider: 'google',
+              connected: true,
+              oauthEmail: mockOAuthAccount.oauthEmail,
+            },
+            { provider: 'kakao', connected: false, oauthEmail: undefined },
+            { provider: 'apple', connected: false, oauthEmail: undefined },
+            { provider: 'discord', connected: false, oauthEmail: undefined },
+          ],
+        };
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+        mockUserRepository.findByIdWithOAuth.mockResolvedValue(mockUser);
 
-      const result = await service.getUserProfile(1);
+        // Act
+        const result = await service.getUserProfile(userId);
 
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 1 },
-        include: {
-          oauthAccounts: true,
-        },
+        // Assert
+        expect(result).toEqual(expectedResult);
+        expect(mockUserRepository.findByIdWithOAuth).toHaveBeenCalledWith(
+          userId,
+        );
       });
-      expect(result).toEqual(expectedResult);
+
+      it('비밀번호가 없는 OAuth 전용 사용자의 프로필을 조회한다', async () => {
+        // Arrange
+        const userId = 1;
+        const mockUser = createMockUser({
+          password: null,
+          oauthAccounts: [createMockOAuthAccount()],
+        });
+
+        mockUserRepository.findByIdWithOAuth.mockResolvedValue(mockUser);
+
+        // Act
+        const result = await service.getUserProfile(userId);
+
+        // Assert
+        expect(result.hasPassword).toBe(false);
+      });
     });
 
-    it('사용자를 찾을 수 없으면 NotFoundException을 발생시켜야 합니다', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+    describe('프로필 조회 실패', () => {
+      it('존재하지 않는 사용자 ID로 조회하면 NotFoundException을 발생시킨다', async () => {
+        // Arrange
+        const userId = 999;
+        mockUserRepository.findByIdWithOAuth.mockResolvedValue(null);
 
-      await expect(service.getUserProfile(999)).rejects.toThrow(
-        NotFoundException,
-      );
+        // Act & Assert
+        await expect(service.getUserProfile(userId)).rejects.toThrow(
+          NotFoundException,
+        );
+      });
     });
   });
 
   describe('updateUserProfile', () => {
-    it('사용자 닉네임을 업데이트해야 합니다', async () => {
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        nickname: 'newNickname',
-        verified: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const updateDto = { nickname: 'newNickname' };
-
-      mockPrismaService.user.findUnique.mockResolvedValue({ id: 1 });
-      mockPrismaService.user.update.mockResolvedValue(mockUser);
-
-      const result = await service.updateUserProfile(1, updateDto);
-
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: 1 },
-        data: updateDto,
+    it('사용자 닉네임을 성공적으로 변경한다', async () => {
+      // Arrange
+      const userId = 1;
+      const updateDto = createUpdateProfileDto();
+      const mockUpdatedUser = createMockUser({
+        nickname: updateDto.nickname,
       });
+
+      mockUserRepository.findById.mockResolvedValue(createMockUser());
+      mockUserRepository.updateProfile.mockResolvedValue(mockUpdatedUser);
+
+      // Act
+      const result = await service.updateUserProfile(userId, updateDto);
+
+      // Assert
       expect(result).toEqual({
-        id: 1,
-        email: 'test@example.com',
-        nickname: 'newNickname',
-        verified: true,
-        createdAt: mockUser.createdAt,
-        updatedAt: mockUser.updatedAt,
+        id: mockUpdatedUser.id,
+        email: mockUpdatedUser.email,
+        nickname: mockUpdatedUser.nickname,
+        verified: mockUpdatedUser.verified,
+        createdAt: mockUpdatedUser.createdAt,
+        updatedAt: mockUpdatedUser.updatedAt,
       });
+      expect(mockUserRepository.updateProfile).toHaveBeenCalledWith(
+        userId,
+        updateDto,
+      );
     });
   });
 
   describe('changeUserPassword', () => {
-    it('사용자 비밀번호를 성공적으로 변경해야 합니다', async () => {
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        password: 'old-hashed-password',
-      };
+    describe('비밀번호 변경 성공', () => {
+      it('현재 비밀번호가 일치하면 새 비밀번호로 변경한다', async () => {
+        // Arrange
+        const userId = 1;
+        const currentPassword = 'oldPassword';
+        const newPassword = 'newPassword';
+        const mockUser = createMockUser();
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed-password');
-      mockPrismaService.user.update.mockResolvedValue({
-        ...mockUser,
-        password: 'new-hashed-password',
-      });
+        mockUserRepository.findById.mockResolvedValue(mockUser);
+        (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+        (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed-password');
+        mockUserRepository.updatePassword.mockResolvedValue(undefined);
 
-      const result = await service.changeUserPassword(
-        1,
-        'oldPassword',
-        'newPassword',
-      );
+        // Act
+        const result = await service.changeUserPassword(
+          userId,
+          currentPassword,
+          newPassword,
+        );
 
-      expect(bcrypt.compare).toHaveBeenCalledWith(
-        'oldPassword',
-        'old-hashed-password',
-      );
-      expect(bcrypt.hash).toHaveBeenCalledWith('newPassword', 10);
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: 1 },
-        data: { password: 'new-hashed-password' },
-      });
-      expect(result).toEqual({
-        message: '비밀번호가 성공적으로 변경되었습니다.',
+        // Assert
+        expect(result).toEqual({
+          message: '비밀번호가 성공적으로 변경되었습니다.',
+        });
+        expect(bcrypt.compare).toHaveBeenCalledWith(
+          currentPassword,
+          mockUser.password,
+        );
+        expect(bcrypt.hash).toHaveBeenCalledWith(newPassword, 10);
+        expect(mockUserRepository.updatePassword).toHaveBeenCalledWith(
+          userId,
+          'new-hashed-password',
+        );
       });
     });
 
-    it('현재 비밀번호가 틀리면 BadRequestException을 발생시켜야 합니다', async () => {
-      const mockUser = {
-        id: 1,
-        email: 'test@example.com',
-        password: 'old-hashed-password',
-      };
+    describe('비밀번호 변경 실패', () => {
+      it('현재 비밀번호가 일치하지 않으면 BadRequestException을 발생시킨다', async () => {
+        // Arrange
+        const userId = 1;
+        const wrongPassword = 'wrongPassword';
+        const newPassword = 'newPassword';
+        const mockUser = createMockUser();
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+        mockUserRepository.findById.mockResolvedValue(mockUser);
+        (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(
-        service.changeUserPassword(1, 'wrongPassword', 'newPassword'),
-      ).rejects.toThrow(BadRequestException);
+        // Act & Assert
+        await expect(
+          service.changeUserPassword(userId, wrongPassword, newPassword),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('사용자가 존재하지 않으면 NotFoundException을 발생시킨다', async () => {
+        // Arrange
+        const userId = 999;
+        mockUserRepository.findById.mockResolvedValue(null);
+
+        // Act & Assert
+        await expect(
+          service.changeUserPassword(userId, 'password', 'newPassword'),
+        ).rejects.toThrow(NotFoundException);
+      });
     });
   });
 
   describe('verifyUserPassword', () => {
-    it('비밀번호가 유효하면 true를 반환해야 합니다', async () => {
-      const mockUser = {
-        id: 1,
-        password: 'hashed-password',
-      };
+    describe('비밀번호 검증 성공', () => {
+      it('입력한 비밀번호가 저장된 비밀번호와 일치하면 true를 반환한다', async () => {
+        // Arrange
+        const userId = 1;
+        const password = 'password123';
+        const mockUser = createMockUser();
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+        mockUserRepository.findById.mockResolvedValue(mockUser);
+        (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      const result = await service.verifyUserPassword(1, 'password123');
+        // Act
+        const result = await service.verifyUserPassword(userId, password);
 
-      expect(bcrypt.compare).toHaveBeenCalledWith(
-        'password123',
-        'hashed-password',
-      );
-      expect(result).toBe(true);
+        // Assert
+        expect(result).toBe(true);
+        expect(bcrypt.compare).toHaveBeenCalledWith(
+          password,
+          mockUser.password,
+        );
+      });
     });
 
-    it('비밀번호가 유효하지 않으면 false를 반환해야 합니다', async () => {
-      const mockUser = {
-        id: 1,
-        password: 'hashed-password',
-      };
+    describe('비밀번호 검증 실패', () => {
+      it('입력한 비밀번호가 일치하지 않으면 false를 반환한다', async () => {
+        // Arrange
+        const userId = 1;
+        const wrongPassword = 'wrongPassword';
+        const mockUser = createMockUser();
 
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+        mockUserRepository.findById.mockResolvedValue(mockUser);
+        (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      const result = await service.verifyUserPassword(1, 'wrongPassword');
+        // Act
+        const result = await service.verifyUserPassword(userId, wrongPassword);
 
-      expect(result).toBe(false);
-    });
+        // Assert
+        expect(result).toBe(false);
+      });
 
-    it('사용자를 찾을 수 없으면 NotFoundException을 발생시켜야 합니다', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      it('사용자가 존재하지 않으면 NotFoundException을 발생시킨다', async () => {
+        // Arrange
+        const userId = 999;
+        mockUserRepository.findById.mockResolvedValue(null);
 
-      await expect(service.verifyUserPassword(999, 'password')).rejects.toThrow(
-        NotFoundException,
-      );
+        // Act & Assert
+        await expect(
+          service.verifyUserPassword(userId, 'password'),
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('OAuth 전용 계정은 비밀번호가 없어서 BadRequestException을 발생시킨다', async () => {
+        // Arrange
+        const userId = 1;
+        const mockUser = createMockUser({ password: null });
+
+        mockUserRepository.findById.mockResolvedValue(mockUser);
+
+        // Act & Assert
+        await expect(
+          service.verifyUserPassword(userId, 'password'),
+        ).rejects.toThrow(BadRequestException);
+      });
     });
   });
 
   describe('disconnectOAuthAccount', () => {
-    it('OAuth 계정을 성공적으로 연결 해제해야 합니다', async () => {
-      mockPrismaService.oAuthAccount.findMany.mockResolvedValue([
-        { provider: 'google', userId: 1 },
-        { provider: 'kakao', userId: 1 },
-      ]);
-      mockPrismaService.oAuthAccount.deleteMany.mockResolvedValue({ count: 1 });
+    describe('OAuth 연결 해제 성공', () => {
+      it('여러 OAuth 계정이 연결된 경우 하나를 해제할 수 있다', async () => {
+        // Arrange
+        const userId = 1;
+        const provider = 'google';
+        const mockOAuthAccounts = [
+          createMockOAuthAccount({ provider: 'google' }),
+          createMockOAuthAccount({ provider: 'kakao' }),
+        ];
 
-      const result = await service.disconnectOAuthAccount(1, 'google');
+        mockUserRepository.findOAuthAccountsByUserId.mockResolvedValue(
+          mockOAuthAccounts,
+        );
+        mockUserRepository.deleteOAuthAccounts.mockResolvedValue(undefined);
 
-      expect(mockPrismaService.oAuthAccount.findMany).toHaveBeenCalledWith({
-        where: { userId: 1 },
+        // Act
+        const result = await service.disconnectOAuthAccount(userId, provider);
+
+        // Assert
+        expect(result).toEqual({
+          message: 'google 계정 연결이 해제되었습니다.',
+        });
+        expect(mockUserRepository.deleteOAuthAccounts).toHaveBeenCalledWith(
+          userId,
+          provider,
+        );
       });
-      expect(mockPrismaService.oAuthAccount.deleteMany).toHaveBeenCalledWith({
-        where: { userId: 1, provider: 'google' },
-      });
-      expect(result).toEqual({ message: 'google 계정 연결이 해제되었습니다.' });
     });
 
-    it('연결된 계정이 1개 이하일 때 연결 해제를 시도하면 ForbiddenException을 발생시켜야 합니다', async () => {
-      mockPrismaService.oAuthAccount.findMany.mockResolvedValue([
-        { provider: 'google', userId: 1 },
-      ]);
+    describe('OAuth 연결 해제 실패', () => {
+      it('마지막 남은 OAuth 계정은 해제할 수 없다', async () => {
+        // Arrange
+        const userId = 1;
+        const provider = 'google';
+        const mockOAuthAccounts = [
+          createMockOAuthAccount({ provider: 'google' }),
+        ];
 
-      await expect(service.disconnectOAuthAccount(1, 'google')).rejects.toThrow(
-        ForbiddenException,
-      );
+        mockUserRepository.findOAuthAccountsByUserId.mockResolvedValue(
+          mockOAuthAccounts,
+        );
+
+        // Act & Assert
+        await expect(
+          service.disconnectOAuthAccount(userId, provider),
+        ).rejects.toThrow(ForbiddenException);
+      });
     });
   });
 });

@@ -1,44 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { SearchRepository } from './search.repository';
 import { SearchCompanyDto, SearchIndicatorDto } from './dto/search.dto';
-import { Prisma, Company } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class SearchService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly searchRepository: SearchRepository) {}
 
   async searchCompanies(searchDto: SearchCompanyDto, userId?: number) {
     const { query, country, page = 1, limit = 10 } = searchDto;
     const skip = (page - 1) * limit;
 
-    const q = `%${query}%`;
+    const items = await this.searchRepository.searchCompaniesRaw(
+      query || '',
+      country || '',
+      limit,
+      skip,
+    );
 
-    const items = await this.prisma.$queryRaw<Company[]>`
-      SELECT *
-        FROM "Company"
-      WHERE
-        (${query} = '' OR "name" ILIKE ${q} OR "ticker"::text ILIKE ${q})
-        AND (${country} = '' OR country = ${country})
-      ORDER BY
-        CASE WHEN "ticker"::text ILIKE ${q} THEN 0 ELSE 1 END,
-        "name" ASC
-      LIMIT ${limit}
-      OFFSET ${skip};
-    `;
-
-    const total = await this.prisma.company.count({
-      where: {
-        ...(query
-          ? {
-              OR: [
-                { name: { contains: query, mode: 'insensitive' } },
-                { ticker: { contains: query, mode: 'insensitive' } },
-              ],
-            }
-          : {}),
-        ...(country ? { country } : {}),
-      },
-    });
+    const total = await this.searchRepository.countCompanies(query, country);
 
     const itemsWithFavorites = items.map((company) => ({
       ...company,
@@ -48,25 +28,18 @@ export class SearchService {
 
     if (userId) {
       // 회사 단위 즐겨찾기 정보 조회
-      const favoriteCompanies = await this.prisma.favoriteCompany.findMany({
-        where: {
+      const favoriteCompanies =
+        await this.searchRepository.findFavoriteCompanies(
           userId,
-          companyId: { in: items.map((c) => c.id) },
-          isActive: true,
-        },
-        select: { companyId: true },
-      });
+          items.map((c) => c.id),
+        );
 
       // 회사 단위 구독 정보 조회
       const subscriptionCompanies =
-        await this.prisma.subscriptionCompany.findMany({
-          where: {
-            userId,
-            companyId: { in: items.map((c) => c.id) },
-            isActive: true,
-          },
-          select: { companyId: true },
-        });
+        await this.searchRepository.findSubscriptionCompanies(
+          userId,
+          items.map((c) => c.id),
+        );
 
       const favoriteCompanyIds = new Set(
         favoriteCompanies.map((f) => f.companyId),
@@ -105,17 +78,8 @@ export class SearchService {
     };
 
     const [groupsWithCount, totalGroups] = await Promise.all([
-      this.prisma.economicIndicator.groupBy({
-        by: ['baseName', 'country'],
-        where,
-        orderBy: [{ baseName: 'asc' }, { country: 'asc' }],
-        skip,
-        take: limit,
-      }),
-      this.prisma.economicIndicator.groupBy({
-        by: ['baseName', 'country'],
-        where,
-      }),
+      this.searchRepository.groupIndicatorsByBaseName(where, skip, limit),
+      this.searchRepository.countIndicatorGroups(where),
     ]);
 
     const total = totalGroups.length;
@@ -132,16 +96,9 @@ export class SearchService {
       };
     }
 
-    const items = await this.prisma.economicIndicator.findMany({
-      where: {
-        OR: groupsWithCount.map((group) => ({
-          baseName: group.baseName,
-          country: group.country,
-        })),
-      },
-      orderBy: [{ releaseDate: 'desc' }, { importance: 'desc' }],
-      distinct: ['baseName', 'country'],
-    });
+    const items = await this.searchRepository.findIndicatorsByGroups(
+      groupsWithCount,
+    );
 
     const processedItems = items.map((indicator) => ({
       ...indicator,
@@ -153,23 +110,11 @@ export class SearchService {
     if (userId) {
       // 지표 그룹 단위 즐겨찾기 정보 조회
       const favoriteIndicatorGroups =
-        await this.prisma.favoriteIndicatorGroup.findMany({
-          where: {
-            userId,
-            isActive: true,
-          },
-          select: { baseName: true, country: true },
-        });
+        await this.searchRepository.findFavoriteIndicatorGroups(userId);
 
       // 지표 그룹 단위 구독 정보 조회
       const subscriptionIndicatorGroups =
-        await this.prisma.subscriptionIndicatorGroup.findMany({
-          where: {
-            userId,
-            isActive: true,
-          },
-          select: { baseName: true, country: true },
-        });
+        await this.searchRepository.findSubscriptionIndicatorGroups(userId);
 
       // baseName과 country 조합 세트 생성 (즐겨찾기)
       const favoriteBaseNameCountryCombinations = new Set(
