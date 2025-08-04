@@ -4,6 +4,7 @@ import { Queue } from 'bull';
 import {
   EMAIL_QUEUE_NAME,
   SLACK_QUEUE_NAME,
+  DISCORD_QUEUE_NAME,
   NotificationJobType,
   NotificationJobData,
 } from './notification-queue.constants';
@@ -28,6 +29,8 @@ export class NotificationQueueService {
     private readonly emailQueue: Queue<NotificationJobData>,
     @InjectQueue(SLACK_QUEUE_NAME)
     private readonly slackQueue: Queue<NotificationJobData>,
+    @InjectQueue(DISCORD_QUEUE_NAME)
+    private readonly discordQueue: Queue<NotificationJobData>,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -47,6 +50,8 @@ export class NotificationQueueService {
       emailEnabled: boolean;
       slackEnabled: boolean;
       slackWebhookUrl?: string;
+      discordEnabled: boolean;
+      discordWebhookUrl?: string;
       notificationsEnabled: boolean;
     };
   }) {
@@ -108,6 +113,30 @@ export class NotificationQueueService {
         `슬랙 작업 추가: 사용자 ${data.userId}, 알림 ${data.contentType} ${data.contentId}, 배송 ${slackDelivery.id}`,
       );
     }
+
+    // 디스코드 전송 작업 추가
+    if (
+      data.userSettings?.discordEnabled &&
+      data.userSettings?.discordWebhookUrl
+    ) {
+      const discordDelivery = await this.prisma.notificationDelivery.create({
+        data: {
+          notificationId: data.notificationId,
+          channelKey: NotificationChannel.DISCORD,
+          status: NotificationStatus.PENDING,
+          retryCount: 0,
+        },
+      });
+
+      await this.discordQueue.add(NotificationJobType.SEND_DISCORD, {
+        ...baseJobData,
+        deliveryId: discordDelivery.id,
+      });
+
+      this.logger.log(
+        `디스코드 작업 추가: 사용자 ${data.userId}, 알림 ${data.contentType} ${data.contentId}, 배송 ${discordDelivery.id}`,
+      );
+    }
   }
 
   /**
@@ -126,15 +155,23 @@ export class NotificationQueueService {
       completed: number;
       failed: number;
     };
+    discord: {
+      waiting: number;
+      active: number;
+      completed: number;
+      failed: number;
+    };
   }> {
-    const [emailStats, slackStats] = await Promise.all([
+    const [emailStats, slackStats, discordStats] = await Promise.all([
       this.getChannelQueueStatus(this.emailQueue),
       this.getChannelQueueStatus(this.slackQueue),
+      this.getChannelQueueStatus(this.discordQueue),
     ]);
 
     return {
       email: emailStats,
       slack: slackStats,
+      discord: discordStats,
     };
   }
 
@@ -164,15 +201,22 @@ export class NotificationQueueService {
   /**
    * 실패한 작업 재시도
    */
-  async retryFailedJobs(): Promise<{ email: number; slack: number }> {
-    const [emailRetryCount, slackRetryCount] = await Promise.all([
-      this.retryQueueFailedJobs(this.emailQueue, 'email'),
-      this.retryQueueFailedJobs(this.slackQueue, 'slack'),
-    ]);
+  async retryFailedJobs(): Promise<{
+    email: number;
+    slack: number;
+    discord: number;
+  }> {
+    const [emailRetryCount, slackRetryCount, discordRetryCount] =
+      await Promise.all([
+        this.retryQueueFailedJobs(this.emailQueue, 'email'),
+        this.retryQueueFailedJobs(this.slackQueue, 'slack'),
+        this.retryQueueFailedJobs(this.discordQueue, 'discord'),
+      ]);
 
     return {
       email: emailRetryCount,
       slack: slackRetryCount,
+      discord: discordRetryCount,
     };
   }
 

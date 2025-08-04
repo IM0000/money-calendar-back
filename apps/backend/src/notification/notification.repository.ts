@@ -129,6 +129,8 @@ export class NotificationRepository {
     emailEnabled: boolean;
     slackEnabled: boolean;
     slackWebhookUrl: string | null;
+    discordEnabled: boolean;
+    discordWebhookUrl: string | null;
     notificationsEnabled: boolean;
   }) {
     return await this.prisma.userNotificationSettings.create({ data });
@@ -140,6 +142,8 @@ export class NotificationRepository {
       emailEnabled?: boolean;
       slackEnabled?: boolean;
       slackWebhookUrl?: string;
+      discordEnabled?: boolean;
+      discordWebhookUrl?: string;
       notificationsEnabled?: boolean;
     },
     createData: {
@@ -147,6 +151,8 @@ export class NotificationRepository {
       emailEnabled: boolean;
       slackEnabled: boolean;
       slackWebhookUrl?: string;
+      discordEnabled: boolean;
+      discordWebhookUrl?: string;
       notificationsEnabled: boolean;
     },
   ) {
