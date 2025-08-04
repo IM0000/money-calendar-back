@@ -62,9 +62,12 @@ export class DiscordWorker {
       // Discord 메시지는 embed 형태로 전송
       if (messages.discord?.embed) {
         discordMessage.embeds = [messages.discord.embed];
+      } else if (messages.discord?.text) {
+        // Discord 텍스트 메시지 사용
+        discordMessage.content = messages.discord.text;
       } else {
-        // fallback으로 일반 텍스트 메시지 사용
-        discordMessage.content = messages.discord?.text || messages.slack.text;
+        // 기본 fallback 메시지
+        discordMessage.content = `알림이 업데이트되었습니다. (사용자 ID: ${userId})`;
       }
 
       await this.discordService.sendNotificationMessage(discordMessage);

@@ -107,7 +107,6 @@ describe('SlackWorker', () => {
         const mockSlackMessage = createSlackMessage();
 
         mockBuildNotificationMessages.mockReturnValue({
-          email: { subject: 'test', html: 'test' },
           slack: mockSlackMessage,
         });
         mockSlackService.sendNotificationMessage.mockResolvedValue(undefined);
@@ -144,7 +143,6 @@ describe('SlackWorker', () => {
         const mockSlackMessage = createSlackMessage();
 
         mockBuildNotificationMessages.mockReturnValue({
-          email: { subject: 'test', html: 'test' },
           slack: mockSlackMessage,
         });
         mockSlackService.sendNotificationMessage.mockRejectedValue(testError);
@@ -171,7 +169,6 @@ describe('SlackWorker', () => {
         const mockSlackMessage = createSlackMessage();
 
         mockBuildNotificationMessages.mockReturnValue({
-          email: { subject: 'test', html: 'test' },
           slack: mockSlackMessage,
         });
         mockSlackService.sendNotificationMessage.mockRejectedValue(
@@ -198,7 +195,6 @@ describe('SlackWorker', () => {
         const mockSlackMessage = createSlackMessage();
 
         mockBuildNotificationMessages.mockReturnValue({
-          email: { subject: 'test', html: 'test' },
           slack: mockSlackMessage,
         });
         mockSlackService.sendNotificationMessage.mockRejectedValue(
@@ -261,7 +257,6 @@ describe('SlackWorker', () => {
         });
 
         mockBuildNotificationMessages.mockReturnValue({
-          email: { subject: 'test', html: 'test' },
           slack: mockSlackMessage,
         });
         mockSlackService.sendNotificationMessage.mockResolvedValue(undefined);
@@ -295,7 +290,6 @@ describe('SlackWorker', () => {
 
         mockDeliveryService.findById.mockResolvedValue(mockDelivery);
         mockBuildNotificationMessages.mockReturnValue({
-          email: { subject: 'test', html: 'test' },
           slack: mockSlackMessage,
         });
         mockSlackService.sendNotificationMessage.mockRejectedValue(testError);
@@ -319,7 +313,6 @@ describe('SlackWorker', () => {
         const mockSlackMessage = createSlackMessage();
 
         mockBuildNotificationMessages.mockReturnValue({
-          email: { subject: 'test', html: 'test' },
           slack: mockSlackMessage,
         });
         mockSlackService.sendNotificationMessage.mockResolvedValue(undefined);

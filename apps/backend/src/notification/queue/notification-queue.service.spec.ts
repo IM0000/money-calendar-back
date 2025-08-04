@@ -4,6 +4,7 @@ import { NotificationQueueService } from './notification-queue.service';
 import {
   EMAIL_QUEUE_NAME,
   SLACK_QUEUE_NAME,
+  DISCORD_QUEUE_NAME,
   NotificationJobType,
 } from './notification-queue.constants';
 import {
@@ -18,6 +19,7 @@ describe('NotificationQueueService', () => {
   let service: NotificationQueueService;
   let mockEmailQueue: any;
   let mockSlackQueue: any;
+  let mockDiscordQueue: any;
   let mockPrisma: any;
 
   // 테스트 데이터 팩토리 함수들
@@ -31,6 +33,7 @@ describe('NotificationQueueService', () => {
     userSettings: {
       emailEnabled: true,
       slackEnabled: false,
+      discordEnabled: false,
       notificationsEnabled: true,
     },
     ...overrides,
@@ -40,6 +43,8 @@ describe('NotificationQueueService', () => {
     emailEnabled: false,
     slackEnabled: false,
     slackWebhookUrl: null,
+    discordEnabled: false,
+    discordWebhookUrl: null,
     notificationsEnabled: true,
     ...overrides,
   });
@@ -61,6 +66,9 @@ describe('NotificationQueueService', () => {
     // 슬랙 큐 Mock
     mockSlackQueue = createQueueMocks();
 
+    // 디스코드 큐 Mock
+    mockDiscordQueue = createQueueMocks();
+
     // Prisma Mock
     mockPrisma = {
       notificationDelivery: {
@@ -78,6 +86,10 @@ describe('NotificationQueueService', () => {
         {
           provide: getQueueToken(SLACK_QUEUE_NAME),
           useValue: mockSlackQueue,
+        },
+        {
+          provide: getQueueToken(DISCORD_QUEUE_NAME),
+          useValue: mockDiscordQueue,
         },
         {
           provide: PrismaService,
@@ -135,6 +147,7 @@ describe('NotificationQueueService', () => {
         );
 
         expect(mockSlackQueue.add).not.toHaveBeenCalled();
+        expect(mockDiscordQueue.add).not.toHaveBeenCalled();
       });
 
       it('슬랙이 활성화된 경우 슬랙 큐에 작업을 추가해야 합니다', async () => {
@@ -177,6 +190,7 @@ describe('NotificationQueueService', () => {
         );
 
         expect(mockEmailQueue.add).not.toHaveBeenCalled();
+        expect(mockDiscordQueue.add).not.toHaveBeenCalled();
       });
 
       it('이메일과 슬랙이 모두 활성화된 경우 두 큐 모두에 작업을 추가해야 합니다', async () => {
@@ -229,7 +243,9 @@ describe('NotificationQueueService', () => {
 
         // Assert
         expect(mockEmailQueue.add).not.toHaveBeenCalled();
+        expect(mockDiscordQueue.add).not.toHaveBeenCalled();
         expect(mockSlackQueue.add).not.toHaveBeenCalled();
+        expect(mockDiscordQueue.add).not.toHaveBeenCalled();
         expect(mockPrisma.notificationDelivery.create).not.toHaveBeenCalled();
       });
 
@@ -253,6 +269,7 @@ describe('NotificationQueueService', () => {
         // Assert
         expect(mockEmailQueue.add).toHaveBeenCalled();
         expect(mockSlackQueue.add).not.toHaveBeenCalled();
+        expect(mockDiscordQueue.add).not.toHaveBeenCalled();
       });
 
       it('이메일과 슬랙이 모두 비활성화된 경우 작업을 추가하지 않아야 합니다', async () => {
@@ -269,7 +286,9 @@ describe('NotificationQueueService', () => {
 
         // Assert
         expect(mockEmailQueue.add).not.toHaveBeenCalled();
+        expect(mockDiscordQueue.add).not.toHaveBeenCalled();
         expect(mockSlackQueue.add).not.toHaveBeenCalled();
+        expect(mockDiscordQueue.add).not.toHaveBeenCalled();
         expect(mockPrisma.notificationDelivery.create).not.toHaveBeenCalled();
       });
 
@@ -314,6 +333,11 @@ describe('NotificationQueueService', () => {
         mockSlackQueue.getCompleted.mockResolvedValue([2, 3]);
         mockSlackQueue.getFailed.mockResolvedValue([]);
 
+        mockDiscordQueue.getWaiting.mockResolvedValue([]);
+        mockDiscordQueue.getActive.mockResolvedValue([]);
+        mockDiscordQueue.getCompleted.mockResolvedValue([]);
+        mockDiscordQueue.getFailed.mockResolvedValue([]);
+
         // Act
         const status = await service.getQueueStatus();
 
@@ -331,6 +355,12 @@ describe('NotificationQueueService', () => {
             completed: 2,
             failed: 0,
           },
+          discord: {
+            waiting: 0,
+            active: 0,
+            completed: 0,
+            failed: 0,
+          },
         });
       });
 
@@ -346,6 +376,11 @@ describe('NotificationQueueService', () => {
         mockSlackQueue.getCompleted.mockResolvedValue([]);
         mockSlackQueue.getFailed.mockResolvedValue([]);
 
+        mockDiscordQueue.getWaiting.mockResolvedValue([]);
+        mockDiscordQueue.getActive.mockResolvedValue([]);
+        mockDiscordQueue.getCompleted.mockResolvedValue([]);
+        mockDiscordQueue.getFailed.mockResolvedValue([]);
+
         // Act
         const status = await service.getQueueStatus();
 
@@ -358,6 +393,12 @@ describe('NotificationQueueService', () => {
             failed: 0,
           },
           slack: {
+            waiting: 0,
+            active: 0,
+            completed: 0,
+            failed: 0,
+          },
+          discord: {
             waiting: 0,
             active: 0,
             completed: 0,
@@ -385,6 +426,7 @@ describe('NotificationQueueService', () => {
 
         mockEmailQueue.getFailed.mockResolvedValue([mockFailedEmailJob]);
         mockSlackQueue.getFailed.mockResolvedValue([mockFailedSlackJob]);
+        mockDiscordQueue.getFailed.mockResolvedValue([]);
 
         // Act
         const result = await service.retryFailedJobs();
@@ -395,6 +437,7 @@ describe('NotificationQueueService', () => {
         expect(result).toEqual({
           email: 1,
           slack: 1,
+          discord: 0,
         });
       });
 
@@ -411,6 +454,7 @@ describe('NotificationQueueService', () => {
           mockFailedJob2,
         ]);
         mockSlackQueue.getFailed.mockResolvedValue([]);
+        mockDiscordQueue.getFailed.mockResolvedValue([]);
 
         // Act
         const result = await service.retryFailedJobs();
@@ -421,6 +465,7 @@ describe('NotificationQueueService', () => {
         expect(result).toEqual({
           email: 1, // 성공한 재시도만 카운트
           slack: 0,
+          discord: 0,
         });
       });
 
@@ -428,6 +473,7 @@ describe('NotificationQueueService', () => {
         // Arrange
         mockEmailQueue.getFailed.mockResolvedValue([]);
         mockSlackQueue.getFailed.mockResolvedValue([]);
+        mockDiscordQueue.getFailed.mockResolvedValue([]);
 
         // Act
         const result = await service.retryFailedJobs();
@@ -436,6 +482,7 @@ describe('NotificationQueueService', () => {
         expect(result).toEqual({
           email: 0,
           slack: 0,
+          discord: 0,
         });
       });
 
@@ -453,6 +500,7 @@ describe('NotificationQueueService', () => {
 
         mockEmailQueue.getFailed.mockResolvedValue(mockFailedEmailJobs);
         mockSlackQueue.getFailed.mockResolvedValue(mockFailedSlackJobs);
+        mockDiscordQueue.getFailed.mockResolvedValue([]);
 
         // Act
         const result = await service.retryFailedJobs();
@@ -467,6 +515,7 @@ describe('NotificationQueueService', () => {
         expect(result).toEqual({
           email: 3,
           slack: 2,
+          discord: 0,
         });
       });
 
@@ -483,6 +532,7 @@ describe('NotificationQueueService', () => {
 
         mockEmailQueue.getFailed.mockResolvedValue(mockFailedEmailJobs);
         mockSlackQueue.getFailed.mockResolvedValue([]);
+        mockDiscordQueue.getFailed.mockResolvedValue([]);
 
         // Act
         const result = await service.retryFailedJobs();
@@ -491,6 +541,7 @@ describe('NotificationQueueService', () => {
         expect(result).toEqual({
           email: 2, // 성공한 재시도만 카운트
           slack: 0,
+          discord: 0,
         });
       });
     });

@@ -21,9 +21,9 @@ export interface DiscordMessage {
 
 // 채널별 알림 메시지
 export interface NotificationMessages {
-  email: EmailMessage;
-  slack: SlackMessage;
-  discord: DiscordMessage;
+  email?: EmailMessage;
+  slack?: SlackMessage;
+  discord?: DiscordMessage;
 }
 
 // 워커에서 메시지 생성 시 필요한 컨텍스트

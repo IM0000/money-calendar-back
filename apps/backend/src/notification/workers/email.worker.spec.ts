@@ -116,7 +116,6 @@ describe('EmailWorker', () => {
         mockDeliveryService.findById.mockResolvedValue(mockDelivery);
         mockBuildNotificationMessages.mockReturnValue({
           email: mockMessageData,
-          slack: { text: 'slack message' },
         });
         mockEmailService.sendNotificationEmail.mockResolvedValue(undefined);
 
@@ -154,7 +153,6 @@ describe('EmailWorker', () => {
 
         mockBuildNotificationMessages.mockReturnValue({
           email: mockMessageData,
-          slack: { text: 'slack message' },
         });
         mockEmailService.sendNotificationEmail.mockRejectedValue(testError);
 
@@ -181,7 +179,6 @@ describe('EmailWorker', () => {
 
         mockBuildNotificationMessages.mockReturnValue({
           email: mockMessageData,
-          slack: { text: 'slack message' },
         });
         mockEmailService.sendNotificationEmail.mockRejectedValue(sesError);
 
@@ -206,7 +203,6 @@ describe('EmailWorker', () => {
 
         mockBuildNotificationMessages.mockReturnValue({
           email: mockMessageData,
-          slack: { text: 'slack message' },
         });
         mockEmailService.sendNotificationEmail.mockRejectedValue(gmailError);
 
@@ -268,7 +264,6 @@ describe('EmailWorker', () => {
 
         mockBuildNotificationMessages.mockReturnValue({
           email: mockMessageData,
-          slack: { text: 'dividend slack message' },
         });
         mockEmailService.sendNotificationEmail.mockResolvedValue(undefined);
 
@@ -303,7 +298,6 @@ describe('EmailWorker', () => {
         mockDeliveryService.findById.mockResolvedValue(mockDelivery);
         mockBuildNotificationMessages.mockReturnValue({
           email: mockMessageData,
-          slack: { text: 'slack message' },
         });
         mockEmailService.sendNotificationEmail.mockRejectedValue(testError);
 
@@ -328,7 +322,6 @@ describe('EmailWorker', () => {
 
         mockBuildNotificationMessages.mockReturnValue({
           email: mockMessageData,
-          slack: { text: 'slack message' },
         });
         mockEmailService.sendNotificationEmail.mockRejectedValue(timeoutError);
 
@@ -352,7 +345,6 @@ describe('EmailWorker', () => {
 
         mockBuildNotificationMessages.mockReturnValue({
           email: mockMessageData,
-          slack: { text: 'slack message' },
         });
         mockEmailService.sendNotificationEmail.mockResolvedValue(undefined);
 

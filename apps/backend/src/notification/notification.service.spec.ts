@@ -48,6 +48,8 @@ describe('NotificationService', () => {
     emailEnabled: true,
     slackEnabled: false,
     slackWebhookUrl: null,
+    discordEnabled: false,
+    discordWebhookUrl: null,
     notificationsEnabled: true,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -391,6 +393,8 @@ describe('NotificationService', () => {
           emailEnabled: false,
           slackEnabled: false,
           slackWebhookUrl: null,
+          discordEnabled: false,
+          discordWebhookUrl: null,
           notificationsEnabled: true,
         });
       });
@@ -596,6 +600,8 @@ describe('NotificationService', () => {
             emailEnabled: true,
             slackEnabled: true,
             slackWebhookUrl: 'https://hooks.slack.com/test',
+            discordEnabled: false,
+            discordWebhookUrl: undefined,
             notificationsEnabled: true,
           },
         );
